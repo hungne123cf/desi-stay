@@ -1,81 +1,100 @@
+export type UserRole = 'student' | 'admin';
 export type GenderPreference = 'all' | 'boys' | 'girls';
-export type RoomType = 'single' | 'double' | 'triple' | 'studio';
-export type FoodType = 'pure_veg' | 'non_veg' | 'jain_available' | 'self_cook';
-
-export interface Amenity {
-  id: string;
-  name: string;
-  icon: string;
-}
+export type RoomType = 'single' | 'double' | 'triple' | 'studio' | 'apartment';
+export type FoodPreference = 'self_cook' | 'pure_veg' | 'mess_included' | 'all' | 'none';
+export type FoodType = FoodPreference;
+export type CurrencyCode = 'VND' | 'USD' | 'INR' | 'EUR';
+export type BookingStatus = 'pending' | 'token_paid' | 'confirmed' | 'cancelled' | 'expired';
+export type PaymentMethod = 'vietqr_bank' | 'razorpay_upi' | 'card_stripe' | 'pay_on_visit';
 
 export interface Property {
   id: string;
-  code: string; // e.g. YS-101
+  code: string;
   title: string;
   slug: string;
+  description: string;
   address: string;
   city: string;
+  country: string;
   area: string;
   nearbyUniversity: string;
-  distanceToCampus: string; // e.g. "500m (5 mins walk)"
+  distanceToCampus: string;
   roomType: RoomType;
   gender: GenderPreference;
-  foodType: FoodType;
-  pricePerMonthINR: number;
-  securityDepositINR: number;
-  tokenDepositINR: number;
-  images: string[];
-  description: string;
+  foodPreference?: FoodPreference;
+  foodType?: FoodPreference;
+  pricePerMonthUSD: number;
+  securityDepositUSD: number;
+  tokenDepositUSD: number;
   highlights: string[];
   amenities: string[];
-  curfewTime?: string;
+  curfewTime: string | null;
+  availableBeds: number;
   isVerified: boolean;
   isZeroBrokerage: boolean;
-  availableRooms: number;
-  landlord: {
-    name: string;
-    phoneWhatsApp: string;
-    badge: string;
-  };
+  isPublished: boolean;
+  landlordName: string;
+  landlordContact: string;
   rating: number;
   reviewsCount: number;
-}
-
-export interface BookingLead {
-  id: string;
-  propertyId: string;
-  propertyTitle: string;
-  propertyCode: string;
-  studentName: string;
-  studentEmail: string;
-  studentWhatsApp: string;
-  universityOrCollege: string;
-  moveInDate: string;
-  sharingPreference: RoomType;
-  tokenPaidINR: number;
-  paymentStatus: 'pending' | 'token_paid' | 'confirmed' | 'cancelled';
-  paymentMethod?: 'razorpay_upi' | 'card' | 'offline_transfer';
-  transactionId?: string;
+  images: string[];
   createdAt: string;
 }
 
-export interface User {
+export interface Booking {
   id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role: 'student' | 'admin';
-  phone?: string;
-  college?: string;
+  reference: string;
+  propertyId: string;
+  propertyTitle: string;
+  propertyCode: string;
+  userId: string;
+  studentName: string;
+  studentEmail: string;
+  studentContact: string;
+  studentWhatsApp?: string;
+  college: string;
+  moveInDate: string;
+  roomType: RoomType;
+  tokenAmountUSD: number;
+  tokenAmountLocal: string;
+  currency: CurrencyCode;
+  status: BookingStatus;
+  paymentMethod: PaymentMethod;
+  transactionReference?: string;
+  adminNotes: string;
+  createdAt: string;
 }
 
-export interface FilterOptions {
-  city: string;
-  university: string;
-  roomType: string;
-  gender: string;
-  foodType: string;
-  maxPrice: number;
-  zeroBrokerageOnly: boolean;
-  attachedBathOnly: boolean;
+export interface CurrentUser {
+  id: string;
+  email: string;
+  name: string;
+  avatarUrl?: string | null;
+  avatar?: string;
+  role: UserRole;
+  phone?: string | null;
+  college?: string | null;
 }
+
+export type User = CurrentUser;
+
+export interface SiteSettings {
+  brandName: string;
+  tagline: string;
+  defaultCurrency: CurrencyCode;
+  supportWhatsApp: string;
+  supportEmail: string;
+  supportHotline: string;
+  vietQrBankName: string;
+  vietQrAccountNumber: string;
+  vietQrAccountHolder: string;
+  razorpayKeyId: string;
+  stripePublishableKey: string;
+  defaultTokenUSD: number;
+  defaultTokenINR?: number;
+  holdHours: number;
+}
+
+export type ActionResult<T = undefined> =
+  | { ok: true; data?: T; message?: string }
+  | { ok: false; error: string; fieldErrors?: Record<string, string[] | undefined> };

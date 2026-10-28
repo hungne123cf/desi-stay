@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Property } from '@/types';
+import { Property, PaymentMethod } from '@/types';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -12,10 +12,11 @@ import {
   Building,
   CheckCircle2,
   Calendar,
-  Sparkles,
-  Phone,
+  Lock,
   ArrowRight,
-  Lock
+  Phone,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface BookingModalProps {
@@ -24,18 +25,21 @@ interface BookingModalProps {
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose }) => {
-  const { addBooking, formatPrice, currency } = useProperties();
+  const { addBooking, formatPrice, currency, settings } = useProperties();
   const { user } = useAuth();
 
   const [step, setStep] = useState<'details' | 'payment' | 'success'>('details');
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'offline'>('upi');
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
+    currency === 'VND' ? 'vietqr_bank' : currency === 'INR' ? 'razorpay_upi' : 'card_stripe'
+  );
   const [isProcessing, setIsProcessing] = useState(false);
-  const [confirmedBookingId, setConfirmedBookingId] = useState('');
+  const [confirmedBookingRef, setConfirmedBookingRef] = useState('');
+  const [copiedAccount, setCopiedAccount] = useState(false);
 
   // Form fields
   const [studentName, setStudentName] = useState(user?.name || '');
   const [studentEmail, setStudentEmail] = useState(user?.email || '');
-  const [studentWhatsApp, setStudentWhatsApp] = useState(user?.phone || '+91 98765 43210');
+  const [studentContact, setStudentContact] = useState(user?.phone || '0901234567');
   const [college, setCollege] = useState(user?.college || property?.nearbyUniversity || '');
   const [moveInDate, setMoveInDate] = useState('2026-11-15');
 
@@ -43,8 +47,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
 
   const handleProceedToPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentName || !studentWhatsApp) {
-      alert('Please fill in your name and WhatsApp number.');
+    if (!studentName || !studentContact) {
+      alert('Vui lòng điền họ tên và số điện thoại liên hệ.');
       return;
     }
     setStep('payment');
@@ -52,58 +56,61 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
 
   const handleCompletePayment = async () => {
     setIsProcessing(true);
-    // Simulate payment gateway delay (Razorpay / UPI)
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    const methodMap = {
-      upi: 'razorpay_upi' as const,
-      card: 'card' as const,
-      offline: 'offline_transfer' as const
-    };
-
-    const newId = addBooking({
+    const ref = addBooking({
       propertyId: property.id,
       propertyTitle: property.title,
       propertyCode: property.code,
+      userId: user?.id || 'guest',
       studentName,
-      studentEmail,
-      studentWhatsApp,
-      universityOrCollege: college,
+      studentEmail: studentEmail || 'student@example.com',
+      studentContact,
+      college,
       moveInDate,
-      sharingPreference: property.roomType,
-      tokenPaidINR: property.tokenDepositINR,
-      paymentStatus: paymentMethod === 'offline' ? 'pending' : 'token_paid',
-      paymentMethod: methodMap[paymentMethod],
-      transactionId: `TXN_${Math.random().toString(36).substring(2, 9).toUpperCase()}`
+      roomType: property.roomType,
+      tokenAmountUSD: property.tokenDepositUSD,
+      tokenAmountLocal: formatPrice(property.tokenDepositUSD),
+      currency,
+      status: selectedMethod === 'pay_on_visit' ? 'pending' : 'token_paid',
+      paymentMethod: selectedMethod,
+      transactionReference: `TXN_${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
+      adminNotes: `Đặt phòng từ website. Phương thức: ${selectedMethod}`
     });
 
-    setConfirmedBookingId(newId);
+    setConfirmedBookingRef(ref);
     setIsProcessing(false);
     setStep('success');
   };
 
-  const handleOpenWhatsAppConfirmation = () => {
-    const phone = property.landlord.phoneWhatsApp.replace(/[^0-9]/g, '');
-    const text = encodeURIComponent(
-      `Hello! I just placed a booking for "${property.title}" (Code: ${property.code}) on YuvaStays.
-Booking ID: ${confirmedBookingId}
-Name: ${studentName}
-Token Amount: ${formatPrice(property.tokenDepositINR)}
-Move-in: ${moveInDate}
-Please confirm my room reservation!`
+  const handleCopyAccount = () => {
+    navigator.clipboard.writeText(settings.vietQrAccountNumber);
+    setCopiedAccount(true);
+    setTimeout(() => setCopiedAccount(false), 2000);
+  };
+
+  const handleOpenWhatsAppOrCall = () => {
+    const contact = property.landlordContact.replace(/[^0-9]/g, '');
+    const message = encodeURIComponent(
+      `Chào bạn, tôi vừa gửi yêu cầu đặt cọc giữ chỗ phòng "${property.title}" (Mã: ${property.code}) trên hệ thống.
+Mã đặt cọc: ${confirmedBookingRef}
+Họ tên: ${studentName}
+Số tiền cọc: ${formatPrice(property.tokenDepositUSD)}
+Ngày dự kiến chuyển vào: ${moveInDate}
+Nhờ bạn xác nhận lịch hẹn nhận phòng nhé!`
     );
-    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+    window.open(`https://wa.me/${contact}?text=${message}`, '_blank');
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 text-white p-5 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white p-5 flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-1.5 text-xs text-orange-100 font-semibold uppercase tracking-wider mb-0.5">
+            <div className="flex items-center gap-1.5 text-xs text-indigo-100 font-semibold uppercase tracking-wider mb-0.5">
               <ShieldCheck className="w-4 h-4 text-emerald-300" />
-              <span>Verified PG Token Booking</span>
+              <span>Đặt cọc giữ chỗ trực tuyến / Token Reservation</span>
             </div>
             <h3 className="text-lg font-bold truncate max-w-[340px]">{property.title}</h3>
           </div>
@@ -117,21 +124,20 @@ Please confirm my room reservation!`
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5">
-          {/* Step 1: Student Details */}
           {step === 'details' && (
             <form onSubmit={handleProceedToPayment} className="space-y-4">
-              {/* Pricing Summary Banner */}
-              <div className="p-3.5 bg-orange-50/70 border border-orange-200/80 rounded-2xl flex items-center justify-between">
+              {/* Price Banner */}
+              <div className="p-4 bg-indigo-50/70 border border-indigo-200/80 rounded-2xl flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-slate-500 block">Holding Token Deposit:</span>
-                  <span className="text-xl font-black text-orange-600">
-                    {formatPrice(property.tokenDepositINR)}
+                  <span className="text-xs text-slate-500 block">Tiền cọc giữ chỗ (Token):</span>
+                  <span className="text-xl font-black text-indigo-600">
+                    {formatPrice(property.tokenDepositUSD)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs text-slate-500 block">Monthly Rent:</span>
+                  <span className="text-xs text-slate-500 block">Giá thuê tháng:</span>
                   <span className="text-sm font-bold text-slate-800">
-                    {formatPrice(property.pricePerMonthINR)} / mo
+                    {formatPrice(property.pricePerMonthUSD)} / tháng
                   </span>
                 </div>
               </div>
@@ -139,167 +145,191 @@ Please confirm my room reservation!`
               <div className="space-y-3">
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Student Full Name *
+                    Họ và tên người thuê *
                   </label>
                   <input
                     type="text"
                     required
                     value={studentName}
                     onChange={(e) => setStudentName(e.target.value)}
-                    placeholder="e.g. Aarav Sharma"
-                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 outline-none"
+                    placeholder="Nguyễn Văn A"
+                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      WhatsApp Number *
+                      Số điện thoại / WhatsApp *
                     </label>
                     <input
                       type="text"
                       required
-                      value={studentWhatsApp}
-                      onChange={(e) => setStudentWhatsApp(e.target.value)}
-                      placeholder="+91 98765 43210"
-                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 outline-none"
+                      value={studentContact}
+                      onChange={(e) => setStudentContact(e.target.value)}
+                      placeholder="0901234567"
+                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
                     />
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      Email Address
+                      Email
                     </label>
                     <input
                       type="email"
                       value={studentEmail}
                       onChange={(e) => setStudentEmail(e.target.value)}
-                      placeholder="student@gmail.com"
-                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 outline-none"
+                      placeholder="sinhvien@gmail.com"
+                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    College / University Enrolled
+                    Trường Đại học / Nơi làm việc
                   </label>
                   <input
                     type="text"
                     value={college}
                     onChange={(e) => setCollege(e.target.value)}
-                    placeholder="e.g. Christ University / CTUMP"
-                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 outline-none"
+                    placeholder="ĐH Bách Khoa, ĐHQG,..."
+                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Expected Move-in Date
+                    Ngày dự kiến chuyển vào
                   </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={moveInDate}
-                      onChange={(e) => setMoveInDate(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 outline-none"
-                    />
-                  </div>
+                  <input
+                    type="date"
+                    value={moveInDate}
+                    onChange={(e) => setMoveInDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
+                  />
                 </div>
               </div>
 
               <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1">
                 <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>Token deposit holds your bed for 48 hours. 100% refundable if room condition does not match listing.</span>
+                <span>Tiền cọc giữ chỗ giúp khóa phòng trong 48h và sẽ được trừ thẳng vào tiền phòng tháng đầu tiên. Hoàn tiền 100% nếu phòng không đúng thực tế.</span>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
               >
-                <span>Proceed to Pay Token ({formatPrice(property.tokenDepositINR)})</span>
+                <span>Tiếp tục thanh toán cọc ({formatPrice(property.tokenDepositUSD)})</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           )}
 
-          {/* Step 2: Payment Gateway Selection */}
           {step === 'payment' && (
             <div className="space-y-5">
               <div className="text-center">
-                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Select Payment Mode</p>
+                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Số tiền đặt cọc giữ chỗ</p>
                 <div className="text-2xl font-black text-slate-900 mt-0.5">
-                  {formatPrice(property.tokenDepositINR)}
+                  {formatPrice(property.tokenDepositUSD)}
                 </div>
-                <p className="text-xs text-emerald-600 font-semibold">Zero Gateway Fees • Secured by 256-bit SSL</p>
+                <p className="text-xs text-emerald-600 font-semibold">An toàn bảo mật • Không mất phí trung gian</p>
               </div>
 
-              {/* Payment Methods Tabs */}
+              {/* Payment Methods */}
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod('upi')}
+                  onClick={() => setSelectedMethod('vietqr_bank')}
                   className={`p-3 rounded-2xl border text-center transition-all ${
-                    paymentMethod === 'upi'
-                      ? 'border-orange-500 bg-orange-50/60 ring-2 ring-orange-500/20'
+                    selectedMethod === 'vietqr_bank'
+                      ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-600/20'
                       : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  <QrCode className="w-5 h-5 mx-auto text-orange-600 mb-1" />
-                  <span className="text-xs font-bold block text-slate-800">UPI Instant</span>
-                  <span className="text-[10px] text-slate-400">GPay, PhonePe</span>
+                  <QrCode className="w-5 h-5 mx-auto text-indigo-600 mb-1" />
+                  <span className="text-xs font-bold block text-slate-800">VietQR 24/7</span>
+                  <span className="text-[10px] text-slate-400">Ngân hàng VN</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod('card')}
+                  onClick={() => setSelectedMethod('card_stripe')}
                   className={`p-3 rounded-2xl border text-center transition-all ${
-                    paymentMethod === 'card'
-                      ? 'border-orange-500 bg-orange-50/60 ring-2 ring-orange-500/20'
+                    selectedMethod === 'card_stripe'
+                      ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-600/20'
                       : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  <CreditCard className="w-5 h-5 mx-auto text-indigo-600 mb-1" />
-                  <span className="text-xs font-bold block text-slate-800">Cards</span>
-                  <span className="text-[10px] text-slate-400">RuPay, Visa, MC</span>
+                  <CreditCard className="w-5 h-5 mx-auto text-blue-600 mb-1" />
+                  <span className="text-xs font-bold block text-slate-800">Thẻ Quốc Tế</span>
+                  <span className="text-[10px] text-slate-400">Visa, Mastercard</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod('offline')}
+                  onClick={() => setSelectedMethod('pay_on_visit')}
                   className={`p-3 rounded-2xl border text-center transition-all ${
-                    paymentMethod === 'offline'
-                      ? 'border-orange-500 bg-orange-50/60 ring-2 ring-orange-500/20'
+                    selectedMethod === 'pay_on_visit'
+                      ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-600/20'
                       : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >
                   <Building className="w-5 h-5 mx-auto text-emerald-600 mb-1" />
-                  <span className="text-xs font-bold block text-slate-800">Pay on Visit</span>
-                  <span className="text-[10px] text-slate-400">Campus Check</span>
+                  <span className="text-xs font-bold block text-slate-800">Đến Xem Phòng</span>
+                  <span className="text-[10px] text-slate-400">Cọc trực tiếp</span>
                 </button>
               </div>
 
-              {/* Payment Content Area */}
-              {paymentMethod === 'upi' && (
+              {/* VietQR View */}
+              {selectedMethod === 'vietqr_bank' && (
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-center space-y-3">
-                  <div className="w-40 h-40 mx-auto bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center">
-                    {/* Simulated UPI QR Code SVG */}
-                    <div className="w-full h-full bg-slate-900 rounded-lg flex items-center justify-center text-white p-2">
-                      <div className="text-center">
-                        <QrCode className="w-16 h-16 mx-auto text-white opacity-90" />
-                        <span className="text-[10px] font-mono block mt-1">UPI ID: desistays@okhdfc</span>
+                  <div className="w-48 h-48 mx-auto bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center">
+                    <img
+                      src={`https://api.vietqr.io/image/970436-${settings.vietQrAccountNumber}-compact2.jpg?amount=${Math.round(
+                        property.tokenDepositUSD * 25400
+                      )}&addInfo=${encodeURIComponent(`COC PHONG ${property.code}`)}&accountName=${encodeURIComponent(
+                        settings.vietQrAccountHolder
+                      )}`}
+                      alt="Mã VietQR Chuyển khoản"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="text-left text-xs bg-white p-3 rounded-xl border border-slate-200 space-y-1.5">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Ngân hàng:</span>
+                      <span className="font-bold text-slate-800">{settings.vietQrBankName}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Số tài khoản:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-indigo-700 font-mono">{settings.vietQrAccountNumber}</span>
+                        <button
+                          type="button"
+                          onClick={handleCopyAccount}
+                          className="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 hover:bg-slate-200"
+                        >
+                          {copiedAccount ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        </button>
                       </div>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Chủ tài khoản:</span>
+                      <span className="font-bold text-slate-800">{settings.vietQrAccountHolder}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Nội dung CK:</span>
+                      <span className="font-bold text-indigo-700 font-mono">COC PHONG {property.code}</span>
+                    </div>
                   </div>
-                  <p className="text-xs font-medium text-slate-600">
-                    Scan with any UPI App: <strong>Google Pay, PhonePe, Paytm, BHIM</strong>
-                  </p>
                 </div>
               )}
 
-              {paymentMethod === 'card' && (
+              {/* Card Stripe View */}
+              {selectedMethod === 'card_stripe' && (
                 <div className="space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Card Number</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Số thẻ (Card Number)</label>
                     <input
                       type="text"
                       placeholder="•••• •••• •••• 4242"
@@ -309,10 +339,10 @@ Please confirm my room reservation!`
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Expiry</label>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Hết hạn (MM/YY)</label>
                       <input
                         type="text"
-                        placeholder="MM/YY"
+                        placeholder="12/28"
                         defaultValue="12/28"
                         className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg"
                       />
@@ -330,10 +360,11 @@ Please confirm my room reservation!`
                 </div>
               )}
 
-              {paymentMethod === 'offline' && (
+              {/* Pay on Visit */}
+              {selectedMethod === 'pay_on_visit' && (
                 <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs text-emerald-800 space-y-1">
-                  <p className="font-bold">Reserve for In-Person Visit:</p>
-                  <p>Our student advisor will contact you via WhatsApp to coordinate an in-person room inspection before any payment.</p>
+                  <p className="font-bold">Đặt lịch xem phòng trực tiếp:</p>
+                  <p>Hệ thống sẽ giữ lịch hẹn và chủ nhà/quản lý tòa nhà sẽ gọi điện hoặc nhắn tin Zalo/WhatsApp để hướng dẫn bạn tới xem phòng trước khi quyết định ký hợp đồng.</p>
                 </div>
               )}
 
@@ -343,20 +374,20 @@ Please confirm my room reservation!`
                   onClick={() => setStep('details')}
                   className="w-1/3 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200"
                 >
-                  Back
+                  Quay lại
                 </button>
                 <button
                   type="button"
                   onClick={handleCompletePayment}
                   disabled={isProcessing}
-                  className="w-2/3 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                  className="w-2/3 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
                 >
                   {isProcessing ? (
-                    <span className="animate-pulse">Authorizing Payment...</span>
+                    <span className="animate-pulse">Đang xác nhận...</span>
                   ) : (
                     <>
                       <Lock className="w-3.5 h-3.5" />
-                      <span>Authorize {formatPrice(property.tokenDepositINR)}</span>
+                      <span>Xác nhận cọc ({formatPrice(property.tokenDepositUSD)})</span>
                     </>
                   )}
                 </button>
@@ -364,7 +395,6 @@ Please confirm my room reservation!`
             </div>
           )}
 
-          {/* Step 3: Success Confirmation */}
           {step === 'success' && (
             <div className="text-center py-4 space-y-4">
               <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
@@ -372,27 +402,27 @@ Please confirm my room reservation!`
               </div>
 
               <div>
-                <h4 className="text-xl font-black text-slate-900">Bed Reservation Confirmed!</h4>
+                <h4 className="text-xl font-black text-slate-900">Đặt Phòng Thành Công!</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  Booking Reference: <strong className="font-mono text-orange-600">{confirmedBookingId}</strong>
+                  Mã giữ chỗ: <strong className="font-mono text-indigo-600">{confirmedBookingRef}</strong>
                 </p>
               </div>
 
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Student:</span>
+                  <span className="text-slate-500">Khách thuê:</span>
                   <span className="font-bold text-slate-800">{studentName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Property:</span>
+                  <span className="text-slate-500">Phòng:</span>
                   <span className="font-bold text-slate-800">{property.code} - {property.title}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Token Paid:</span>
-                  <span className="font-bold text-emerald-700">{formatPrice(property.tokenDepositINR)}</span>
+                  <span className="text-slate-500">Tiền cọc giữ phòng:</span>
+                  <span className="font-bold text-emerald-700">{formatPrice(property.tokenDepositUSD)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Move-in Date:</span>
+                  <span className="text-slate-500">Ngày chuyển vào:</span>
                   <span className="font-bold text-slate-800">{moveInDate}</span>
                 </div>
               </div>
@@ -400,11 +430,11 @@ Please confirm my room reservation!`
               <div className="pt-2 space-y-2">
                 <button
                   type="button"
-                  onClick={handleOpenWhatsAppConfirmation}
+                  onClick={handleOpenWhatsAppOrCall}
                   className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
                 >
                   <Phone className="w-4 h-4" />
-                  <span>Send Confirmation to Warden on WhatsApp</span>
+                  <span>Gửi thông tin xác nhận cho Chủ Nhà / Quản lý</span>
                 </button>
 
                 <button
@@ -412,7 +442,7 @@ Please confirm my room reservation!`
                   onClick={onClose}
                   className="w-full py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
                 >
-                  Close Window
+                  Đóng cửa sổ
                 </button>
               </div>
             </div>

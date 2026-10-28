@@ -1,139 +1,176 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Property, BookingLead } from '@/types';
+import { Property, Booking, CurrencyCode, SiteSettings } from '@/types';
 import { INITIAL_PROPERTIES } from '@/data/mockProperties';
+import { siteConfig } from '@/config/site';
 
 interface PropertyContextType {
   properties: Property[];
-  bookings: BookingLead[];
-  currency: 'INR' | 'USD';
-  currencyRate: number; // 1 USD = 85 INR
-  formatPrice: (inr: number) => string;
-  addProperty: (property: Omit<Property, 'id' | 'code' | 'rating' | 'reviewsCount'>) => void;
+  bookings: Booking[];
+  currency: CurrencyCode;
+  settings: SiteSettings;
+  setCurrency: (c: CurrencyCode) => void;
+  formatPrice: (priceUSD: number, customCurrency?: CurrencyCode) => string;
+  addProperty: (property: Omit<Property, 'id' | 'code' | 'rating' | 'reviewsCount' | 'createdAt'>) => void;
   updateProperty: (id: string, property: Partial<Property>) => void;
   deleteProperty: (id: string) => void;
-  addBooking: (booking: Omit<BookingLead, 'id' | 'createdAt'>) => string;
-  updateBookingStatus: (id: string, status: BookingLead['paymentStatus']) => void;
-  toggleCurrency: () => void;
+  addBooking: (booking: Omit<Booking, 'id' | 'reference' | 'createdAt'>) => string;
+  updateBookingStatus: (id: string, status: Booking['status']) => void;
+  updateSettings: (newSettings: Partial<SiteSettings>) => void;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
 
-const INITIAL_BOOKINGS: BookingLead[] = [
+const DEFAULT_SETTINGS: SiteSettings = {
+  brandName: siteConfig.name,
+  tagline: siteConfig.tagline,
+  defaultCurrency: 'VND',
+  supportWhatsApp: '+84901234567',
+  supportEmail: 'contact@unistay.app',
+  supportHotline: '1900 6868',
+  vietQrBankName: 'Vietcombank (VCB)',
+  vietQrAccountNumber: '1029384756',
+  vietQrAccountHolder: 'CONG TY CP UNISTAY VIETNAM',
+  razorpayKeyId: 'rzp_test_sample',
+  stripePublishableKey: 'pk_test_sample',
+  defaultTokenUSD: 20,
+  holdHours: 48,
+};
+
+const INITIAL_BOOKINGS: Booking[] = [
   {
     id: 'lead-1',
-    propertyId: 'prop-1',
-    propertyTitle: 'The Elite Heights - Boys Luxury PG & Co-Living',
-    propertyCode: 'YS-101',
-    studentName: 'Kabir Mehta',
-    studentEmail: 'kabir.m@gmail.com',
-    studentWhatsApp: '+91 98450 12345',
-    universityOrCollege: 'Christ University (Central Campus)',
+    reference: 'BK-VN98A1',
+    propertyId: 'prop-vn-1',
+    propertyTitle: 'The Green Studio – Căn hộ dịch vụ cao cấp Quận 10',
+    propertyCode: 'VN-101',
+    userId: 'usr-1',
+    studentName: 'Nguyễn Hoàng Nam',
+    studentEmail: 'nam.nguyen@gmail.com',
+    studentContact: '0909 123 456',
+    college: 'ĐH Bách Khoa TP.HCM',
     moveInDate: '2026-11-15',
-    sharingPreference: 'double',
-    tokenPaidINR: 2000,
-    paymentStatus: 'token_paid',
-    paymentMethod: 'razorpay_upi',
-    transactionId: 'pay_UPI_98a7sd76f',
-    createdAt: '2026-10-25 14:32'
+    roomType: 'studio',
+    tokenAmountUSD: 20,
+    tokenAmountLocal: '500.000 ₫',
+    currency: 'VND',
+    status: 'token_paid',
+    paymentMethod: 'vietqr_bank',
+    transactionReference: 'VCB_MB_883921',
+    adminNotes: 'Đã nhận chuyển khoản cọc giữ phòng 500k. Đã hẹn 15/11 nhận phòng.',
+    createdAt: '2026-10-27 09:30'
   },
   {
     id: 'lead-2',
-    propertyId: 'prop-2',
-    propertyTitle: 'Aura Blossom - Premium Girls Residency & Hostel',
-    propertyCode: 'YS-102',
-    studentName: 'Ananya Iyer',
-    studentEmail: 'ananya.iyer@gmail.com',
-    studentWhatsApp: '+91 99201 54321',
-    universityOrCollege: 'Fergusson College',
-    moveInDate: '2026-11-01',
-    sharingPreference: 'single',
-    tokenPaidINR: 2500,
-    paymentStatus: 'confirmed',
+    reference: 'BK-IN44B2',
+    propertyId: 'prop-in-1',
+    propertyTitle: 'The Elite Heights – Boys Luxury PG',
+    propertyCode: 'IN-201',
+    userId: 'usr-2',
+    studentName: 'Kabir Mehta',
+    studentEmail: 'kabir.m@gmail.com',
+    studentContact: '+91 98450 12345',
+    college: 'Christ University (Central Campus)',
+    moveInDate: '2026-11-20',
+    roomType: 'double',
+    tokenAmountUSD: 24,
+    tokenAmountLocal: '₹2,000',
+    currency: 'INR',
+    status: 'confirmed',
     paymentMethod: 'razorpay_upi',
-    transactionId: 'pay_UPI_12x99a8b',
-    createdAt: '2026-10-27 10:15'
-  },
-  {
-    id: 'lead-3',
-    propertyId: 'prop-4',
-    propertyTitle: 'MedCampus Residency - International Indian Students Hub',
-    propertyCode: 'YS-104',
-    studentName: 'Rohan Gupta (MBBS 1st Year)',
-    studentEmail: 'rohan.g@yahoo.in',
-    studentWhatsApp: '+91 97112 33445',
-    universityOrCollege: 'Can Tho University of Medicine & Pharmacy (CTUMP)',
-    moveInDate: '2026-12-01',
-    sharingPreference: 'double',
-    tokenPaidINR: 1500,
-    paymentStatus: 'token_paid',
-    paymentMethod: 'razorpay_upi',
-    transactionId: 'pay_UPI_66b5543c',
-    createdAt: '2026-10-28 16:45'
+    transactionReference: 'pay_UPI_98a7sd76f',
+    adminNotes: 'Paid token via Google Pay. Warden notified.',
+    createdAt: '2026-10-28 14:15'
   }
 ];
 
 export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
-  const [bookings, setBookings] = useState<BookingLead[]>(INITIAL_BOOKINGS);
-  const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
-  const currencyRate = 85; // 1 USD = 85 INR
+  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
+  const [currency, setCurrencyState] = useState<CurrencyCode>('VND');
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
 
-  // Load persisted data if available
   useEffect(() => {
     try {
-      const savedProps = localStorage.getItem('desi_stay_properties');
-      if (savedProps) {
-        setProperties(JSON.parse(savedProps));
-      }
-      const savedBookings = localStorage.getItem('desi_stay_bookings');
-      if (savedBookings) {
-        setBookings(JSON.parse(savedBookings));
-      }
+      const savedProps = localStorage.getItem('unistay_properties');
+      if (savedProps) setProperties(JSON.parse(savedProps));
+
+      const savedBookings = localStorage.getItem('unistay_bookings');
+      if (savedBookings) setBookings(JSON.parse(savedBookings));
+
+      const savedCurrency = localStorage.getItem('unistay_currency') as CurrencyCode;
+      if (savedCurrency) setCurrencyState(savedCurrency);
+
+      const savedSettings = localStorage.getItem('unistay_settings');
+      if (savedSettings) setSettings(JSON.parse(savedSettings));
     } catch {
-      // ignore
+      // fallback
     }
   }, []);
 
-  const saveProperties = (newProps: Property[]) => {
-    setProperties(newProps);
+  const saveProperties = (data: Property[]) => {
+    setProperties(data);
     try {
-      localStorage.setItem('desi_stay_properties', JSON.stringify(newProps));
-    } catch {
-      // ignore
-    }
+      localStorage.setItem('unistay_properties', JSON.stringify(data));
+    } catch {}
   };
 
-  const saveBookings = (newBookings: BookingLead[]) => {
-    setBookings(newBookings);
+  const saveBookings = (data: Booking[]) => {
+    setBookings(data);
     try {
-      localStorage.setItem('desi_stay_bookings', JSON.stringify(newBookings));
-    } catch {
-      // ignore
+      localStorage.setItem('unistay_bookings', JSON.stringify(data));
+    } catch {}
+  };
+
+  const setCurrency = (c: CurrencyCode) => {
+    setCurrencyState(c);
+    try {
+      localStorage.setItem('unistay_currency', c);
+    } catch {}
+  };
+
+  const updateSettings = (newSettings: Partial<SiteSettings>) => {
+    setSettings((prev) => {
+      const updated = { ...prev, ...newSettings };
+      try {
+        localStorage.setItem('unistay_settings', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const formatPrice = (priceUSD: number, customCurrency?: CurrencyCode): string => {
+    const cur = customCurrency || currency;
+    switch (cur) {
+      case 'VND': {
+        const vnd = Math.round(priceUSD * siteConfig.currencyRates.VND);
+        return `${vnd.toLocaleString('vi-VN')} ₫`;
+      }
+      case 'INR': {
+        const inr = Math.round(priceUSD * siteConfig.currencyRates.INR);
+        return `₹${inr.toLocaleString('en-IN')}`;
+      }
+      case 'EUR': {
+        const eur = Math.round(priceUSD * siteConfig.currencyRates.EUR);
+        return `€${eur.toLocaleString()}`;
+      }
+      case 'USD':
+      default:
+        return `$${priceUSD.toLocaleString()}`;
     }
   };
 
-  const formatPrice = (inr: number) => {
-    if (currency === 'USD') {
-      const usd = Math.round(inr / currencyRate);
-      return `$${usd.toLocaleString()}`;
-    }
-    return `₹${inr.toLocaleString('en-IN')}`;
-  };
-
-  const toggleCurrency = () => {
-    setCurrency((prev) => (prev === 'INR' ? 'USD' : 'INR'));
-  };
-
-  const addProperty = (newProp: Omit<Property, 'id' | 'code' | 'rating' | 'reviewsCount'>) => {
+  const addProperty = (newProp: Omit<Property, 'id' | 'code' | 'rating' | 'reviewsCount' | 'createdAt'>) => {
     const nextCodeNumber = properties.length + 101;
+    const prefix = newProp.country === 'Vietnam' ? 'VN' : newProp.country === 'India' ? 'IN' : 'GL';
     const created: Property = {
       ...newProp,
       id: `prop-${Date.now()}`,
-      code: `YS-${nextCodeNumber}`,
+      code: `${prefix}-${nextCodeNumber}`,
       rating: 5.0,
-      reviewsCount: 1
+      reviewsCount: 1,
+      createdAt: new Date().toISOString().slice(0, 10)
     };
     saveProperties([created, ...properties]);
   };
@@ -144,24 +181,23 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const deleteProperty = (id: string) => {
-    const filtered = properties.filter((p) => p.id !== id);
-    saveProperties(filtered);
+    saveProperties(properties.filter((p) => p.id !== id));
   };
 
-  const addBooking = (bookingData: Omit<BookingLead, 'id' | 'createdAt'>): string => {
-    const newId = `lead-${Date.now()}`;
-    const newBooking: BookingLead = {
+  const addBooking = (bookingData: Omit<Booking, 'id' | 'reference' | 'createdAt'>): string => {
+    const ref = `BK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const newBooking: Booking = {
       ...bookingData,
-      id: newId,
+      id: `book-${Date.now()}`,
+      reference: ref,
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
     };
     saveBookings([newBooking, ...bookings]);
-    return newId;
+    return ref;
   };
 
-  const updateBookingStatus = (id: string, status: BookingLead['paymentStatus']) => {
-    const updated = bookings.map((b) => (b.id === id ? { ...b, paymentStatus: status } : b));
-    saveBookings(updated);
+  const updateBookingStatus = (id: string, status: Booking['status']) => {
+    saveBookings(bookings.map((b) => (b.id === id ? { ...b, status } : b)));
   };
 
   return (
@@ -170,14 +206,15 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         properties,
         bookings,
         currency,
-        currencyRate,
+        settings,
+        setCurrency,
         formatPrice,
         addProperty,
         updateProperty,
         deleteProperty,
         addBooking,
         updateBookingStatus,
-        toggleCurrency
+        updateSettings
       }}
     >
       {children}
@@ -187,8 +224,6 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 export const useProperties = () => {
   const context = useContext(PropertyContext);
-  if (!context) {
-    throw new Error('useProperties must be used within PropertyProvider');
-  }
+  if (!context) throw new Error('useProperties must be used within PropertyProvider');
   return context;
 };

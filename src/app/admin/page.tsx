@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
-import { Property, RoomType, FoodType, GenderPreference } from '@/types';
+import { Property, RoomType, GenderPreference, FoodPreference, CurrencyCode } from '@/types';
 import {
   ShieldCheck,
   Building,
@@ -12,16 +12,13 @@ import {
   Trash2,
   Phone,
   CheckCircle,
-  Clock,
-  DollarSign,
   Users,
-  Search,
   Settings,
   Layers,
-  ArrowUpRight,
-  Sparkles,
   Lock,
-  X
+  X,
+  CreditCard,
+  QrCode
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -29,44 +26,53 @@ export default function AdminPage() {
   const {
     properties,
     bookings,
+    currency,
+    settings,
     formatPrice,
     addProperty,
     deleteProperty,
-    updateBookingStatus
+    updateBookingStatus,
+    updateSettings
   } = useProperties();
 
   const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'settings'>('listings');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [settingsSaved, setSettingsSaved] = useState(false);
 
   // Settings form state
-  const [razorpayKey, setRazorpayKey] = useState('rzp_test_98as7d6fa5sdf');
-  const [whatsappNumber, setWhatsappNumber] = useState('+91 98765 43210');
-  const [defaultTokenINR, setDefaultTokenINR] = useState(2000);
+  const [brandName, setBrandName] = useState(settings.brandName);
+  const [defaultCurrency, setDefaultCurrency] = useState<CurrencyCode>(settings.defaultCurrency);
+  const [vietQrBankName, setVietQrBankName] = useState(settings.vietQrBankName);
+  const [vietQrAccountNumber, setVietQrAccountNumber] = useState(settings.vietQrAccountNumber);
+  const [vietQrAccountHolder, setVietQrAccountHolder] = useState(settings.vietQrAccountHolder);
+  const [supportWhatsApp, setSupportWhatsApp] = useState(settings.supportWhatsApp);
+  const [supportHotline, setSupportHotline] = useState(settings.supportHotline);
+  const [stripeKey, setStripeKey] = useState(settings.stripePublishableKey);
+  const [razorpayKey, setRazorpayKey] = useState(settings.razorpayKeyId);
 
   // Add Property Form State
   const [newTitle, setNewTitle] = useState('');
-  const [newCity, setNewCity] = useState('Bengaluru');
-  const [newArea, setNewArea] = useState('');
+  const [newCountry, setNewCountry] = useState('Vietnam');
+  const [newCity, setNewCity] = useState('TP. Hồ Chí Minh');
+  const [newArea, setNewArea] = useState('Quận 10');
   const [newAddress, setNewAddress] = useState('');
-  const [newUniversity, setNewUniversity] = useState('Christ University (Central Campus)');
-  const [newDistance, setNewDistance] = useState('400m (5 mins walk)');
-  const [newRoomType, setNewRoomType] = useState<RoomType>('double');
-  const [newGender, setNewGender] = useState<GenderPreference>('boys');
-  const [newFoodType, setNewFoodType] = useState<FoodType>('pure_veg');
-  const [newPriceINR, setNewPriceINR] = useState(12000);
-  const [newDepositINR, setNewDepositINR] = useState(15000);
-  const [newTokenINR, setNewTokenINR] = useState(2000);
+  const [newUniversity, setNewUniversity] = useState('ĐH Bách Khoa TP.HCM');
+  const [newDistance, setNewDistance] = useState('300m (4 phút đi bộ)');
+  const [newRoomType, setNewRoomType] = useState<RoomType>('studio');
+  const [newGender, setNewGender] = useState<GenderPreference>('all');
+  const [newFoodPref, setNewFoodPref] = useState<FoodPreference>('self_cook');
+  const [newPriceUSD, setNewPriceUSD] = useState(180); // ~4.500.000 VND
+  const [newDepositUSD, setNewDepositUSD] = useState(180);
+  const [newTokenUSD, setNewTokenUSD] = useState(20); // ~500.000 VND
   const [newImageUrl, setNewImageUrl] = useState(
-    'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1200&q=80'
+    'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'
   );
   const [newDescription, setNewDescription] = useState('');
+  const [newCurfew, setNewCurfew] = useState('Giờ giấc tự do 24/7 (Khóa vân tay)');
 
-  // Total Token Revenue calculation
-  const totalRevenueINR = bookings
-    .filter((b) => b.paymentStatus === 'token_paid' || b.paymentStatus === 'confirmed')
-    .reduce((sum, b) => sum + b.tokenPaidINR, 0);
+  const totalRevenueUSD = bookings
+    .filter((b) => b.status === 'token_paid' || b.status === 'confirmed')
+    .reduce((sum, b) => sum + b.tokenAmountUSD, 0);
 
   const handleCreateProperty = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,53 +83,60 @@ export default function AdminPage() {
       slug: newTitle.toLowerCase().replace(/[^a-z0-9]/g, '-'),
       address: newAddress || `${newArea}, ${newCity}`,
       city: newCity,
-      area: newArea || 'Campus Area',
+      country: newCountry,
+      area: newArea,
       nearbyUniversity: newUniversity,
       distanceToCampus: newDistance,
       roomType: newRoomType,
       gender: newGender,
-      foodType: newFoodType,
-      pricePerMonthINR: Number(newPriceINR),
-      securityDepositINR: Number(newDepositINR),
-      tokenDepositINR: Number(newTokenINR),
+      foodPreference: newFoodPref,
+      pricePerMonthUSD: Number(newPriceUSD),
+      securityDepositUSD: Number(newDepositUSD),
+      tokenDepositUSD: Number(newTokenUSD),
       images: [newImageUrl],
-      description: newDescription || 'Fully furnished modern student PG with high speed WiFi and hygienic meals.',
+      description: newDescription || 'Phòng trọ sinh viên tiện nghi, an ninh, giờ giấc tự do.',
       highlights: [
-        'Zero Brokerage Direct Landlord',
-        `Near ${newUniversity}`,
-        'High Speed WiFi & Housekeeping'
+        '0% Phí môi giới làm việc trực tiếp',
+        `Gần ${newUniversity}`,
+        'Khóa cửa an ninh, wifi tốc độ cao'
       ],
       amenities: [
-        'High-Speed WiFi',
-        'Air Conditioner',
-        'Attached Bathroom',
-        'Study Table & Chair',
-        'Power Backup'
+        'Wifi tốc độ cao',
+        'Máy lạnh Inverter',
+        'Vệ sinh khép kín',
+        'Bếp riêng tự nấu',
+        'Bãi đỗ xe an ninh'
       ],
-      curfewTime: '10:30 PM',
+      curfewTime: newCurfew,
+      availableBeds: 2,
       isVerified: true,
       isZeroBrokerage: true,
-      availableRooms: 3,
-      landlord: {
-        name: user?.name || 'Verified Landlord',
-        phoneWhatsApp: whatsappNumber,
-        badge: 'Owner Certified'
-      }
+      isPublished: true,
+      landlordName: user?.name || 'Chủ trọ trực tiếp',
+      landlordContact: supportWhatsApp || '0901234567'
     });
 
     setShowAddModal(false);
-    // Reset form
     setNewTitle('');
-    setNewArea('');
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
+    updateSettings({
+      brandName,
+      defaultCurrency,
+      vietQrBankName,
+      vietQrAccountNumber,
+      vietQrAccountHolder,
+      supportWhatsApp,
+      supportHotline,
+      stripePublishableKey: stripeKey,
+      razorpayKeyId: razorpayKey
+    });
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 2500);
   };
 
-  // If user is currently in student mode, offer quick switch
   if (user?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -132,21 +145,21 @@ export default function AdminPage() {
             <Lock className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Admin Mode Required</h3>
+            <h3 className="text-xl font-bold text-slate-900">Yêu cầu quyền Quản Trị</h3>
             <p className="text-xs text-slate-500 mt-1">
-              You are currently viewing the website in <strong>Student Mode</strong> ({user?.name || 'Guest'}).
-              Switch to <strong>Admin Mode</strong> to manage properties and view student leads.
+              Bạn đang ở góc nhìn <strong>Khách thuê</strong> ({user?.name || 'Khách vãng lai'}).
+              Bấm nút dưới để chuyển sang <strong>Chủ trọ / Admin</strong> để quản lý danh sách phòng và khách đặt cọc.
             </p>
           </div>
           <button
             onClick={() => switchRole('admin')}
             className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition-all"
           >
-            Switch to Admin Role Now
+            Chuyển Sang Quyền Admin Ngay
           </button>
           <div>
             <Link href="/" className="text-xs text-slate-400 hover:text-slate-600">
-              Return to Student View
+              Quay lại trang xem phòng
             </Link>
           </div>
         </div>
@@ -161,130 +174,129 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-xs text-orange-400 font-bold uppercase tracking-wider mb-1">
-                <ShieldCheck className="w-4 h-4 text-orange-400" />
-                <span>Housing Management Portal</span>
+              <div className="flex items-center gap-2 text-xs text-indigo-400 font-bold uppercase tracking-wider mb-1">
+                <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                <span>Bảng Điều Khiển Quản Trị • Admin Portal</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-                Welcome back, {user?.name.split(' ')[0]} 👋
+                Xin chào, {user?.name.split(' ')[0]} 👋
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                Oversee listings, monitor student token deposits, and manage lead conversations.
+                Quản lý kho phòng trọ, theo dõi sinh viên đặt cọc giữ chỗ, và cấu hình thông tin ngân hàng.
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowAddModal(true)}
-                className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition-transform active:scale-95"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add New Listing</span>
+                <span>Thêm Phòng Mới</span>
               </button>
               <Link
                 href="/"
                 className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition-colors"
               >
-                View Live Site
+                Xem Website
               </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* KPI Stats Cards (Negative margin for overlapping effect) */}
+      {/* KPI Stats Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Total Active PGs</span>
+          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
+            <span className="text-xs font-semibold text-slate-500 block">Tổng số phòng trọ</span>
             <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
               {properties.length}
             </div>
-            <span className="text-[11px] text-emerald-600 font-semibold">100% Zero Brokerage</span>
+            <span className="text-[11px] text-emerald-600 font-semibold">Đang hoạt động trực tuyến</span>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Student Inquiries / Leads</span>
+          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
+            <span className="text-xs font-semibold text-slate-500 block">Khách đặt lịch &amp; Lead</span>
             <div className="text-2xl sm:text-3xl font-black text-indigo-600 mt-1">
               {bookings.length}
             </div>
-            <span className="text-[11px] text-slate-400">From WhatsApp &amp; Web</span>
+            <span className="text-[11px] text-slate-400">Từ Web &amp; VietQR / Zalo</span>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Token Deposits Collected</span>
+          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
+            <span className="text-xs font-semibold text-slate-500 block">Tiền cọc Token đã thu</span>
             <div className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">
-              {formatPrice(totalRevenueINR)}
+              {formatPrice(totalRevenueUSD)}
             </div>
-            <span className="text-[11px] text-emerald-700 font-semibold">Via Razorpay / UPI</span>
+            <span className="text-[11px] text-emerald-700 font-semibold">Tự động quy đổi theo {currency}</span>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Lead Conversion Rate</span>
-            <div className="text-2xl sm:text-3xl font-black text-orange-600 mt-1">
-              74.2%
+          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
+            <span className="text-xs font-semibold text-slate-500 block">Tiền tệ mặc định</span>
+            <div className="text-2xl sm:text-3xl font-black text-indigo-600 mt-1">
+              {currency}
             </div>
-            <span className="text-[11px] text-orange-700 font-semibold">High student intent</span>
+            <span className="text-[11px] text-indigo-600 font-semibold">Đổi được trong Settings</span>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="flex border-b border-slate-200 gap-6 text-sm font-bold">
           <button
             onClick={() => setActiveTab('listings')}
             className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 ${
               activeTab === 'listings'
-                ? 'border-orange-600 text-orange-600'
+                ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Manage Properties ({properties.length})</span>
+            <span>Quản Lý Phòng Trọ ({properties.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('leads')}
             className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 ${
               activeTab === 'leads'
-                ? 'border-orange-600 text-orange-600'
+                ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Student Bookings &amp; Leads ({bookings.length})</span>
+            <span>Khách Đặt Cọc &amp; Lịch Hẹn ({bookings.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('settings')}
             className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 ${
               activeTab === 'settings'
-                ? 'border-orange-600 text-orange-600'
+                ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <Settings className="w-4 h-4" />
-            <span>Payment &amp; WhatsApp Settings</span>
+            <span>Cấu Hình VietQR &amp; Cổng Thanh Toán</span>
           </button>
         </div>
 
-        {/* Tab 1: Properties List */}
+        {/* Tab 1: Listings */}
         {activeTab === 'listings' && (
           <div className="mt-6 space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                     <tr>
-                      <th className="p-4">Property</th>
-                      <th className="p-4">City / Area</th>
-                      <th className="p-4">Nearby Campus</th>
-                      <th className="p-4">Sharing</th>
-                      <th className="p-4">Food</th>
-                      <th className="p-4">Rent</th>
-                      <th className="p-4">Token</th>
-                      <th className="p-4 text-right">Actions</th>
+                      <th className="p-4">Phòng trọ</th>
+                      <th className="p-4">Quốc gia / Thành phố</th>
+                      <th className="p-4">Trường ĐH gần nhất</th>
+                      <th className="p-4">Loại phòng</th>
+                      <th className="p-4">Giá thuê / tháng</th>
+                      <th className="p-4">Cọc giữ phòng</th>
+                      <th className="p-4 text-right">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -294,10 +306,10 @@ export default function AdminPage() {
                           <img
                             src={prop.images[0]}
                             alt=""
-                            className="w-12 h-10 object-cover rounded-lg shrink-0"
+                            className="w-12 h-10 object-cover rounded-xl shrink-0"
                           />
                           <div>
-                            <span className="font-bold text-slate-900 block truncate max-w-[200px]">
+                            <span className="font-bold text-slate-900 block truncate max-w-[220px]">
                               {prop.title}
                             </span>
                             <span className="font-mono text-[10px] text-slate-400">
@@ -305,33 +317,24 @@ export default function AdminPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="p-4 text-slate-600 font-medium">{prop.city}</td>
-                        <td className="p-4 text-indigo-700 font-medium truncate max-w-[160px]">
+                        <td className="p-4 text-slate-600 font-medium">
+                          {prop.city}, <span className="font-semibold text-slate-800">{prop.country}</span>
+                        </td>
+                        <td className="p-4 text-indigo-700 font-medium truncate max-w-[180px]">
                           {prop.nearbyUniversity}
                         </td>
-                        <td className="p-4 capitalize">{prop.roomType}</td>
-                        <td className="p-4 capitalize">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              prop.foodType === 'pure_veg'
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-slate-100 text-slate-700'
-                            }`}
-                          >
-                            {prop.foodType.replace('_', ' ')}
-                          </span>
-                        </td>
+                        <td className="p-4 uppercase font-semibold text-slate-700">{prop.roomType}</td>
                         <td className="p-4 font-bold text-slate-900">
-                          {formatPrice(prop.pricePerMonthINR)}
+                          {formatPrice(prop.pricePerMonthUSD)}
                         </td>
-                        <td className="p-4 font-bold text-orange-600">
-                          {formatPrice(prop.tokenDepositINR)}
+                        <td className="p-4 font-bold text-indigo-600">
+                          {formatPrice(prop.tokenDepositUSD)}
                         </td>
                         <td className="p-4 text-right">
                           <button
                             onClick={() => deleteProperty(prop.id)}
-                            title="Delete Listing"
-                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                            title="Xóa phòng"
+                            className="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -345,21 +348,22 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Tab 2: Bookings & Leads */}
+        {/* Tab 2: Leads */}
         {activeTab === 'leads' && (
           <div className="mt-6 space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                     <tr>
-                      <th className="p-4">Student Name</th>
-                      <th className="p-4">College / Uni</th>
-                      <th className="p-4">Property</th>
-                      <th className="p-4">Move-in</th>
-                      <th className="p-4">Token Paid</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Contact</th>
+                      <th className="p-4">Khách thuê</th>
+                      <th className="p-4">Trường học / Công ty</th>
+                      <th className="p-4">Mã phòng</th>
+                      <th className="p-4">Ngày nhận phòng</th>
+                      <th className="p-4">Cọc giữ chỗ</th>
+                      <th className="p-4">Phương thức</th>
+                      <th className="p-4">Trạng thái</th>
+                      <th className="p-4 text-right">Liên hệ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -367,44 +371,47 @@ export default function AdminPage() {
                       <tr key={lead.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="p-4">
                           <span className="font-bold text-slate-900 block">{lead.studentName}</span>
-                          <span className="text-[10px] text-slate-400">{lead.studentEmail}</span>
+                          <span className="text-[10px] text-slate-400">{lead.studentContact}</span>
                         </td>
-                        <td className="p-4 text-slate-700 font-medium">{lead.universityOrCollege}</td>
+                        <td className="p-4 text-slate-700 font-medium">{lead.college}</td>
                         <td className="p-4">
-                          <span className="font-bold text-slate-800">{lead.propertyCode}</span>
+                          <span className="font-bold text-indigo-700 font-mono">{lead.propertyCode}</span>
                         </td>
                         <td className="p-4 text-slate-600 font-medium">{lead.moveInDate}</td>
                         <td className="p-4 font-bold text-emerald-700">
-                          {formatPrice(lead.tokenPaidINR)}
+                          {lead.tokenAmountLocal || formatPrice(lead.tokenAmountUSD)}
+                        </td>
+                        <td className="p-4 capitalize text-slate-600 font-medium">
+                          {lead.paymentMethod.replace('_', ' ')}
                         </td>
                         <td className="p-4">
                           <select
-                            value={lead.paymentStatus}
+                            value={lead.status}
                             onChange={(e) =>
                               updateBookingStatus(
                                 lead.id,
                                 e.target.value as 'pending' | 'token_paid' | 'confirmed' | 'cancelled'
                               )
                             }
-                            className="px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none"
+                            className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
                           >
-                            <option value="token_paid">Paid Token</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="pending">Pending</option>
-                            <option value="cancelled">Cancelled</option>
+                            <option value="token_paid">Đã cọc Token</option>
+                            <option value="confirmed">Đã chốt phòng</option>
+                            <option value="pending">Chờ thanh toán</option>
+                            <option value="cancelled">Đã hủy</option>
                           </select>
                         </td>
                         <td className="p-4 text-right">
                           <a
-                            href={`https://wa.me/${lead.studentWhatsApp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                              `Hello ${lead.studentName}, this is regarding your room booking (${lead.propertyCode}) on YuvaStays.`
+                            href={`https://wa.me/${lead.studentContact.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                              `Chào ${lead.studentName}, tôi liên hệ từ ban quản trị phòng ${lead.propertyCode} để xác nhận lịch hẹn nhận phòng của bạn.`
                             )}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-200 hover:bg-emerald-100"
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200 hover:bg-emerald-100"
                           >
                             <Phone className="w-3 h-3 text-emerald-600" />
-                            <span>WhatsApp</span>
+                            <span>Nhắn tin</span>
                           </a>
                         </td>
                       </tr>
@@ -418,66 +425,137 @@ export default function AdminPage() {
 
         {/* Tab 3: Settings */}
         {activeTab === 'settings' && (
-          <div className="mt-6 max-w-2xl bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+          <div className="mt-6 max-w-3xl bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Payment &amp; Gateway Configuration</h3>
+              <h3 className="text-lg font-bold text-slate-900">Cấu Hình Ngân Hàng VietQR &amp; Thanh Toán Toàn Cầu</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Configure your Razorpay UPI keys and WhatsApp business alerts.
+                Thiết lập thông tin tài khoản ngân hàng để tự động tạo mã VietQR cho khách thuê tại Việt Nam, hoặc cổng thanh toán quốc tế.
               </p>
             </div>
 
             {settingsSaved && (
-              <div className="p-3 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2">
+              <div className="p-3 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-emerald-600" />
-                <span>Settings successfully saved!</span>
+                <span>Đã lưu toàn bộ cấu hình thành công!</span>
               </div>
             )}
 
             <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Razorpay Key ID (For Indian UPI &amp; Cards)
-                </label>
-                <input
-                  type="text"
-                  value={razorpayKey}
-                  onChange={(e) => setRazorpayKey(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                />
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  Find this in your Razorpay Dashboard &gt; Settings &gt; API Keys
-                </span>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Tên Thương Hiệu (Brand Name)</label>
+                  <input
+                    type="text"
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Tiền tệ hiển thị mặc định</label>
+                  <select
+                    value={defaultCurrency}
+                    onChange={(e) => setDefaultCurrency(e.target.value as CurrencyCode)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                  >
+                    <option value="VND">VND (₫) – Việt Nam</option>
+                    <option value="USD">USD ($) – Quốc Tế</option>
+                    <option value="INR">INR (₹) – Ấn Độ</option>
+                    <option value="EUR">EUR (€) – Châu Âu</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Owner WhatsApp Number (Receives booking notices)
-                </label>
-                <input
-                  type="text"
-                  value={whatsappNumber}
-                  onChange={(e) => setWhatsappNumber(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                />
+              {/* VietQR Section */}
+              <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-200 space-y-3">
+                <div className="flex items-center gap-2 text-indigo-900 font-bold text-sm">
+                  <QrCode className="w-4 h-4 text-indigo-600" />
+                  <span>Cấu hình Chuyển khoản VietQR (Napas 24/7)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Tên Ngân Hàng</label>
+                    <input
+                      type="text"
+                      value={vietQrBankName}
+                      onChange={(e) => setVietQrBankName(e.target.value)}
+                      placeholder="Vietcombank, MB Bank,..."
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Số Tài Khoản</label>
+                    <input
+                      type="text"
+                      value={vietQrAccountNumber}
+                      onChange={(e) => setVietQrAccountNumber(e.target.value)}
+                      placeholder="1029384756"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Tên Chủ Tài Khoản</label>
+                    <input
+                      type="text"
+                      value={vietQrAccountHolder}
+                      onChange={(e) => setVietQrAccountHolder(e.target.value)}
+                      placeholder="NGUYEN VAN A"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl uppercase font-mono"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Default Token Deposit Amount (INR ₹)
-                </label>
-                <input
-                  type="number"
-                  value={defaultTokenINR}
-                  onChange={(e) => setDefaultTokenINR(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                />
+              {/* International Gateways */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Stripe Publishable Key (Thẻ quốc tế)</label>
+                  <input
+                    type="text"
+                    value={stripeKey}
+                    onChange={(e) => setStripeKey(e.target.value)}
+                    placeholder="pk_live_..."
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Razorpay Key ID (Thị trường Ấn Độ)</label>
+                  <input
+                    type="text"
+                    value={razorpayKey}
+                    onChange={(e) => setRazorpayKey(e.target.value)}
+                    placeholder="rzp_live_..."
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Hotline / Zalo liên hệ</label>
+                  <input
+                    type="text"
+                    value={supportHotline}
+                    onChange={(e) => setSupportHotline(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">WhatsApp Chủ Trọ</label>
+                  <input
+                    type="text"
+                    value={supportWhatsApp}
+                    onChange={(e) => setSupportWhatsApp(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-sm transition-all"
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition-all"
               >
-                Save Settings
+                Lưu Toàn Bộ Cấu Hình
               </button>
             </form>
           </div>
@@ -489,7 +567,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
-              <h3 className="text-base font-bold">List a New Student PG / Accommodation</h3>
+              <h3 className="text-base font-bold">Thêm Phòng Trọ Mới Vào Hệ Thống</h3>
               <button
                 onClick={() => setShowAddModal(false)}
                 className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
@@ -500,37 +578,45 @@ export default function AdminPage() {
 
             <form onSubmit={handleCreateProperty} className="p-6 overflow-y-auto space-y-4 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Property Name *</label>
+                <label className="font-bold text-slate-700 block mb-1">Tiêu đề phòng trọ *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Royal Oxford Student PG"
+                  placeholder="Ví dụ: Căn hộ Studio cao cấp gần ĐH Bách Khoa"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">City *</label>
+                  <label className="font-bold text-slate-700 block mb-1">Quốc gia</label>
                   <select
-                    value={newCity}
-                    onChange={(e) => setNewCity(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    value={newCountry}
+                    onChange={(e) => setNewCountry(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="Bengaluru">Bengaluru</option>
-                    <option value="Pune">Pune</option>
-                    <option value="Delhi NCR">Delhi NCR</option>
-                    <option value="Kota">Kota</option>
-                    <option value="Can Tho / Vietnam Hub">Can Tho / Vietnam Hub</option>
+                    <option value="Vietnam">Việt Nam</option>
+                    <option value="India">Ấn Độ</option>
+                    <option value="Australia">Úc (Australia)</option>
+                    <option value="United Kingdom">Vương Quốc Anh</option>
+                    <option value="Global">Khác / Toàn Cầu</option>
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Area / Locality</label>
+                  <label className="font-bold text-slate-700 block mb-1">Thành phố</label>
                   <input
                     type="text"
-                    placeholder="e.g. Koramangala 4th Block"
+                    value={newCity}
+                    onChange={(e) => setNewCity(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Quận / Khu vực</label>
+                  <input
+                    type="text"
                     value={newArea}
                     onChange={(e) => setNewArea(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -540,7 +626,7 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Nearby University</label>
+                  <label className="font-bold text-slate-700 block mb-1">Trường ĐH gần nhất</label>
                   <input
                     type="text"
                     value={newUniversity}
@@ -549,7 +635,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Distance (Walk time)</label>
+                  <label className="font-bold text-slate-700 block mb-1">Khoảng cách (Đi bộ / Xe máy)</label>
                   <input
                     type="text"
                     value={newDistance}
@@ -561,77 +647,82 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Sharing Type</label>
+                  <label className="font-bold text-slate-700 block mb-1">Loại phòng</label>
                   <select
                     value={newRoomType}
                     onChange={(e) => setNewRoomType(e.target.value as RoomType)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   >
-                    <option value="single">Single</option>
-                    <option value="double">Twin Sharing</option>
-                    <option value="triple">Triple</option>
-                    <option value="studio">Studio</option>
+                    <option value="studio">Căn hộ Studio</option>
+                    <option value="single">Phòng đơn / Sleepbox</option>
+                    <option value="double">Phòng ở ghép 2 người</option>
+                    <option value="triple">Phòng 3 người</option>
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Gender</label>
+                  <label className="font-bold text-slate-700 block mb-1">Đối tượng ở</label>
                   <select
                     value={newGender}
                     onChange={(e) => setNewGender(e.target.value as GenderPreference)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   >
-                    <option value="boys">Boys Only</option>
-                    <option value="girls">Girls Only</option>
-                    <option value="all">Co-Ed</option>
+                    <option value="all">Nam / Nữ (Chung)</option>
+                    <option value="boys">Chỉ Nam</option>
+                    <option value="girls">Chỉ Nữ</option>
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Food / Mess</label>
-                  <select
-                    value={newFoodType}
-                    onChange={(e) => setNewFoodType(e.target.value as FoodType)}
+                  <label className="font-bold text-slate-700 block mb-1">Giờ giấc</label>
+                  <input
+                    type="text"
+                    value={newCurfew}
+                    onChange={(e) => setNewCurfew(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                  >
-                    <option value="pure_veg">Pure Veg Mess</option>
-                    <option value="jain_available">Jain Food Available</option>
-                    <option value="non_veg">Veg & Non-Veg</option>
-                    <option value="self_cook">Self Cook Kitchen</option>
-                  </select>
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Monthly Rent (₹)</label>
+                  <label className="font-bold text-slate-700 block mb-1">Giá thuê (tương đương USD)</label>
                   <input
                     type="number"
-                    value={newPriceINR}
-                    onChange={(e) => setNewPriceINR(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    value={newPriceUSD}
+                    onChange={(e) => setNewPriceUSD(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Hiển thị: {formatPrice(newPriceUSD)}
+                  </span>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Security Deposit (₹)</label>
+                  <label className="font-bold text-slate-700 block mb-1">Tiền cọc đảm bảo (USD)</label>
                   <input
                     type="number"
-                    value={newDepositINR}
-                    onChange={(e) => setNewDepositINR(Number(e.target.value))}
+                    value={newDepositUSD}
+                    onChange={(e) => setNewDepositUSD(Number(e.target.value))}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Hiển thị: {formatPrice(newDepositUSD)}
+                  </span>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Holding Token (₹)</label>
+                  <label className="font-bold text-slate-700 block mb-1">Cọc giữ phòng Token (USD)</label>
                   <input
                     type="number"
-                    value={newTokenINR}
-                    onChange={(e) => setNewTokenINR(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    value={newTokenUSD}
+                    onChange={(e) => setNewTokenUSD(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-indigo-700"
                   />
+                  <span className="text-[10px] text-indigo-600 mt-0.5 block">
+                    Hiển thị: {formatPrice(newTokenUSD)}
+                  </span>
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Image URL</label>
+                <label className="font-bold text-slate-700 block mb-1">Link ảnh chụp phòng (URL)</label>
                 <input
                   type="text"
                   value={newImageUrl}
@@ -641,12 +732,12 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Description</label>
+                <label className="font-bold text-slate-700 block mb-1">Mô tả phòng trọ</label>
                 <textarea
                   rows={3}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Describe the rooms, food menu, and surroundings..."
+                  placeholder="Mô tả nội thất, bếp, khu vực phơi đồ, camera an ninh..."
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                 />
               </div>
@@ -657,13 +748,13 @@ export default function AdminPage() {
                   onClick={() => setShowAddModal(false)}
                   className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold"
                 >
-                  Cancel
+                  Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-md"
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md"
                 >
-                  Publish Listing
+                  Đăng Phòng Lên Website
                 </button>
               </div>
             </form>

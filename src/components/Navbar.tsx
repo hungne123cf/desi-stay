@@ -4,121 +4,154 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
+import { CurrencyCode } from '@/types';
 import {
-  Home,
+  Building2,
   ShieldCheck,
   User as UserIcon,
   LogOut,
-  Building,
   Menu,
   X,
-  PhoneCall,
-  Sparkles,
-  ArrowRight
+  Globe2,
+  ChevronDown
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, logout, switchRole } = useAuth();
-  const { currency, toggleCurrency } = useProperties();
+  const { currency, setCurrency, settings } = useProperties();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
+  const currencies: { code: CurrencyCode; label: string; symbol: string }[] = [
+    { code: 'VND', label: 'Việt Nam Đồng', symbol: '₫' },
+    { code: 'USD', label: 'US Dollar', symbol: '$' },
+    { code: 'INR', label: 'Indian Rupee', symbol: '₹' },
+    { code: 'EUR', label: 'Euro', symbol: '€' }
+  ];
+
   return (
-    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-600 via-orange-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
-              <Building className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-blue-600 to-emerald-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+              <Building2 className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-2xl font-black tracking-tight text-slate-900">
-                  Yuva<span className="text-orange-600">Stays</span>
+                  {settings.brandName || 'UniStay'}
                 </span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
-                  .IN
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase">
+                  Global
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium -mt-0.5">
-                Student Housing & PGs
+              <p className="text-[11px] text-slate-500 font-medium -mt-0.5 truncate max-w-[180px]">
+                {settings.tagline || 'Student Housing & Co-Living'}
               </p>
             </div>
           </Link>
 
           {/* Desktop Nav Links */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
-            <Link href="/" className="hover:text-orange-600 transition-colors flex items-center gap-1">
-              <Home className="w-4 h-4 text-slate-400" />
-              Explore PGs
+            <Link href="/" className="hover:text-indigo-600 transition-colors">
+              Khám phá phòng trọ / Explore
             </Link>
-            <a href="#cities" className="hover:text-orange-600 transition-colors">
-              Campus Hubs
+            <a href="#cities" className="hover:text-indigo-600 transition-colors">
+              Khu vực trường ĐH / Campuses
             </a>
-            <a href="#benefits" className="hover:text-orange-600 transition-colors">
-              Pure Veg & Safety
+            <a href="#benefits" className="hover:text-indigo-600 transition-colors">
+              Tiện ích &amp; An ninh
             </a>
             <Link
               href="/admin"
-              className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full border border-indigo-200 transition-colors"
+              className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-full border border-indigo-200 transition-colors"
             >
               <ShieldCheck className="w-4 h-4 text-indigo-600" />
-              Admin Portal
+              <span>Admin Portal</span>
             </Link>
           </nav>
 
           {/* Right Action buttons */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Currency Toggle */}
-            <button
-              onClick={toggleCurrency}
-              title="Click to toggle Currency (INR ₹ / USD $)"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors"
-            >
-              <span className="text-orange-600 font-extrabold">{currency === 'INR' ? '₹ INR' : '$ USD'}</span>
-              <span className="text-[10px] text-slate-400">Switch</span>
-            </button>
+            {/* Multi-Currency Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setCurrencyDropdownOpen(!currencyDropdownOpen)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-all"
+              >
+                <Globe2 className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="text-indigo-600 font-black">{currency}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+
+              {currencyDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 text-xs">
+                  <p className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Chọn loại tiền tệ / Currency
+                  </p>
+                  {currencies.map((c) => (
+                    <button
+                      key={c.code}
+                      onClick={() => {
+                        setCurrency(c.code);
+                        setCurrencyDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between transition-colors ${
+                        currency === c.code
+                          ? 'bg-indigo-50 text-indigo-700 font-bold'
+                          : 'hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <span>{c.code} ({c.symbol})</span>
+                      <span className="text-[10px] text-slate-400">{c.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Role Demo Switcher */}
             <div className="relative">
               <button
                 onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Role: <strong className="capitalize text-slate-900">{user?.role || 'Guest'}</strong></span>
               </button>
 
               {roleDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50 text-xs">
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 text-xs">
                   <div className="p-2 border-b border-slate-100 mb-1">
-                    <p className="font-bold text-slate-800">Quick Role Switch (Demo)</p>
-                    <p className="text-slate-500 text-[11px]">Experience the site as a student or as the property admin</p>
+                    <p className="font-bold text-slate-800">Chuyển quyền nhanh (Demo)</p>
+                    <p className="text-slate-500 text-[11px]">Trải nghiệm góc nhìn Khách thuê hoặc Chủ trọ</p>
                   </div>
                   <button
                     onClick={() => {
                       switchRole('student');
                       setRoleDropdownOpen(false);
                     }}
-                    className={`w-full text-left p-2 rounded-lg flex items-center justify-between transition-colors ${
-                      user?.role === 'student' ? 'bg-orange-50 text-orange-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors ${
+                      user?.role === 'student' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <span>🎓 Student Mode</span>
-                    {user?.role === 'student' && <span className="text-[10px] bg-orange-200 px-1.5 py-0.5 rounded">Active</span>}
+                    <span>🎓 Khách thuê / Sinh viên</span>
+                    {user?.role === 'student' && <span className="text-[10px] bg-indigo-200 px-1.5 py-0.5 rounded">Active</span>}
                   </button>
                   <button
                     onClick={() => {
                       switchRole('admin');
                       setRoleDropdownOpen(false);
                     }}
-                    className={`w-full text-left p-2 rounded-lg flex items-center justify-between transition-colors ${
-                      user?.role === 'admin' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors ${
+                      user?.role === 'admin' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <span>👑 Admin / Owner Mode</span>
-                    {user?.role === 'admin' && <span className="text-[10px] bg-indigo-200 px-1.5 py-0.5 rounded">Active</span>}
+                    <span>👑 Chủ trọ / Admin Quản lý</span>
+                    {user?.role === 'admin' && <span className="text-[10px] bg-emerald-200 px-1.5 py-0.5 rounded">Active</span>}
                   </button>
                 </div>
               )}
@@ -142,10 +175,10 @@ export const Navbar: React.FC = () => {
             ) : (
               <Link
                 href="/auth/login"
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 rounded-xl shadow-sm transition-all"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all"
               >
                 <UserIcon className="w-4 h-4" />
-                Sign In
+                Đăng Nhập
               </Link>
             )}
           </div>
@@ -153,8 +186,11 @@ export const Navbar: React.FC = () => {
           {/* Mobile hamburger */}
           <div className="flex md:hidden items-center gap-2">
             <button
-              onClick={toggleCurrency}
-              className="px-2 py-1 text-xs font-bold rounded border border-slate-200 bg-slate-50 text-orange-600"
+              onClick={() => {
+                const next: CurrencyCode = currency === 'VND' ? 'USD' : currency === 'USD' ? 'INR' : 'VND';
+                setCurrency(next);
+              }}
+              className="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-200 bg-slate-50 text-indigo-600"
             >
               {currency}
             </button>
@@ -176,22 +212,22 @@ export const Navbar: React.FC = () => {
             onClick={() => setMobileMenuOpen(false)}
             className="block py-2 text-sm font-semibold text-slate-800 border-b border-slate-100"
           >
-            Explore PGs & Hostels
+            Tìm phòng trọ &amp; Ký túc xá
           </Link>
           <Link
             href="/admin"
             onClick={() => setMobileMenuOpen(false)}
             className="block py-2 text-sm font-bold text-indigo-700 border-b border-slate-100"
           >
-            Admin Management Portal
+            Trang Quản Trị (Admin Portal)
           </Link>
           <div className="pt-2 flex items-center justify-between">
-            <span className="text-xs text-slate-500">Current Role: <strong>{user?.role}</strong></span>
+            <span className="text-xs text-slate-500">Vai trò hiện tại: <strong>{user?.role}</strong></span>
             <button
               onClick={() => switchRole(user?.role === 'admin' ? 'student' : 'admin')}
-              className="text-xs font-bold text-orange-600 underline"
+              className="text-xs font-bold text-indigo-600 underline"
             >
-              Switch to {user?.role === 'admin' ? 'Student' : 'Admin'}
+              Chuyển sang {user?.role === 'admin' ? 'Khách thuê' : 'Chủ trọ'}
             </button>
           </div>
           {user ? (
@@ -199,15 +235,15 @@ export const Navbar: React.FC = () => {
               onClick={logout}
               className="w-full mt-2 py-2 text-center text-sm font-bold text-red-600 bg-red-50 rounded-lg"
             >
-              Log Out ({user.name})
+              Đăng xuất ({user.name})
             </button>
           ) : (
             <Link
               href="/auth/login"
               onClick={() => setMobileMenuOpen(false)}
-              className="block w-full py-2.5 text-center text-sm font-bold text-white bg-orange-600 rounded-lg"
+              className="block w-full py-2.5 text-center text-sm font-bold text-white bg-indigo-600 rounded-lg"
             >
-              Sign In with Google / Email
+              Đăng nhập bằng Google / Email
             </Link>
           )}
         </div>
