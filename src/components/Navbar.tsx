@@ -17,11 +17,10 @@ import {
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout } = useAuth();
   const { currency, setCurrency, settings } = useProperties();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
   const currencies: { code: CurrencyCode; label: string; symbol: string }[] = [
     { code: 'VND', label: 'Việt Nam Đồng', symbol: '₫' },
@@ -57,21 +56,23 @@ export const Navbar: React.FC = () => {
           {/* Desktop Nav Links */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
             <Link href="/" className="hover:text-indigo-600 transition-colors">
-              Khám phá phòng trọ / Explore
+              Khám phá phòng trọ
             </Link>
             <a href="#cities" className="hover:text-indigo-600 transition-colors">
-              Khu vực trường ĐH / Campuses
+              Khu vực trường ĐH
             </a>
             <a href="#benefits" className="hover:text-indigo-600 transition-colors">
               Tiện ích &amp; An ninh
             </a>
-            <Link
-              href="/admin"
-              className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-full border border-indigo-200 transition-colors"
-            >
-              <ShieldCheck className="w-4 h-4 text-indigo-600" />
-              <span>Admin Portal</span>
-            </Link>
+            {user?.role === 'admin' && (
+              <Link
+                href="/admin"
+                className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-full border border-indigo-200 transition-colors"
+              >
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <span>Admin Portal</span>
+              </Link>
+            )}
           </nav>
 
           {/* Right Action buttons */}
@@ -80,7 +81,7 @@ export const Navbar: React.FC = () => {
             <div className="relative">
               <button
                 onClick={() => setCurrencyDropdownOpen(!currencyDropdownOpen)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-all cursor-pointer"
               >
                 <Globe2 className="w-3.5 h-3.5 text-indigo-600" />
                 <span className="text-indigo-600 font-black">{currency}</span>
@@ -99,7 +100,7 @@ export const Navbar: React.FC = () => {
                         setCurrency(c.code);
                         setCurrencyDropdownOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between transition-colors ${
+                      className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
                         currency === c.code
                           ? 'bg-indigo-50 text-indigo-700 font-bold'
                           : 'hover:bg-slate-50 text-slate-700'
@@ -113,61 +114,27 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* Role Demo Switcher */}
-            <div className="relative">
-              <button
-                onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Role: <strong className="capitalize text-slate-900">{user?.role || 'Guest'}</strong></span>
-              </button>
-
-              {roleDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 text-xs">
-                  <div className="p-2 border-b border-slate-100 mb-1">
-                    <p className="font-bold text-slate-800">Chuyển quyền nhanh (Demo)</p>
-                    <p className="text-slate-500 text-[11px]">Trải nghiệm góc nhìn Khách thuê hoặc Chủ trọ</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      switchRole('student');
-                      setRoleDropdownOpen(false);
-                    }}
-                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors ${
-                      user?.role === 'student' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <span>🎓 Khách thuê / Sinh viên</span>
-                    {user?.role === 'student' && <span className="text-[10px] bg-indigo-200 px-1.5 py-0.5 rounded">Active</span>}
-                  </button>
-                  <button
-                    onClick={() => {
-                      switchRole('admin');
-                      setRoleDropdownOpen(false);
-                    }}
-                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors ${
-                      user?.role === 'admin' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <span>👑 Chủ trọ / Admin Quản lý</span>
-                    {user?.role === 'admin' && <span className="text-[10px] bg-emerald-200 px-1.5 py-0.5 rounded">Active</span>}
-                  </button>
-                </div>
-              )}
-            </div>
-
             {/* User Profile or Login */}
             {user ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
                 <div className="text-right">
-                  <p className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">{user.name}</p>
-                  <p className="text-[10px] text-slate-500 capitalize">{user.role}</p>
+                  <p className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[140px]">{user.name}</p>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    {user.role === 'admin' ? '👑 Quản Trị Viên' : 'Khách Thuê'}
+                  </p>
                 </div>
+                {user.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100"
+                  >
+                    Admin
+                  </Link>
+                )}
                 <button
                   onClick={logout}
-                  title="Logout"
-                  className="p-2 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                  title="Đăng xuất"
+                  className="p-2 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -206,37 +173,55 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3">
+        <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-3">
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-sm font-semibold text-slate-800 border-b border-slate-100"
+            className="block py-2 text-sm font-medium text-slate-700 border-b border-slate-100"
           >
-            Tìm phòng trọ &amp; Ký túc xá
+            Khám phá phòng trọ
           </Link>
-          <Link
-            href="/admin"
+          <a
+            href="#cities"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-sm font-bold text-indigo-700 border-b border-slate-100"
+            className="block py-2 text-sm font-medium text-slate-700 border-b border-slate-100"
           >
-            Trang Quản Trị (Admin Portal)
-          </Link>
-          <div className="pt-2 flex items-center justify-between">
-            <span className="text-xs text-slate-500">Vai trò hiện tại: <strong>{user?.role}</strong></span>
-            <button
-              onClick={() => switchRole(user?.role === 'admin' ? 'student' : 'admin')}
-              className="text-xs font-bold text-indigo-600 underline"
+            Khu vực trường ĐH
+          </a>
+          <a
+            href="#benefits"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block py-2 text-sm font-medium text-slate-700 border-b border-slate-100"
+          >
+            Tiện ích &amp; An ninh
+          </a>
+          {user?.role === 'admin' && (
+            <Link
+              href="/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-sm font-bold text-indigo-700 border-b border-slate-100"
             >
-              Chuyển sang {user?.role === 'admin' ? 'Khách thuê' : 'Chủ trọ'}
-            </button>
-          </div>
+              Trang Quản Trị (Admin Portal)
+            </Link>
+          )}
           {user ? (
-            <button
-              onClick={logout}
-              className="w-full mt-2 py-2 text-center text-sm font-bold text-red-600 bg-red-50 rounded-lg"
-            >
-              Đăng xuất ({user.name})
-            </button>
+            <div className="pt-2">
+              <div className="flex items-center justify-between py-1">
+                <span className="text-xs font-bold text-slate-800">{user.name}</span>
+                <span className="text-[10px] text-slate-500 font-semibold">
+                  {user.role === 'admin' ? '👑 Admin' : 'Khách thuê'}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full mt-2 py-2 text-center text-sm font-bold text-red-600 bg-red-50 rounded-lg"
+              >
+                Đăng xuất
+              </button>
+            </div>
           ) : (
             <Link
               href="/auth/login"

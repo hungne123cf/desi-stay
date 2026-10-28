@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function AdminPage() {
-  const { user, switchRole } = useAuth();
+  const { user } = useAuth();
   const {
     properties,
     bookings,
@@ -147,19 +147,19 @@ export default function AdminPage() {
           <div>
             <h3 className="text-xl font-bold text-slate-900">Yêu cầu quyền Quản Trị</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Bạn đang ở góc nhìn <strong>Khách thuê</strong> ({user?.name || 'Khách vãng lai'}).
-              Bấm nút dưới để chuyển sang <strong>Chủ trọ / Admin</strong> để quản lý danh sách phòng và khách đặt cọc.
+              Khu vực này dành riêng cho Quản trị viên (Admin).
+              Vui lòng đăng nhập bằng tài khoản Admin để truy cập Bảng điều khiển quản lý phòng và khách đặt cọc.
             </p>
           </div>
-          <button
-            onClick={() => switchRole('admin')}
-            className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition-all"
+          <Link
+            href="/auth/login"
+            className="w-full block py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition-all text-center"
           >
-            Chuyển Sang Quyền Admin Ngay
-          </button>
+            Đăng nhập tài khoản Admin
+          </Link>
           <div>
             <Link href="/" className="text-xs text-slate-400 hover:text-slate-600">
-              Quay lại trang xem phòng
+              Quay lại trang xem phòng trọ
             </Link>
           </div>
         </div>
