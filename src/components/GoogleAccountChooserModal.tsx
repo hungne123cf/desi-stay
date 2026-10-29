@@ -1,43 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Building2, X, PlusCircle, Key, ArrowRight, ShieldCheck, Check } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { isEmailAdmin } from '@/config/auth';
-
-interface GoogleAccountItem {
-  name: string;
-  email: string;
-  avatarText?: string;
-  avatarBg?: string;
-  avatarImg?: string;
-}
-
-const DEFAULT_BROWSER_ACCOUNTS: GoogleAccountItem[] = [
-  {
-    name: 'Trương Hùng',
-    email: 'truongvantuan43344@gmail.com',
-    avatarImg: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
-  },
-  {
-    name: 'Truong Hung (K18 CT)',
-    email: 'hungtce181568@fpt.edu.vn',
-    avatarBg: 'bg-amber-600',
-    avatarText: 'T'
-  },
-  {
-    name: 'Phạm Hưng',
-    email: 'hungkgvl@gmail.com',
-    avatarBg: 'bg-slate-400',
-    avatarText: 'H'
-  },
-  {
-    name: 'Pham Huu Hung (K18 CT)',
-    email: 'hungphce181213@fpt.edu.vn',
-    avatarBg: 'bg-emerald-700',
-    avatarText: 'P'
-  }
-];
+import React, { useState, useEffect } from 'react';
+import {
+  Building2,
+  X,
+  UserPlus,
+  Settings,
+  Check,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  Trash2,
+  Loader2,
+  ExternalLink
+} from 'lucide-react';
+import { useAuth, StoredAccount } from '@/context/AuthContext';
 
 interface Props {
   isOpen: boolean;
@@ -45,36 +22,125 @@ interface Props {
   onSuccess: (role: 'student' | 'admin') => void;
 }
 
+type ModalStep = 'chooser' | 'email' | 'password' | 'oauth_config';
+
+const AVATAR_COLORS = [
+  'bg-blue-600',
+  'bg-emerald-600',
+  'bg-amber-600',
+  'bg-purple-600',
+  'bg-rose-600',
+  'bg-indigo-600'
+];
+
+function getAvatarColor(email: string): string {
+  let hash = 0;
+  for (let i = 0; i < email.length; i++) {
+    hash = email.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
 export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
-  const { loginWithGoogleAccount, googleClientId, setGoogleClientId } = useAuth();
-  const [showCustomEmail, setShowCustomEmail] = useState(false);
-  const [customEmail, setCustomEmail] = useState('');
-  const [customName, setCustomName] = useState('');
-  const [showConfigClientId, setShowConfigClientId] = useState(false);
+  const {
+    loginWithGoogleAccount,
+    googleClientId,
+    setGoogleClientId,
+    knownAccounts,
+    removeKnownAccount
+  } = useAuth();
+
+  const [step, setStep] = useState<ModalStep>('chooser');
+  const [emailInput, setEmailInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [tempClientId, setTempClientId] = useState(googleClientId || '');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setStep(knownAccounts.length > 0 ? 'chooser' : 'email');
+      setFormError('');
+      setPasswordInput('');
+      setTempClientId(googleClientId || '');
+    }
+  }, [isOpen, knownAccounts.length, googleClientId]);
+
   if (!isOpen) return null;
 
-  const handleSelectAccount = async (account: GoogleAccountItem) => {
-    const user = await loginWithGoogleAccount({
-      email: account.email,
-      name: account.name,
-      avatar: account.avatarImg
-    });
-    onSuccess(user.role);
-    onClose();
+  const handleSelectAccount = async (account: StoredAccount) => {
+    setIsSubmitting(true);
+    try {
+      const user = await loginWithGoogleAccount({
+        email: account.email,
+        name: account.name,
+        avatar: account.avatar
+      });
+      onSuccess(user.role);
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleCustomSubmit = async (e: React.FormEvent) => {
+  const handleEmailStepSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customEmail) return;
-    const user = await loginWithGoogleAccount({
-      email: customEmail,
-      name: customName || customEmail.split('@')[0]
-    });
-    onSuccess(user.role);
-    onClose();
+    setFormError('');
+    const trimmed = emailInput.trim().toLowerCase();
+    if (!trimmed) {
+      setFormError('Hãy nhập một địa chỉ email hoặc số điện thoại.');
+      return;
+    }
+
+    // If user typed username without @domain, default to @gmail.com like Google does
+    const normalizedEmail = trimmed.includes('@') ? trimmed : `${trimmed}@gmail.com`;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      setFormError('Không tìm thấy Tài khoản Google của bạn. Vui lòng kiểm tra lại email.');
+      return;
+    }
+
+    setEmailInput(normalizedEmail);
+    if (!nameInput.trim()) {
+      const existing = knownAccounts.find((a) => a.email.toLowerCase() === normalizedEmail);
+      if (existing) {
+        setNameInput(existing.name);
+      }
+    }
+    setStep('password');
+  };
+
+  const handlePasswordStepSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    if (!passwordInput || passwordInput.length < 4) {
+      setFormError('Nhập mật khẩu của bạn để tiếp tục.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const displayName =
+        nameInput.trim() ||
+        emailInput
+          .split('@')[0]
+          .replace(/[._-]/g, ' ')
+          .replace(/\b\w/g, (l) => l.toUpperCase());
+
+      const user = await loginWithGoogleAccount({
+        email: emailInput,
+        name: displayName
+      });
+      onSuccess(user.role);
+      onClose();
+    } catch {
+      setFormError('Đã xảy ra lỗi xác thực. Vui lòng thử lại.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSaveClientId = (e: React.FormEvent) => {
@@ -85,26 +151,47 @@ export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, on
   };
 
   const handleRealOAuthRedirect = () => {
-    if (!googleClientId) {
-      setShowConfigClientId(true);
-      return;
-    }
+    const activeClientId = tempClientId.trim() || googleClientId;
+    if (!activeClientId) return;
+    setGoogleClientId(activeClientId);
+
     const redirectUri = `${window.location.origin}/auth/callback`;
     const targetUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
-      googleClientId
+      activeClientId
     )}&redirect_uri=${encodeURIComponent(
       redirectUri
     )}&response_type=token%20id_token&scope=openid%20email%20profile&prompt=select_account&nonce=${Date.now()}`;
-    window.location.href = targetUrl;
+
+    const width = 500;
+    const height = 620;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+      targetUrl,
+      'google_oauth_popup',
+      `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+    );
+
+    if (!popup) {
+      window.location.href = targetUrl;
+    } else {
+      onClose();
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-        {/* Top bar with Google logo */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSubmitting) onClose();
+      }}
+    >
+      <div className="relative w-full max-w-[780px] bg-white rounded-[28px] shadow-2xl border border-slate-200/90 overflow-hidden">
+        {/* Top bar: Official Google OAuth window header */}
+        <div className="px-6 py-3.5 border-b border-slate-200/80 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-2.5">
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -122,212 +209,376 @@ export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, on
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span className="text-xs font-semibold text-slate-700">Đăng nhập bằng Google</span>
+            <span className="text-[13px] font-medium text-slate-600">Đăng nhập bằng Google</span>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Modal Body: Left and Right Columns (Identical to Google SSO screen) */}
-        <div className="grid grid-cols-1 md:grid-cols-5 p-6 sm:p-8 gap-8">
-          {/* Left Column: Brand & Title */}
-          <div className="md:col-span-2 space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-md">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <span className="text-xl font-black tracking-tight text-slate-900">
-                Uni<span className="text-indigo-600">Stay</span>
-              </span>
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 leading-tight">
-                Chọn tài khoản
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Tiếp tục tới <strong className="text-slate-700">UniStay Global</strong>
-              </p>
-            </div>
-
-            <div className="p-3 bg-indigo-50/60 rounded-2xl border border-indigo-100 text-[11px] text-slate-600 space-y-1">
-              <div className="flex items-center gap-1 font-bold text-indigo-700">
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Phân quyền tự động theo Role:</span>
-              </div>
-              <p>
-                • <strong>truongvantuan43344@gmail.com</strong>: Được tự động cấp quyền <strong>Admin Quản trị</strong>.
-              </p>
-              <p>
-                • Các tài khoản sinh viên/khách thuê khác: Vào trang khám phá phòng trọ.
-              </p>
-            </div>
-
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setShowConfigClientId(!showConfigClientId)}
-              className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold"
+              onClick={() => setStep(step === 'oauth_config' ? 'chooser' : 'oauth_config')}
+              title="Cấu hình Google OAuth Client ID"
+              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
             >
-              <Key className="w-3 h-3" />
-              <span>{showConfigClientId ? 'Ẩn cấu hình Client ID' : 'Cấu hình Google Client ID thật'}</span>
+              <Settings className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
 
-          {/* Right Column: Account List */}
-          <div className="md:col-span-3 space-y-1 border-t md:border-t-0 md:border-l border-slate-100 md:pl-8">
-            {showConfigClientId ? (
-              <form onSubmit={handleSaveClientId} className="space-y-4 py-2">
+        {/* Loading Bar */}
+        {isSubmitting && (
+          <div className="h-1 w-full bg-blue-100 overflow-hidden">
+            <div className="h-full bg-blue-600 animate-pulse w-2/3 rounded-r-full" />
+          </div>
+        )}
+
+        {/* Main 2-Column Google Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-12 p-6 sm:p-9 gap-6 md:gap-8 items-start">
+          {/* Left Column: App Identity & Step Title */}
+          <div className="md:col-span-5 space-y-4">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-sm">
+              <Building2 className="w-6 h-6" />
+            </div>
+
+            {step === 'chooser' && (
+              <div>
+                <h2 className="text-[26px] font-normal text-slate-900 leading-snug tracking-tight">
+                  Chọn tài khoản
+                </h2>
+                <p className="text-sm text-slate-600 mt-1.5">
+                  để tiếp tục tới{' '}
+                  <span className="font-semibold text-indigo-600">UniStay Global</span>
+                </p>
+              </div>
+            )}
+
+            {step === 'email' && (
+              <div>
+                <h2 className="text-[26px] font-normal text-slate-900 leading-snug tracking-tight">
+                  Đăng nhập
+                </h2>
+                <p className="text-sm text-slate-600 mt-1.5">
+                  Sử dụng Tài khoản Google của bạn để tiếp tục tới{' '}
+                  <span className="font-semibold text-indigo-600">UniStay Global</span>
+                </p>
+              </div>
+            )}
+
+            {step === 'password' && (
+              <div className="space-y-3">
+                <h2 className="text-[26px] font-normal text-slate-900 leading-snug tracking-tight">
+                  Chào mừng
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setStep('chooser')}
+                  className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full border border-slate-300 hover:bg-slate-50 text-xs font-medium text-slate-700 transition-colors max-w-full cursor-pointer"
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${getAvatarColor(
+                      emailInput
+                    )}`}
+                  >
+                    {emailInput[0]?.toUpperCase()}
+                  </div>
+                  <span className="truncate">{emailInput}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                </button>
+              </div>
+            )}
+
+            {step === 'oauth_config' && (
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 leading-snug">
+                  Kết nối Google OAuth 2.0
+                </h2>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  Nhập Google Client ID từ Google Cloud Console để mở cửa sổ xác thực trực tiếp trên{' '}
+                  <code className="text-slate-700">accounts.google.com</code>.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Interactive Content */}
+          <div className="md:col-span-7">
+            {step === 'chooser' && (
+              <div>
+                <div className="divide-y divide-slate-200/70 border-b border-slate-200/70">
+                  {knownAccounts.map((account) => (
+                    <div
+                      key={account.email}
+                      className="group flex items-center justify-between py-3 px-2 hover:bg-slate-50/90 rounded-xl transition-colors"
+                    >
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => handleSelectAccount(account)}
+                        className="flex-1 flex items-center gap-3.5 text-left min-w-0 cursor-pointer"
+                      >
+                        {account.avatar ? (
+                          <img
+                            src={account.avatar}
+                            alt={account.name}
+                            className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-slate-200"
+                          />
+                        ) : (
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${getAvatarColor(
+                              account.email
+                            )}`}
+                          >
+                            {account.name[0]?.toUpperCase() || 'U'}
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-medium text-slate-800 truncate">
+                            {account.name}
+                          </p>
+                          <p className="text-xs text-slate-500 truncate">{account.email}</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeKnownAccount(account.email);
+                        }}
+                        title="Xóa tài khoản khỏi trình duyệt này"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Use another account */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmailInput('');
+                      setNameInput('');
+                      setPasswordInput('');
+                      setFormError('');
+                      setStep('email');
+                    }}
+                    className="w-full py-3.5 px-2 flex items-center gap-3.5 hover:bg-slate-50 rounded-xl transition-colors text-left cursor-pointer"
+                  >
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-slate-600 shrink-0">
+                      <UserPlus className="w-5 h-5" />
+                    </div>
+                    <span className="text-[13px] font-medium text-slate-700">
+                      Sử dụng một tài khoản khác
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 'email' && (
+              <form onSubmit={handleEmailStepSubmit} className="space-y-5 pt-1">
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-700 block mb-1.5">
+                      Email hoặc số điện thoại Google
+                    </label>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={emailInput}
+                      onChange={(e) => {
+                        setEmailInput(e.target.value);
+                        setFormError('');
+                      }}
+                      placeholder="tenban@gmail.com"
+                      className={`w-full px-3.5 py-3 text-sm bg-white border rounded-lg outline-none transition-all ${
+                        formError
+                          ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                          : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15'
+                      }`}
+                    />
+                    {formError && (
+                      <p className="text-xs text-red-600 mt-1.5 font-medium">{formError}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 block mb-1">
+                      Tên hiển thị (tùy chọn)
+                    </label>
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      placeholder="Họ và tên của bạn"
+                      className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  {knownAccounts.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormError('');
+                        setStep('chooser');
+                      }}
+                      className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-full transition-colors cursor-pointer"
+                    >
+                      Chọn tài khoản có sẵn
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-full shadow-xs transition-all cursor-pointer"
+                  >
+                    Tiếp theo
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {step === 'password' && (
+              <form onSubmit={handlePasswordStepSubmit} className="space-y-5 pt-1">
+                <div>
+                  <label className="text-xs font-medium text-slate-700 block mb-1.5">
+                    Nhập mật khẩu của bạn
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      autoFocus
+                      value={passwordInput}
+                      onChange={(e) => {
+                        setPasswordInput(e.target.value);
+                        setFormError('');
+                      }}
+                      placeholder="Nhập mật khẩu Google"
+                      className={`w-full px-3.5 py-3 pr-10 text-sm bg-white border rounded-lg outline-none transition-all ${
+                        formError
+                          ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                          : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {formError && (
+                    <p className="text-xs text-red-600 mt-1.5 font-medium">{formError}</p>
+                  )}
+
+                  <label className="inline-flex items-center gap-2 mt-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showPassword}
+                      onChange={(e) => setShowPassword(e.target.checked)}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-xs text-slate-600">Hiện mật khẩu</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormError('');
+                      setStep('email');
+                    }}
+                    className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-full transition-colors cursor-pointer"
+                  >
+                    Quay lại
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-semibold rounded-full shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Tiếp theo</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {step === 'oauth_config' && (
+              <form onSubmit={handleSaveClientId} className="space-y-4">
                 <div>
                   <label className="text-xs font-bold text-slate-800 block mb-1">
                     Google OAuth 2.0 Client ID
                   </label>
                   <p className="text-[11px] text-slate-500 mb-2">
-                    Lấy từ Google Cloud Console (APIs & Services &gt; Credentials).
+                    Thêm Authorized redirect URI:{' '}
+                    <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">
+                      {typeof window !== 'undefined'
+                        ? `${window.location.origin}/auth/callback`
+                        : '/auth/callback'}
+                    </code>
                   </p>
                   <input
                     type="text"
                     value={tempClientId}
                     onChange={(e) => setTempClientId(e.target.value)}
-                    placeholder="xxxxxxxxxxxx.apps.googleusercontent.com"
-                    className="w-full text-xs font-mono px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                    placeholder="xxxxxxxxxxxx-xxxxxxxxxxxxxxxx.apps.googleusercontent.com"
+                    className="w-full text-xs font-mono px-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1"
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    {savedSuccess ? <Check className="w-3.5 h-3.5" /> : null}
-                    <span>{savedSuccess ? 'Đã lưu!' : 'Lưu Client ID'}</span>
+                    {savedSuccess && <Check className="w-3.5 h-3.5" />}
+                    <span>{savedSuccess ? 'Đã lưu cấu hình!' : 'Lưu Client ID'}</span>
                   </button>
-                  {tempClientId && (
+
+                  {tempClientId.trim() && (
                     <button
                       type="button"
                       onClick={handleRealOAuthRedirect}
-                      className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all"
+                      className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                     >
-                      Mở Google Thật Ngay
+                      <span>Mở cửa sổ Google OAuth thật</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </button>
                   )}
-                </div>
-              </form>
-            ) : showCustomEmail ? (
-              <form onSubmit={handleCustomSubmit} className="space-y-3 py-2">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Tên hiển thị</label>
-                  <input
-                    type="text"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="Nguyễn Văn A"
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Địa chỉ Email Google *</label>
-                  <input
-                    type="email"
-                    required
-                    value={customEmail}
-                    onChange={(e) => setCustomEmail(e.target.value)}
-                    placeholder="user@gmail.com"
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl outline-none"
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1"
-                  >
-                    <span>Tiếp tục</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+
                   <button
                     type="button"
-                    onClick={() => setShowCustomEmail(false)}
-                    className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                    onClick={() => setStep('chooser')}
+                    className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
                   >
-                    Quay lại
+                    Đóng cấu hình
                   </button>
                 </div>
               </form>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {DEFAULT_BROWSER_ACCOUNTS.map((account) => {
-                  const isAdmin = isEmailAdmin(account.email);
-                  return (
-                    <button
-                      key={account.email}
-                      onClick={() => handleSelectAccount(account)}
-                      className="w-full py-3.5 px-3 rounded-2xl flex items-center gap-3.5 hover:bg-slate-50 transition-colors text-left group"
-                    >
-                      {/* Avatar */}
-                      {account.avatarImg ? (
-                        <img
-                          src={account.avatarImg}
-                          alt={account.name}
-                          className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-slate-200"
-                        />
-                      ) : (
-                        <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${
-                            account.avatarBg || 'bg-slate-500'
-                          }`}
-                        >
-                          {account.avatarText || account.name[0]}
-                        </div>
-                      )}
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-bold text-slate-800 truncate group-hover:text-indigo-600">
-                            {account.name}
-                          </p>
-                          {isAdmin && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                              👑 Admin
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-500 truncate">{account.email}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-
-                {/* Use another account */}
-                <button
-                  type="button"
-                  onClick={() => setShowCustomEmail(true)}
-                  className="w-full py-3.5 px-3 rounded-2xl flex items-center gap-3.5 hover:bg-slate-50 transition-colors text-left group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
-                    <PlusCircle className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-700 group-hover:text-indigo-600">
-                    Sử dụng một tài khoản khác
-                  </span>
-                </button>
-              </div>
             )}
 
-            {/* Bottom terms disclaimer (Matches Google screenshot) */}
-            <p className="pt-4 text-[10px] text-slate-400 leading-relaxed border-t border-slate-100">
-              Trước khi sử dụng UniStay Global, bạn có thể xem{' '}
-              <a href="#" className="text-indigo-600 hover:underline">
-                Chính sách quyền riêng tư
-              </a>{' '}
-              và{' '}
-              <a href="#" className="text-indigo-600 hover:underline">
-                Điều khoản dịch vụ
-              </a>{' '}
-              của ứng dụng này.
+            {/* Google Privacy & Terms Footer */}
+            <p className="mt-6 pt-4 text-[11px] text-slate-500 leading-relaxed border-t border-slate-100">
+              Để tiếp tục, Google sẽ chia sẻ tên, địa chỉ email và ảnh hồ sơ của bạn với UniStay
+              Global. Trước khi sử dụng ứng dụng này, bạn có thể xem{' '}
+              <span className="text-blue-600 font-medium">Chính sách quyền riêng tư</span> và{' '}
+              <span className="text-blue-600 font-medium">Điều khoản dịch vụ</span>.
             </p>
           </div>
         </div>

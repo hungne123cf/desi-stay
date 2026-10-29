@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2 } from 'lucide-react';
-import { isEmailAdmin } from '@/config/auth';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -12,16 +11,53 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    async function finalizeUser(payload: { email: string; name: string; avatar?: string }) {
+      const user = await loginWithGoogleAccount(payload);
+
+      // If opened inside an OAuth popup window, notify opener and close popup
+      if (window.opener && window.opener !== window) {
+        try {
+          window.opener.postMessage(
+            { type: 'UNISTAY_GOOGLE_AUTH_SUCCESS', payload },
+            window.location.origin
+          );
+          window.close();
+          return;
+        } catch {
+          // Fallback to normal redirect if postMessage fails
+        }
+      }
+
+      if (user.role === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/');
+      }
+    }
+
     async function processOAuthCallback() {
       try {
-        // Parse Hash parameters (Google OAuth Implicit / ID Token flow)
         const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
-        const idToken = params.get('id_token');
-        const accessToken = params.get('access_token');
+        const hashParams = new URLSearchParams(hash);
+        const searchParams = new URLSearchParams(window.location.search);
+
+        const oauthError = hashParams.get('error') || searchParams.get('error');
+        if (oauthError) {
+          setError('Bạn đã hủy đăng nhập hoặc từ chối cấp quyền truy cập từ Google.');
+          setTimeout(() => {
+            if (window.opener && window.opener !== window) {
+              window.close();
+            } else {
+              router.replace('/auth/login');
+            }
+          }, 1800);
+          return;
+        }
+
+        const idToken = hashParams.get('id_token');
+        const accessToken = hashParams.get('access_token');
 
         if (idToken) {
-          // Decode JWT payload (standard Google id_token)
           const base64Url = idToken.split('.')[1];
           const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
           const jsonPayload = decodeURIComponent(
@@ -36,47 +72,33 @@ export default function AuthCallbackPage() {
           const name = parsed.name || email.split('@')[0];
           const picture = parsed.picture || '';
 
-          const user = await loginWithGoogleAccount({
+          await finalizeUser({
             email,
             name,
             avatar: picture
           });
-
-          if (user.role === 'admin') {
-            router.replace('/admin');
-          } else {
-            router.replace('/');
-          }
           return;
         }
 
-        // Check if access_token without id_token
         if (accessToken) {
-          // Fetch user info from Google UserInfo endpoint
           const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
           if (res.ok) {
             const data = await res.json();
-            const user = await loginWithGoogleAccount({
+            await finalizeUser({
               email: data.email,
               name: data.name || data.email.split('@')[0],
               avatar: data.picture
             });
-            if (user.role === 'admin') {
-              router.replace('/admin');
-            } else {
-              router.replace('/');
-            }
             return;
           }
         }
 
-        // If no tokens found, redirect back to login
         router.replace('/auth/login');
       } catch (err) {
         console.error('OAuth callback error:', err);
-        setError('Không thể xử lý xác thực từ Google. Đang chuyển về trang đăng nhập...');
+        setError('Không thể xác thực tài khoản từ Google. Đang chuyển về trang đăng nhập...');
         setTimeout(() => router.replace('/auth/login'), 2000);
       }
     }
@@ -87,17 +109,17 @@ export default function AuthCallbackPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl text-center space-y-4 max-w-sm w-full">
-        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
-        <h3 className="text-base font-bold text-slate-800">
-          Đang hoàn tất đăng nhập Google...
-        </h3>
         {error ? (
-          <p className="text-xs text-red-600">{error}</p>
+          <AlertCircle className="w-10 h-10 text-red-500 mx-auto" />
         ) : (
-          <p className="text-xs text-slate-400">
-            Hệ thống đang xác thực danh tính và phân quyền tài khoản của bạn.
-          </p>
+          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
         )}
+        <h3 className="text-base font-bold text-slate-800">
+          {error ? 'Xác thực chưa hoàn tất' : 'Đang đồng bộ tài khoản Google...'}
+        </h3>
+        <p className={`text-xs ${error ? 'text-red-600' : 'text-slate-500'}`}>
+          {error || 'Vui lòng đợi trong giây lát để hệ thống hoàn tất đăng nhập.'}
+        </p>
       </div>
     </div>
   );
