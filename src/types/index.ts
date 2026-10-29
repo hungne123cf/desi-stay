@@ -118,6 +118,7 @@ export interface ChatMessage {
 
 export interface PropertyReview {
   id: string;
+  bookingId?: string;
   propertyId: string;
   propertyCode?: string;
   propertyTitle?: string;

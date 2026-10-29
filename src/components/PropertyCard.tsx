@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Property } from '@/types';
 import { useProperties } from '@/context/PropertyContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   MapPin,
   GraduationCap,
@@ -22,13 +23,16 @@ interface PropertyCardProps {
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow }) => {
-  const { formatPrice, settings, reviews } = useProperties();
+  const { formatPrice, settings, reviews, getReviewEligibility } = useProperties();
+  const { user } = useAuth();
   const [activeImgIndex, setActiveImgIndex] = useState(0);
 
   const propertyReviewsCount =
     reviews.filter((r) => r.propertyId === property.id || r.propertyCode === property.code).length ||
     property.reviewsCount ||
     0;
+
+  const eligibility = getReviewEligibility(property.id, property.code, user);
 
   const getGenderBadge = () => {
     switch (property.gender) {
@@ -195,24 +199,45 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
             </div>
           </div>
 
-          {/* Nút Xem Chi Tiết Phòng & Đánh Giá Bình Luận */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Nút Xem Chi Tiết Phòng & Nút Đánh Giá (chỉ hiện sau khi đã đặt phòng) */}
+          {eligibility.hasPurchased ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href={`/properties/${property.id}`}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-xl transition-colors"
+              >
+                <Eye className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span>Xem Chi Tiết</span>
+              </Link>
+
+              {eligibility.remainingReviews > 0 ? (
+                <Link
+                  href={`/properties/${property.id}#reviews`}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-xl transition-colors shadow-2xs"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Đánh Giá ({eligibility.remainingReviews} lượt)</span>
+                </Link>
+              ) : (
+                <Link
+                  href={`/properties/${property.id}#reviews`}
+                  className="flex items-center justify-center gap-1 py-2 px-2.5 text-[11px] font-bold text-emerald-700 bg-emerald-50/80 border border-emerald-200 rounded-xl"
+                  title="Bạn đã sử dụng hết lượt đánh giá cho lần đặt phòng này"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Đã Đánh Giá ({eligibility.usedReviews}/{eligibility.totalPurchases})</span>
+                </Link>
+              )}
+            </div>
+          ) : (
             <Link
               href={`/properties/${property.id}`}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-xl transition-colors"
             >
               <Eye className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>Xem Chi Tiết</span>
+              <span>Xem Chi Tiết Phòng ({propertyReviewsCount} đánh giá)</span>
             </Link>
-
-            <Link
-              href={`/properties/${property.id}#reviews`}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-xl transition-colors"
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span>Đánh Giá ({propertyReviewsCount})</span>
-            </Link>
-          </div>
+          )}
 
           {/* Nút Nhắn Zalo & Đặt Cọc Giữ Chỗ */}
           <div className="grid grid-cols-2 gap-2">

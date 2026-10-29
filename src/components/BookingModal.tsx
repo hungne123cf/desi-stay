@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Property, PaymentMethod } from '@/types';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
@@ -19,7 +20,8 @@ import {
   Check,
   Upload,
   Image as ImageIcon,
-  Clock
+  Clock,
+  Star
 } from 'lucide-react';
 
 interface BookingModalProps {
@@ -618,6 +620,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                       : `Hẹn xem phòng (${visitTimeSlot})`}
                   </span>
                 </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-3 text-left">
+                <div className="text-xs">
+                  <span className="font-bold text-amber-900 block">
+                    🎉 Bạn vừa được mở khóa 1 lượt Đánh Giá Sao &amp; Bình Luận!
+                  </span>
+                  <span className="text-[11px] text-amber-700">
+                    Mỗi lần đặt phòng thành công được cấp tối đa 1 lượt đánh giá xác thực.
+                  </span>
+                </div>
+                <Link
+                  href={`/properties/${property.id}#reviews`}
+                  onClick={onClose}
+                  className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shrink-0 flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Star className="w-3.5 h-3.5 fill-slate-950" />
+                  <span>Đánh Giá Ngay</span>
+                </Link>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2.5">

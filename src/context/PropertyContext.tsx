@@ -4,6 +4,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Property, Booking, CurrencyCode, SiteSettings, ChatMessage, PropertyReview } from '@/types';
 import { siteConfig } from '@/config/site';
 
+export interface ReviewEligibility {
+  hasPurchased: boolean;
+  totalPurchases: number;
+  usedReviews: number;
+  remainingReviews: number;
+  nextBookingToReview: Booking | null;
+}
+
 interface PropertyContextType {
   properties: Property[];
   bookings: Booking[];
@@ -25,6 +33,11 @@ interface PropertyContextType {
   addReview: (review: Omit<PropertyReview, 'id' | 'createdAt'>) => void;
   replyToReview: (reviewId: string, adminReply: string) => void;
   deleteReview: (reviewId: string) => void;
+  getReviewEligibility: (
+    propertyId: string,
+    propertyCode: string,
+    user?: { id?: string; email?: string; phone?: string; name?: string } | null
+  ) => ReviewEligibility;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -70,8 +83,19 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reviews, setReviews] = useState<PropertyReview[]>([]);
+  const [myBookingIds, setMyBookingIds] = useState<string[]>([]);
   const [currency, setCurrencyState] = useState<CurrencyCode>('VND');
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
+
+  useEffect(() => {
+    try {
+      const savedIds = localStorage.getItem('unistay_my_booking_ids');
+      if (savedIds) {
+        const parsed = JSON.parse(savedIds);
+        if (Array.isArray(parsed)) setMyBookingIds(parsed);
+      }
+    } catch {}
+  }, []);
 
   const syncToServer = async (payload: {
     properties?: Property[];
@@ -292,6 +316,13 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       syncToServer({ bookings: updated });
       return updated;
     });
+    setMyBookingIds((prev) => {
+      const updatedIds = Array.from(new Set([newBooking.id, ref, ...prev]));
+      try {
+        localStorage.setItem('unistay_my_booking_ids', JSON.stringify(updatedIds));
+      } catch {}
+      return updatedIds;
+    });
     return ref;
   };
 
@@ -431,6 +462,84 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
+  const getReviewEligibility = (
+    propertyId: string,
+    propertyCode: string,
+    user?: { id?: string; email?: string; phone?: string; name?: string } | null
+  ): ReviewEligibility => {
+    const cleanUserPhone = user?.phone ? user.phone.replace(/[^0-9]/g, '') : '';
+
+    const userBookings = bookings.filter((b) => {
+      const matchesProperty = b.propertyId === propertyId || b.propertyCode === propertyCode;
+      if (!matchesProperty || b.status === 'cancelled') return false;
+
+      const byLocalBrowser =
+        myBookingIds.includes(b.id) || (b.reference ? myBookingIds.includes(b.reference) : false);
+      const byUserId = Boolean(user?.id && user.id !== 'guest' && b.userId === user.id);
+      const byEmail = Boolean(
+        user?.email &&
+          b.studentEmail &&
+          b.studentEmail.toLowerCase() === user.email.toLowerCase()
+      );
+      const byPhone = Boolean(
+        cleanUserPhone.length >= 8 &&
+          b.studentContact.replace(/[^0-9]/g, '') === cleanUserPhone
+      );
+      const byName = Boolean(
+        user?.name && b.studentName.trim().toLowerCase() === user.name.trim().toLowerCase()
+      );
+
+      return byLocalBrowser || byUserId || byEmail || byPhone || byName;
+    });
+
+    const totalPurchases = userBookings.length;
+    if (totalPurchases === 0) {
+      return {
+        hasPurchased: false,
+        totalPurchases: 0,
+        usedReviews: 0,
+        remainingReviews: 0,
+        nextBookingToReview: null
+      };
+    }
+
+    const propReviews = reviews.filter(
+      (r) => r.propertyId === propertyId || r.propertyCode === propertyCode
+    );
+
+    const unreviewedBookings = userBookings.filter(
+      (b) =>
+        !propReviews.some(
+          (r) => r.bookingId === b.id || (b.reference && r.bookingId === b.reference)
+        )
+    );
+
+    const userOwnReviewsCount = propReviews.filter((r) => {
+      const matchesBooking = userBookings.some(
+        (b) => r.bookingId === b.id || (b.reference && r.bookingId === b.reference)
+      );
+      const matchesEmail = Boolean(
+        user?.email && r.userEmail && r.userEmail.toLowerCase() === user.email.toLowerCase()
+      );
+      const matchesName = Boolean(
+        user?.name && r.userName.trim().toLowerCase() === user.name.trim().toLowerCase()
+      );
+      return matchesBooking || matchesEmail || matchesName;
+    }).length;
+
+    const usedReviews = Math.max(totalPurchases - unreviewedBookings.length, userOwnReviewsCount);
+    const remainingReviews = Math.max(0, totalPurchases - usedReviews);
+
+    return {
+      hasPurchased: true,
+      totalPurchases,
+      usedReviews,
+      remainingReviews,
+      nextBookingToReview:
+        remainingReviews > 0 ? unreviewedBookings[0] || userBookings[0] || null : null
+    };
+  };
+
   return (
     <PropertyContext.Provider
       value={{
@@ -453,7 +562,8 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteConversation,
         addReview,
         replyToReview,
-        deleteReview
+        deleteReview,
+        getReviewEligibility
       }}
     >
       {children}
