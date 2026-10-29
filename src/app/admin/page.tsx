@@ -6,6 +6,12 @@ import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
 import { Property, RoomType, GenderPreference, FoodPreference, CurrencyCode } from '@/types';
 import {
+  LOCATION_CATALOG,
+  DISTANCE_PRESETS,
+  CURFEW_PRESETS,
+  SAMPLE_ROOM_IMAGES
+} from '@/data/locations';
+import {
   ShieldCheck,
   Building,
   Plus,
@@ -18,7 +24,12 @@ import {
   Lock,
   X,
   CreditCard,
-  QrCode
+  QrCode,
+  MapPin,
+  GraduationCap,
+  Upload,
+  Image as ImageIcon,
+  Map
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -53,22 +64,68 @@ export default function AdminPage() {
   // Add Property Form State
   const [newTitle, setNewTitle] = useState('');
   const [newCountry, setNewCountry] = useState('Vietnam');
-  const [newCity, setNewCity] = useState('TP. Hồ Chí Minh');
-  const [newArea, setNewArea] = useState('Quận 10');
+  const [newCity, setNewCity] = useState('Cần Thơ');
+  const [newArea, setNewArea] = useState('Quận Ninh Kiều');
+  const [customArea, setCustomArea] = useState('');
   const [newAddress, setNewAddress] = useState('');
-  const [newUniversity, setNewUniversity] = useState('ĐH Bách Khoa TP.HCM');
+  const [newUniversity, setNewUniversity] = useState('ĐH Cần Thơ (CTU - Khu II Đường 3/2)');
+  const [customUniversity, setCustomUniversity] = useState('');
   const [newDistance, setNewDistance] = useState('300m (4 phút đi bộ)');
   const [newRoomType, setNewRoomType] = useState<RoomType>('studio');
   const [newGender, setNewGender] = useState<GenderPreference>('all');
   const [newFoodPref, setNewFoodPref] = useState<FoodPreference>('self_cook');
-  const [newPriceUSD, setNewPriceUSD] = useState(180); // ~4.500.000 VND
-  const [newDepositUSD, setNewDepositUSD] = useState(180);
-  const [newTokenUSD, setNewTokenUSD] = useState(20); // ~500.000 VND
+  const [priceInputMode, setPriceInputMode] = useState<'VND' | 'USD'>('VND');
+  const [newPriceVND, setNewPriceVND] = useState(3500000);
+  const [newDepositVND, setNewDepositVND] = useState(3500000);
+  const [newTokenVND, setNewTokenVND] = useState(500000);
+  const [newPriceUSD, setNewPriceUSD] = useState(140);
+  const [newDepositUSD, setNewDepositUSD] = useState(140);
+  const [newTokenUSD, setNewTokenUSD] = useState(20);
   const [newImageUrl, setNewImageUrl] = useState(
     'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'
   );
   const [newDescription, setNewDescription] = useState('');
   const [newCurfew, setNewCurfew] = useState('Giờ giấc tự do 24/7 (Khóa vân tay)');
+  const [showMapPreview, setShowMapPreview] = useState(true);
+
+  const countryCatalog = LOCATION_CATALOG[newCountry] || LOCATION_CATALOG.Vietnam;
+  const currentCityData =
+    countryCatalog.cities.find((c) => c.city === newCity) || countryCatalog.cities[0];
+
+  const handleCountryChange = (countryKey: string) => {
+    setNewCountry(countryKey);
+    const catalog = LOCATION_CATALOG[countryKey];
+    if (catalog && catalog.cities.length > 0) {
+      const firstCity = catalog.cities[0];
+      setNewCity(firstCity.city);
+      setNewArea(firstCity.districts[0] || '');
+      setNewUniversity(firstCity.universities[0] || '');
+    }
+    setPriceInputMode(countryKey === 'Vietnam' ? 'VND' : 'USD');
+  };
+
+  const handleCityChange = (cityName: string) => {
+    setNewCity(cityName);
+    const foundCity = countryCatalog.cities.find((c) => c.city === cityName);
+    if (foundCity) {
+      setNewArea(foundCity.districts[0] || '');
+      setNewUniversity(foundCity.universities[0] || '');
+      setCustomArea('');
+      setCustomUniversity('');
+    }
+  };
+
+  const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        setNewImageUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const totalRevenueUSD = bookings
     .filter((b) => b.status === 'token_paid' || b.status === 'confirmed')
@@ -78,27 +135,49 @@ export default function AdminPage() {
     e.preventDefault();
     if (!newTitle) return;
 
+    const finalArea = newArea === '__custom__' ? customArea.trim() || newCity : newArea;
+    const finalUniversity =
+      newUniversity === '__custom__' ? customUniversity.trim() || 'Đại học khu vực' : newUniversity;
+
+    const EXCHANGE_VND_PER_USD = 25400;
+    const computedPriceUSD =
+      priceInputMode === 'VND'
+        ? Math.max(1, Math.round(newPriceVND / EXCHANGE_VND_PER_USD))
+        : Number(newPriceUSD);
+    const computedDepositUSD =
+      priceInputMode === 'VND'
+        ? Math.max(1, Math.round(newDepositVND / EXCHANGE_VND_PER_USD))
+        : Number(newDepositUSD);
+    const computedTokenUSD =
+      priceInputMode === 'VND'
+        ? Math.max(1, Math.round(newTokenVND / EXCHANGE_VND_PER_USD))
+        : Number(newTokenUSD);
+
+    const fullAddress = newAddress.trim()
+      ? `${newAddress.trim()}, ${finalArea}, ${newCity}`
+      : `${finalArea}, ${newCity}`;
+
     addProperty({
       title: newTitle,
-      slug: newTitle.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-      address: newAddress || `${newArea}, ${newCity}`,
+      slug: `${newTitle.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now().toString().slice(-4)}`,
+      address: fullAddress,
       city: newCity,
       country: newCountry,
-      area: newArea,
-      nearbyUniversity: newUniversity,
+      area: finalArea,
+      nearbyUniversity: finalUniversity,
       distanceToCampus: newDistance,
       roomType: newRoomType,
       gender: newGender,
       foodPreference: newFoodPref,
-      pricePerMonthUSD: Number(newPriceUSD),
-      securityDepositUSD: Number(newDepositUSD),
-      tokenDepositUSD: Number(newTokenUSD),
+      pricePerMonthUSD: computedPriceUSD,
+      securityDepositUSD: computedDepositUSD,
+      tokenDepositUSD: computedTokenUSD,
       images: [newImageUrl],
       description: newDescription || 'Phòng trọ sinh viên tiện nghi, an ninh, giờ giấc tự do.',
       highlights: [
         '0% Phí môi giới làm việc trực tiếp',
-        `Gần ${newUniversity}`,
-        'Khóa cửa an ninh, wifi tốc độ cao'
+        `Gần ${finalUniversity} (${newDistance})`,
+        newCurfew
       ],
       amenities: [
         'Wifi tốc độ cao',
@@ -118,6 +197,7 @@ export default function AdminPage() {
 
     setShowAddModal(false);
     setNewTitle('');
+    setNewAddress('');
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -565,98 +645,238 @@ export default function AdminPage() {
       {/* Add Property Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
-              <h3 className="text-base font-bold">Thêm Phòng Trọ Mới Vào Hệ Thống</h3>
+          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-base font-bold">Thêm Phòng Trọ Mới Vào Hệ Thống</h3>
+                <p className="text-[11px] text-slate-400">
+                  Chọn Tỉnh/Thành phố để hệ thống tự động gợi ý Quận/Huyện và các Trường Đại học tương ứng
+                </p>
+              </div>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateProperty} className="p-6 overflow-y-auto space-y-4 text-xs">
+            <form onSubmit={handleCreateProperty} className="p-6 overflow-y-auto space-y-5 text-xs">
+              {/* Tiêu đề phòng */}
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Tiêu đề phòng trọ *</label>
+                <label className="font-bold text-slate-700 block mb-1.5">Tiêu đề phòng trọ / Căn hộ *</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: Căn hộ Studio cao cấp gần ĐH Bách Khoa"
+                  placeholder="Ví dụ: Căn hộ Studio ban công thoáng mát gần ĐH Cần Thơ"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-600 outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Quốc gia</label>
-                  <select
-                    value={newCountry}
-                    onChange={(e) => setNewCountry(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+              {/* Khối Vị trí Hành chính (Cascading Selects) */}
+              <div className="p-4 bg-indigo-50/40 border border-indigo-100 rounded-2xl space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-indigo-950 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-indigo-600" />
+                    Vị trí hành chính &amp; Khu vực Trường Đại học
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPreview(!showMapPreview)}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
                   >
-                    <option value="Vietnam">Việt Nam</option>
-                    <option value="India">Ấn Độ</option>
-                    <option value="Australia">Úc (Australia)</option>
-                    <option value="United Kingdom">Vương Quốc Anh</option>
-                    <option value="Global">Khác / Toàn Cầu</option>
-                  </select>
+                    <Map className="w-3.5 h-3.5" />
+                    <span>{showMapPreview ? 'Ẩn bản đồ định vị' : 'Hiện bản đồ Google Maps'}</span>
+                  </button>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* 1. Quốc gia */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">1. Quốc gia</label>
+                    <select
+                      value={newCountry}
+                      onChange={(e) => handleCountryChange(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 focus:border-indigo-600 outline-none"
+                    >
+                      {Object.values(LOCATION_CATALOG).map((c) => (
+                        <option key={c.countryCode} value={c.countryCode}>
+                          {c.countryName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 2. Tỉnh / Thành phố (Tự động đổi theo Quốc gia) */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">2. Tỉnh / Thành phố</label>
+                    <select
+                      value={newCity}
+                      onChange={(e) => handleCityChange(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 focus:border-indigo-600 outline-none"
+                    >
+                      {countryCatalog.cities.map((c) => (
+                        <option key={c.city} value={c.city}>
+                          {c.city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 3. Quận / Huyện / Khu dân cư (Tự động lọc theo Tỉnh/TP) */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">3. Quận / Huyện / KDC</label>
+                    <select
+                      value={newArea}
+                      onChange={(e) => setNewArea(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-800 focus:border-indigo-600 outline-none"
+                    >
+                      {currentCityData.districts.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                      <option value="__custom__">+ Tự nhập Quận / Khu vực khác...</option>
+                    </select>
+                    {newArea === '__custom__' && (
+                      <input
+                        type="text"
+                        placeholder="Nhập tên Quận / Phường / KDC..."
+                        value={customArea}
+                        onChange={(e) => setCustomArea(e.target.value)}
+                        className="mt-2 w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl outline-none"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Địa chỉ thường trú / Số nhà, tên đường cụ thể */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Thành phố</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    4. Địa chỉ chi tiết (Số nhà, Hẻm/Ngõ, Tên đường, Phường/Xã) *
+                  </label>
                   <input
                     type="text"
-                    value={newCity}
-                    onChange={(e) => setNewCity(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    required
+                    placeholder={`Ví dụ: Số 128 Đường 3/2 (hoặc KDC Hồng Phát), ${
+                      newArea === '__custom__' ? '' : newArea
+                    }, ${newCity}`}
+                    value={newAddress}
+                    onChange={(e) => setNewAddress(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-indigo-600 outline-none"
                   />
                 </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Quận / Khu vực</label>
-                  <input
-                    type="text"
-                    value={newArea}
-                    onChange={(e) => setNewArea(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                  />
+
+                {/* 5. Trường Đại học gần nhất (Sổ xuống đúng các trường thuộc Tỉnh/TP đã chọn) & Khoảng cách */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 flex items-center gap-1 mb-1">
+                      <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>5. Trường Đại học / Cao đẳng tại {newCity}</span>
+                    </label>
+                    <select
+                      value={newUniversity}
+                      onChange={(e) => setNewUniversity(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-indigo-950 focus:border-indigo-600 outline-none"
+                    >
+                      {currentCityData.universities.map((u) => (
+                        <option key={u} value={u}>
+                          🎓 {u}
+                        </option>
+                      ))}
+                      <option value="__custom__">+ Nhập tên trường ĐH/CĐ khác...</option>
+                    </select>
+                    {newUniversity === '__custom__' && (
+                      <input
+                        type="text"
+                        placeholder="Nhập tên trường Đại học / Cao đẳng..."
+                        value={customUniversity}
+                        onChange={(e) => setCustomUniversity(e.target.value)}
+                        className="mt-2 w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl outline-none"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      6. Khoảng cách di chuyển tới trường
+                    </label>
+                    <select
+                      value={DISTANCE_PRESETS.includes(newDistance) ? newDistance : '__custom__'}
+                      onChange={(e) => {
+                        if (e.target.value !== '__custom__') {
+                          setNewDistance(e.target.value);
+                        } else {
+                          setNewDistance('');
+                        }
+                      }}
+                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-800 focus:border-indigo-600 outline-none"
+                    >
+                      {DISTANCE_PRESETS.map((d) => (
+                        <option key={d} value={d}>
+                          📍 {d}
+                        </option>
+                      ))}
+                      <option value="__custom__">+ Tự nhập khoảng cách cụ thể...</option>
+                    </select>
+                    {!DISTANCE_PRESETS.includes(newDistance) && (
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: 450m (5 phút đi bộ)"
+                        value={newDistance}
+                        onChange={(e) => setNewDistance(e.target.value)}
+                        className="mt-2 w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl outline-none"
+                      />
+                    )}
+                  </div>
                 </div>
+
+                {/* Live Google Maps Embed Preview */}
+                {showMapPreview && (
+                  <div className="pt-1">
+                    <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 h-44 relative">
+                      <iframe
+                        title="Google Maps Location Preview"
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={`https://www.google.com/maps?q=${encodeURIComponent(
+                          `${newAddress ? newAddress + ', ' : ''}${
+                            newArea === '__custom__' ? customArea : newArea
+                          }, ${newCity}, ${
+                            newUniversity === '__custom__' ? customUniversity : newUniversity
+                          }`
+                        )}&output=embed`}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      📌 Bản đồ tự động định vị theo địa chỉ thường trú &amp; khu vực trường{' '}
+                      <strong>
+                        {newUniversity === '__custom__' ? customUniversity : newUniversity}
+                      </strong>{' '}
+                      tại <strong>{newCity}</strong>.
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Trường ĐH gần nhất</label>
-                  <input
-                    type="text"
-                    value={newUniversity}
-                    onChange={(e) => setNewUniversity(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Khoảng cách (Đi bộ / Xe máy)</label>
-                  <input
-                    type="text"
-                    value={newDistance}
-                    onChange={(e) => setNewDistance(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
+              {/* Loại phòng, Đối tượng, Giờ giấc */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Loại phòng</label>
                   <select
                     value={newRoomType}
                     onChange={(e) => setNewRoomType(e.target.value as RoomType)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="studio">Căn hộ Studio</option>
+                    <option value="studio">Căn hộ Studio khép kín</option>
                     <option value="single">Phòng đơn / Sleepbox</option>
                     <option value="double">Phòng ở ghép 2 người</option>
-                    <option value="triple">Phòng 3 người</option>
+                    <option value="triple">Phòng ở ghép 3-4 người</option>
                   </select>
                 </div>
                 <div>
@@ -664,95 +884,222 @@ export default function AdminPage() {
                   <select
                     value={newGender}
                     onChange={(e) => setNewGender(e.target.value as GenderPreference)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="all">Nam / Nữ (Chung)</option>
-                    <option value="boys">Chỉ Nam</option>
-                    <option value="girls">Chỉ Nữ</option>
+                    <option value="all">Nam &amp; Nữ (Khu chung)</option>
+                    <option value="boys">Chỉ dành cho Nam</option>
+                    <option value="girls">Chỉ dành cho Nữ</option>
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Giờ giấc</label>
-                  <input
-                    type="text"
-                    value={newCurfew}
-                    onChange={(e) => setNewCurfew(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                  />
+                  <label className="font-bold text-slate-700 block mb-1">Giờ giấc &amp; An ninh</label>
+                  <select
+                    value={CURFEW_PRESETS.includes(newCurfew) ? newCurfew : '__custom__'}
+                    onChange={(e) => {
+                      if (e.target.value !== '__custom__') setNewCurfew(e.target.value);
+                      else setNewCurfew('');
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    {CURFEW_PRESETS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    <option value="__custom__">+ Tự nhập giờ giấc...</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Giá thuê (tương đương USD)</label>
-                  <input
-                    type="number"
-                    value={newPriceUSD}
-                    onChange={(e) => setNewPriceUSD(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">
-                    Hiển thị: {formatPrice(newPriceUSD)}
-                  </span>
+              {/* Bảng giá linh hoạt VNĐ hoặc USD */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800">Chi phí thuê &amp; Tiền đặt cọc</span>
+                  <div className="inline-flex rounded-xl bg-white p-0.5 border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setPriceInputMode('VND')}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                        priceInputMode === 'VND'
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Nhập bằng VNĐ (₫)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPriceInputMode('USD')}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                        priceInputMode === 'USD'
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Nhập bằng USD ($)
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Tiền cọc đảm bảo (USD)</label>
-                  <input
-                    type="number"
-                    value={newDepositUSD}
-                    onChange={(e) => setNewDepositUSD(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">
-                    Hiển thị: {formatPrice(newDepositUSD)}
-                  </span>
+
+                {priceInputMode === 'VND' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Giá thuê / tháng (VNĐ)</label>
+                      <input
+                        type="number"
+                        step={100000}
+                        value={newPriceVND}
+                        onChange={(e) => setNewPriceVND(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-900"
+                      />
+                      <span className="text-[10px] text-emerald-700 font-semibold mt-1 block">
+                        = {newPriceVND.toLocaleString('vi-VN')} ₫ / tháng
+                      </span>
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Tiền cọc hợp đồng (VNĐ)</label>
+                      <input
+                        type="number"
+                        step={100000}
+                        value={newDepositVND}
+                        onChange={(e) => setNewDepositVND(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        = {newDepositVND.toLocaleString('vi-VN')} ₫
+                      </span>
+                    </div>
+                    <div>
+                      <label className="font-bold text-indigo-700 block mb-1">Cọc giữ chỗ Online (VNĐ)</label>
+                      <input
+                        type="number"
+                        step={50000}
+                        value={newTokenVND}
+                        onChange={(e) => setNewTokenVND(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-700"
+                      />
+                      <span className="text-[10px] text-indigo-600 font-semibold mt-1 block">
+                        = {newTokenVND.toLocaleString('vi-VN')} ₫ (Giữ chỗ 48h)
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Giá thuê (USD / tháng)</label>
+                      <input
+                        type="number"
+                        value={newPriceUSD}
+                        onChange={(e) => setNewPriceUSD(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-bold"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Quy đổi: {formatPrice(newPriceUSD)}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Tiền cọc đảm bảo (USD)</label>
+                      <input
+                        type="number"
+                        value={newDepositUSD}
+                        onChange={(e) => setNewDepositUSD(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Quy đổi: {formatPrice(newDepositUSD)}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="font-bold text-indigo-700 block mb-1">Cọc giữ phòng Token (USD)</label>
+                      <input
+                        type="number"
+                        value={newTokenUSD}
+                        onChange={(e) => setNewTokenUSD(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-700"
+                      />
+                      <span className="text-[10px] text-indigo-600 mt-1 block">
+                        Quy đổi: {formatPrice(newTokenUSD)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Hình ảnh phòng trọ: Tải từ máy hoặc chọn ảnh mẫu hoặc dán URL */}
+              <div className="space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="font-bold text-slate-700 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-indigo-600" />
+                    <span>Hình ảnh phòng trọ (Tải ảnh từ máy hoặc dán Link)</span>
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl border border-indigo-200 cursor-pointer transition-colors">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Tải ảnh từ máy tính</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLocalImageUpload}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Cọc giữ phòng Token (USD)</label>
-                  <input
-                    type="number"
-                    value={newTokenUSD}
-                    onChange={(e) => setNewTokenUSD(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-indigo-700"
+
+                <div className="flex gap-3 items-start">
+                  <img
+                    src={newImageUrl}
+                    alt="Room preview"
+                    className="w-24 h-20 rounded-xl object-cover border border-slate-200 shrink-0 bg-slate-100"
                   />
-                  <span className="text-[10px] text-indigo-600 mt-0.5 block">
-                    Hiển thị: {formatPrice(newTokenUSD)}
-                  </span>
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]"
+                    />
+                    <div className="flex flex-wrap gap-1.5">
+                      {SAMPLE_ROOM_IMAGES.map((img) => (
+                        <button
+                          key={img.label}
+                          type="button"
+                          onClick={() => setNewImageUrl(img.url)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
+                            newImageUrl === img.url
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {img.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Link ảnh chụp phòng (URL)</label>
-                <input
-                  type="text"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Mô tả phòng trọ</label>
+                <label className="font-bold text-slate-700 block mb-1">Mô tả chi tiết phòng trọ</label>
                 <textarea
                   rows={3}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Mô tả nội thất, bếp, khu vực phơi đồ, camera an ninh..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  placeholder="Mô tả nội thất (máy lạnh, tủ lạnh, gác lửng, bếp riêng), giờ giấc, tiền điện nước..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-600 outline-none"
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold"
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md"
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md cursor-pointer"
                 >
                   Đăng Phòng Lên Website
                 </button>

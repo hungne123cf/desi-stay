@@ -222,6 +222,39 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                   </div>
                 </div>
               )}
+
+              {/* Embedded Real Google Map */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-indigo-600" />
+                    <span>Vị trí thực tế &amp; Đường đi tới trường</span>
+                  </h4>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      `${property.address}, ${property.city}`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-indigo-600 hover:underline"
+                  >
+                    Mở trên Google Maps ↗
+                  </a>
+                </div>
+                <div className="rounded-2xl overflow-hidden border border-slate-200 h-64 bg-slate-100">
+                  <iframe
+                    title={`Bản đồ ${property.title}`}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(
+                      `${property.address}, ${property.city}`
+                    )}&output=embed`}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Landlord Profile */}
