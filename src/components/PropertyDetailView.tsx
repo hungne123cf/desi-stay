@@ -56,6 +56,19 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
 
   const property = properties.find((p) => p.id === propertyId);
 
+  const propertyActualReviews = reviews.filter(
+    (r) => property && (r.propertyId === property.id || r.propertyCode === property.code)
+  );
+  const propertyReviewsCount = propertyActualReviews.length;
+  const propertyRating =
+    propertyReviewsCount > 0
+      ? Number(
+          (propertyActualReviews.reduce((sum, r) => sum + r.rating, 0) / propertyReviewsCount).toFixed(1)
+        )
+      : property?.reviewsCount && property.reviewsCount > 0
+      ? property.rating
+      : 0;
+
   const eligibility = property
     ? getReviewEligibility(property.id, property.code, user)
     : {
@@ -194,13 +207,24 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs text-slate-600">
                 <div className="flex items-center gap-1.5 font-medium text-slate-700">
                   <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span>{property.address}, {property.area}, {property.city}</span>
+                  <span>
+                    {property.address.includes(property.city)
+                      ? property.address
+                      : `${property.address}, ${property.area}, ${property.city}`}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1 text-slate-800 font-bold bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <span>{property.rating} / 5.0</span>
-                  <span className="text-slate-400 font-normal">({property.reviewsCount} đánh giá)</span>
-                </div>
+                {propertyReviewsCount > 0 ? (
+                  <div className="flex items-center gap-1 text-slate-800 font-bold bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    <span>{propertyRating} / 5.0</span>
+                    <span className="text-slate-400 font-normal">({propertyReviewsCount} đánh giá)</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-slate-600 font-medium bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200">
+                    <Star className="w-4 h-4 text-slate-400" />
+                    <span>Chưa có đánh giá (0)</span>
+                  </div>
+                )}
               </div>
 
               {/* Campus Proximity Banner */}
@@ -393,15 +417,17 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-amber-50/80 border border-amber-200 px-4 py-2.5 rounded-2xl">
-                      <div className="text-2xl font-black text-amber-600">{property.rating}</div>
+                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-2xl">
+                      <div className="text-2xl font-black text-slate-800">
+                        {propertyReviewsCount > 0 ? propertyRating : '0'}
+                      </div>
                       <div>
                         <div className="flex items-center gap-0.5">
                           {[1, 2, 3, 4, 5].map((star) => (
                             <Star
                               key={star}
                               className={`w-3.5 h-3.5 ${
-                                star <= Math.round(property.rating)
+                                propertyReviewsCount > 0 && star <= Math.round(propertyRating)
                                   ? 'fill-amber-400 text-amber-400'
                                   : 'text-slate-300'
                               }`}
@@ -409,9 +435,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                           ))}
                         </div>
                         <span className="text-[11px] font-semibold text-slate-600">
-                          {propertyReviews.length > 0
-                            ? `${propertyReviews.length} nhận xét xác thực`
-                            : 'Đánh giá tiêu chuẩn 5.0'}
+                          {propertyReviewsCount > 0
+                            ? `${propertyReviewsCount} nhận xét xác thực`
+                            : 'Chưa có đánh giá nào từ người thuê'}
                         </span>
                       </div>
                     </div>

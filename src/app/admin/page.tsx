@@ -173,9 +173,17 @@ export default function AdminPage() {
     const computedDepositUSD = Math.max(1, Math.round(newDepositVND / EXCHANGE_VND_PER_USD));
     const computedTokenUSD = Math.max(1, Math.round(newTokenVND / EXCHANGE_VND_PER_USD));
 
-    const fullAddress = newAddress.trim()
-      ? `${newAddress.trim()}, ${finalArea}, ${newCity}`
-      : `${finalArea}, ${newCity}`;
+    let fullAddress = newAddress.trim();
+    if (!fullAddress) {
+      fullAddress = `${finalArea}, ${newCity}`;
+    } else {
+      if (!fullAddress.toLowerCase().includes(finalArea.toLowerCase())) {
+        fullAddress += `, ${finalArea}`;
+      }
+      if (!fullAddress.toLowerCase().includes(newCity.toLowerCase())) {
+        fullAddress += `, ${newCity}`;
+      }
+    }
 
     addProperty({
       title: newTitle,

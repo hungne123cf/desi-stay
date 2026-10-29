@@ -29,10 +29,18 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
   const [activeImgIndex, setActiveImgIndex] = useState(0);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
-  const propertyReviewsCount =
-    reviews.filter((r) => r.propertyId === property.id || r.propertyCode === property.code).length ||
-    property.reviewsCount ||
-    0;
+  const propertyActualReviews = reviews.filter(
+    (r) => r.propertyId === property.id || r.propertyCode === property.code
+  );
+  const propertyReviewsCount = propertyActualReviews.length;
+  const propertyRating =
+    propertyReviewsCount > 0
+      ? Number(
+          (propertyActualReviews.reduce((sum, r) => sum + r.rating, 0) / propertyReviewsCount).toFixed(1)
+        )
+      : property.reviewsCount && property.reviewsCount > 0
+      ? property.rating
+      : 0;
 
   const eligibility = getReviewEligibility(property.id, property.code, user);
 
@@ -102,12 +110,25 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
         {/* Rating chip - Bấm vào để nhảy thẳng tới mục Đánh giá & Bình luận */}
         <Link
           href={`/properties/${property.id}#reviews`}
-          title="Bấm để xem & gửi đánh giá sao, bình luận"
-          className="absolute bottom-3 right-3 z-10 bg-white/95 hover:bg-amber-50 backdrop-blur-sm px-2.5 py-1 rounded-xl shadow-md flex items-center gap-1 text-xs font-bold text-slate-800 border border-amber-200/60 transition-transform hover:scale-105"
+          title={
+            propertyReviewsCount > 0
+              ? `Đánh giá: ${propertyRating}/5 (${propertyReviewsCount} lượt)`
+              : 'Phòng mới đăng - Chưa có đánh giá'
+          }
+          className="absolute bottom-3 right-3 z-10 bg-white/95 hover:bg-amber-50 backdrop-blur-sm px-2.5 py-1 rounded-xl shadow-md flex items-center gap-1.5 text-xs font-bold text-slate-800 border border-amber-200/60 transition-transform hover:scale-105"
         >
-          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-          <span>{property.rating || 5}</span>
-          <span className="text-indigo-600 font-semibold">({propertyReviewsCount} đánh giá)</span>
+          {propertyReviewsCount > 0 ? (
+            <>
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              <span>{propertyRating}</span>
+              <span className="text-indigo-600 font-semibold">({propertyReviewsCount} đánh giá)</span>
+            </>
+          ) : (
+            <>
+              <Star className="w-3.5 h-3.5 text-slate-300" />
+              <span className="text-slate-500 font-semibold text-[11px]">Chưa có đánh giá (0)</span>
+            </>
+          )}
         </Link>
 
         {/* Dots */}
@@ -170,7 +191,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
         <div className="flex items-center gap-1 text-xs text-slate-500 mb-3">
           <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           <span className="truncate">
-            {property.address}, {property.area}, {property.city}
+            {property.address.includes(property.city)
+              ? property.address
+              : `${property.address}, ${property.area}, ${property.city}`}
           </span>
         </div>
 
@@ -238,7 +261,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
               className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-xl transition-colors"
             >
               <Eye className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>Xem Chi Tiết Phòng ({propertyReviewsCount} đánh giá)</span>
+              <span>
+                Xem Chi Tiết Phòng{propertyReviewsCount > 0 ? ` (${propertyReviewsCount} đánh giá)` : ''}
+              </span>
             </Link>
           )}
 

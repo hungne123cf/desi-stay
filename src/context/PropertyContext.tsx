@@ -171,7 +171,18 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         });
 
-        const finalProps = Array.from(mergedMap.values());
+        const finalProps = Array.from(mergedMap.values()).map((p) => {
+          const pReviews = serverReviews.filter(
+            (r) => r.propertyId === p.id || r.propertyCode === p.code
+          );
+          if (pReviews.length === 0) {
+            return { ...p, rating: 0, reviewsCount: 0 };
+          }
+          const avg = Number(
+            (pReviews.reduce((sum, r) => sum + r.rating, 0) / pReviews.length).toFixed(1)
+          );
+          return { ...p, rating: avg, reviewsCount: pReviews.length };
+        });
         setProperties(finalProps);
         setBookings(serverBookings);
         setMessages(serverMessages);
@@ -265,8 +276,8 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isPublished: true,
         id: `prop-${Date.now()}`,
         code: `${prefix}-${nextCodeNumber}`,
-        rating: 5.0,
-        reviewsCount: 1,
+        rating: 0,
+        reviewsCount: 0,
         createdAt: new Date().toISOString().slice(0, 10)
       };
       const updated = [created, ...prev];
@@ -396,7 +407,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ? Number(
             (propReviews.reduce((sum, r) => sum + r.rating, 0) / count).toFixed(2)
           )
-        : 5.0;
+        : 0;
 
     setProperties((prevProps) => {
       const updatedProps = prevProps.map((p) =>
