@@ -51,12 +51,18 @@ function isSamplePropertyId(id: string): boolean {
   return (
     id.startsWith('prop-vn-') ||
     id.startsWith('prop-in-') ||
-    id.startsWith('prop-eu-')
+    id.startsWith('prop-eu-') ||
+    id === 'prop-1793248830043'
   );
 }
 
 function isSampleBookingId(id: string): boolean {
-  return id === 'lead-1' || id === 'lead-2' || id === 'lead-3';
+  return (
+    id === 'lead-1' ||
+    id === 'lead-2' ||
+    id === 'lead-3' ||
+    id === 'book-1793248971531'
+  );
 }
 
 export function getRealtimeState(): RealtimeState {

@@ -64,7 +64,9 @@ function isRealAdminProperty(p: Property): boolean {
   if (
     p.id.startsWith('prop-vn-') ||
     p.id.startsWith('prop-in-') ||
-    p.id.startsWith('prop-eu-')
+    p.id.startsWith('prop-eu-') ||
+    p.id === 'prop-1793248830043' ||
+    (p.code === 'CT-102' && p.title === '2')
   ) {
     return false;
   }
@@ -73,7 +75,13 @@ function isRealAdminProperty(p: Property): boolean {
 
 function isRealUserBooking(b: Booking): boolean {
   if (!b || !b.id) return false;
-  if (b.id === 'lead-1' || b.id === 'lead-2' || b.id === 'lead-3') {
+  if (
+    b.id === 'lead-1' ||
+    b.id === 'lead-2' ||
+    b.id === 'lead-3' ||
+    b.id === 'book-1793248971531' ||
+    b.propertyCode === 'CT-102'
+  ) {
     return false;
   }
   return true;
@@ -155,7 +163,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const savedProps = localStorage.getItem('unistay_real_properties_v4');
       if (savedProps) {
         const parsed = JSON.parse(savedProps);
-        if (Array.isArray(parsed) && parsed.length > 0) setProperties(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProperties(parsed.filter(isRealAdminProperty));
+        }
       }
     } catch {}
   }, []);
@@ -189,26 +199,8 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     let isMounted = true;
 
-    const localRealProps = new Map<string, Property>();
+    // Dọn sạch các key cache cũ
     try {
-      ['unistay_properties', 'unistay_vn_properties_v2', 'unistay_vn_properties_v3', 'unistay_real_properties_v4'].forEach(
-        (key) => {
-          const raw = localStorage.getItem(key);
-          if (!raw) return;
-          const parsed: Property[] = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((p) => {
-              if (isRealAdminProperty(p)) {
-                localRealProps.set(p.id, {
-                  ...p,
-                  country: 'Việt Nam',
-                  isPublished: true
-                });
-              }
-            });
-          }
-        }
-      );
       localStorage.removeItem('unistay_properties');
       localStorage.removeItem('unistay_vn_properties_v2');
       localStorage.removeItem('unistay_vn_properties_v3');
@@ -232,17 +224,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ? serverState.reviews
           : [];
 
-        const mergedMap = new Map<string, Property>();
-        serverProps.forEach((p) => mergedMap.set(p.id, p));
-        let hasNewLocalToPush = false;
-        localRealProps.forEach((p, id) => {
-          if (!mergedMap.has(id)) {
-            mergedMap.set(id, p);
-            hasNewLocalToPush = true;
-          }
-        });
-
-        const finalProps = Array.from(mergedMap.values()).map((p) => {
+        const finalProps = serverProps.map((p) => {
           const pReviews = serverReviews.filter(
             (r) => r.propertyId === p.id || r.propertyCode === p.code
           );
@@ -266,15 +248,8 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           localStorage.setItem('unistay_real_messages_v4', JSON.stringify(serverMessages));
           localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(serverReviews));
         } catch {}
-
-        if (hasNewLocalToPush) {
-          syncToServer({ properties: finalProps });
-        }
       })
-      .catch(() => {
-        const fallbackProps = Array.from(localRealProps.values());
-        setProperties(fallbackProps);
-      });
+      .catch(() => {});
 
     // 1. Kênh BroadcastChannel đồng bộ tức thì giữa các tab/cửa sổ (SignalR-style browser mesh)
     let syncChannel: BroadcastChannel | null = null;
