@@ -656,12 +656,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                   <Phone className="w-4 h-4" />
                   <span>Nhắn Zalo Báo Chủ Trọ Ngay</span>
                 </button>
+                <Link
+                  href="/my-bookings"
+                  onClick={onClose}
+                  className="py-3 px-5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-200 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <span>Xem Lịch Sử Giao Dịch ↗</span>
+                </Link>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="py-3 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+                  className="py-3 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
                 >
-                  Đóng cửa sổ
+                  Đóng
                 </button>
               </div>
             </div>

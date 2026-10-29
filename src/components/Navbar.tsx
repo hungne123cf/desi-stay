@@ -15,7 +15,8 @@ import {
   X,
   ChevronDown,
   RefreshCw,
-  MapPin
+  MapPin,
+  Receipt
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -86,6 +87,13 @@ export const Navbar: React.FC = () => {
               <a href="#benefits" className="hover:text-indigo-600 transition-colors">
                 Tiện ích &amp; An ninh
               </a>
+              <Link
+                href="/my-bookings"
+                className="hover:text-indigo-600 transition-colors flex items-center gap-1.5"
+              >
+                <Receipt className="w-4 h-4 text-indigo-600" />
+                <span>Lịch Sử Đặt Phòng</span>
+              </Link>
               {user?.role === 'admin' && (
                 <Link
                   href="/admin"
@@ -149,6 +157,15 @@ export const Navbar: React.FC = () => {
                           <span>Bảng điều khiển Admin</span>
                         </Link>
                       )}
+
+                      <Link
+                        href="/my-bookings"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2.5 transition-colors"
+                      >
+                        <Receipt className="w-4 h-4 text-indigo-600" />
+                        <span>Lịch Sử Giao Dịch &amp; Đặt Cọc</span>
+                      </Link>
 
                       <button
                         type="button"
@@ -220,6 +237,14 @@ export const Navbar: React.FC = () => {
             >
               Tiện ích &amp; An ninh
             </a>
+            <Link
+              href="/my-bookings"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-sm font-medium text-indigo-700 border-b border-slate-100 flex items-center gap-1.5"
+            >
+              <Receipt className="w-4 h-4 text-indigo-600" />
+              <span>Lịch Sử Đặt Cọc &amp; Giao Dịch</span>
+            </Link>
             {user?.role === 'admin' && (
               <Link
                 href="/admin"

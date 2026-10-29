@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -39,8 +40,12 @@ export default function RootLayout({
           <PropertyProvider>
             <Navbar />
             <div className="flex-1">{children}</div>
-            <Footer />
-            <WhatsAppFloat />
+            <Suspense fallback={null}>
+              <Footer />
+            </Suspense>
+            <Suspense fallback={null}>
+              <WhatsAppFloat />
+            </Suspense>
           </PropertyProvider>
         </AuthProvider>
       </body>
