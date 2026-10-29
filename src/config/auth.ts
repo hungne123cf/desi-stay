@@ -1,3 +1,7 @@
+export const DEFAULT_GOOGLE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+  '397249070493-tdjj1fnblridf17atv36jat90vju5n0v.apps.googleusercontent.com';
+
 export const ADMIN_EMAILS = [
   'truongvantuan43344@gmail.com',
   'admin@unistay.com'

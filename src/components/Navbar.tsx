@@ -21,12 +21,23 @@ import {
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, loginWithGoogle } = useAuth();
   const { currency, setCurrency, settings } = useProperties();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
+
+  const handleSwitchGoogleAccount = async () => {
+    setUserDropdownOpen(false);
+    setMobileMenuOpen(false);
+    const res = await loginWithGoogle();
+    if (res.requiresModal) {
+      setShowAccountSwitcher(true);
+    } else if (res.user?.role === 'admin') {
+      router.push('/admin');
+    }
+  };
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
@@ -192,10 +203,7 @@ export const Navbar: React.FC = () => {
 
                       <button
                         type="button"
-                        onClick={() => {
-                          setUserDropdownOpen(false);
-                          setShowAccountSwitcher(true);
-                        }}
+                        onClick={handleSwitchGoogleAccount}
                         className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer"
                       >
                         <RefreshCw className="w-4 h-4 text-slate-500" />
@@ -302,10 +310,7 @@ export const Navbar: React.FC = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setShowAccountSwitcher(true);
-                  }}
+                  onClick={handleSwitchGoogleAccount}
                   className="w-full py-2 text-center text-xs font-bold text-slate-700 bg-slate-100 rounded-lg"
                 >
                   Chuyển đổi tài khoản Google

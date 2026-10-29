@@ -11,21 +11,23 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function finalizeUser(payload: { email: string; name: string; avatar?: string }) {
+    async function finalizeUser(
+      payload: { email: string; name: string; avatar?: string },
+      isPopup: boolean
+    ) {
       const user = await loginWithGoogleAccount(payload);
 
-      // If opened inside an OAuth popup window, notify opener and close popup
-      if (window.opener && window.opener !== window) {
-        try {
-          window.opener.postMessage(
-            { type: 'UNISTAY_GOOGLE_AUTH_SUCCESS', payload },
-            window.location.origin
-          );
-          window.close();
-          return;
-        } catch {
-          // Fallback to normal redirect if postMessage fails
-        }
+      try {
+        const channel = new BroadcastChannel('unistay_auth_channel');
+        channel.postMessage({ type: 'UNISTAY_GOOGLE_AUTH_SUCCESS', user });
+        channel.close();
+      } catch {
+        // ignore if BroadcastChannel unsupported
+      }
+
+      if (isPopup || (window.opener && window.opener !== window)) {
+        window.close();
+        return;
       }
 
       if (user.role === 'admin') {
@@ -41,21 +43,52 @@ export default function AuthCallbackPage() {
         const hashParams = new URLSearchParams(hash);
         const searchParams = new URLSearchParams(window.location.search);
 
+        const isPopup =
+          hashParams.get('state') === 'popup' ||
+          searchParams.get('state') === 'popup' ||
+          window.name === 'google_oauth_popup';
+
         const oauthError = hashParams.get('error') || searchParams.get('error');
         if (oauthError) {
-          setError('Bạn đã hủy đăng nhập hoặc từ chối cấp quyền truy cập từ Google.');
+          setError('Bạn đã hủy đăng nhập hoặc từ chối cấp quyền từ Google.');
+          try {
+            const channel = new BroadcastChannel('unistay_auth_channel');
+            channel.postMessage({ type: 'UNISTAY_GOOGLE_AUTH_CANCEL' });
+            channel.close();
+          } catch {
+            // ignore
+          }
           setTimeout(() => {
-            if (window.opener && window.opener !== window) {
+            if (isPopup) {
               window.close();
             } else {
               router.replace('/auth/login');
             }
-          }, 1800);
+          }, 1200);
           return;
         }
 
-        const idToken = hashParams.get('id_token');
         const accessToken = hashParams.get('access_token');
+        const idToken = hashParams.get('id_token');
+
+        // Prefer Google UserInfo API with access_token for verified high-res profile
+        if (accessToken) {
+          const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            await finalizeUser(
+              {
+                email: data.email,
+                name: data.name || data.email.split('@')[0],
+                avatar: data.picture
+              },
+              isPopup
+            );
+            return;
+          }
+        }
 
         if (idToken) {
           const base64Url = idToken.split('.')[1];
@@ -72,27 +105,15 @@ export default function AuthCallbackPage() {
           const name = parsed.name || email.split('@')[0];
           const picture = parsed.picture || '';
 
-          await finalizeUser({
-            email,
-            name,
-            avatar: picture
-          });
+          await finalizeUser(
+            {
+              email,
+              name,
+              avatar: picture
+            },
+            isPopup
+          );
           return;
-        }
-
-        if (accessToken) {
-          const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            await finalizeUser({
-              email: data.email,
-              name: data.name || data.email.split('@')[0],
-              avatar: data.picture
-            });
-            return;
-          }
         }
 
         router.replace('/auth/login');

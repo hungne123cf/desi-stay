@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '@/types';
-import { isEmailAdmin, PREDEFINED_ADMINS } from '@/config/auth';
+import { DEFAULT_GOOGLE_CLIENT_ID, isEmailAdmin, PREDEFINED_ADMINS } from '@/config/auth';
 
 export interface StoredAccount {
   name: string;
@@ -28,52 +28,28 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const DEFAULT_KNOWN_ACCOUNTS: StoredAccount[] = [
-  {
-    name: 'Trương Hùng',
-    email: 'truongvantuan43344@gmail.com',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-    role: 'admin'
-  },
-  {
-    name: 'Truong Hung (K18 CT)',
-    email: 'hungtce181568@fpt.edu.vn',
-    role: 'student'
-  }
-];
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [googleClientId, setGoogleClientIdState] = useState<string>('');
+  const [googleClientId, setGoogleClientIdState] = useState<string>(DEFAULT_GOOGLE_CLIENT_ID);
   const [knownAccounts, setKnownAccounts] = useState<StoredAccount[]>([]);
 
-  // Load initial state from localStorage
   useEffect(() => {
     try {
       const savedClientId =
-        process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-        localStorage.getItem('unistay_google_client_id') ||
-        '';
+        localStorage.getItem('unistay_google_client_id') || DEFAULT_GOOGLE_CLIENT_ID;
       setGoogleClientIdState(savedClientId);
 
-      // Load known Google accounts in browser
       const savedKnown = localStorage.getItem('unistay_known_accounts');
       if (savedKnown) {
         const parsedKnown = JSON.parse(savedKnown);
-        if (Array.isArray(parsedKnown) && parsedKnown.length > 0) {
+        if (Array.isArray(parsedKnown)) {
           setKnownAccounts(parsedKnown);
-        } else {
-          setKnownAccounts(DEFAULT_KNOWN_ACCOUNTS);
         }
-      } else {
-        setKnownAccounts(DEFAULT_KNOWN_ACCOUNTS);
-        localStorage.setItem('unistay_known_accounts', JSON.stringify(DEFAULT_KNOWN_ACCOUNTS));
       }
 
-      // Load active user session
       const savedUser = localStorage.getItem('unistay_auth_user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
@@ -90,13 +66,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const setGoogleClientId = (id: string) => {
-    const clean = id.trim();
+    const clean = id.trim() || DEFAULT_GOOGLE_CLIENT_ID;
     setGoogleClientIdState(clean);
-    if (clean) {
-      localStorage.setItem('unistay_google_client_id', clean);
-    } else {
-      localStorage.removeItem('unistay_google_client_id');
-    }
+    localStorage.setItem('unistay_google_client_id', clean);
   };
 
   const saveKnownAccount = useCallback((acc: StoredAccount) => {
@@ -106,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         localStorage.setItem('unistay_known_accounts', JSON.stringify(updated));
       } catch {
-        // ignore storage quota errors
+        // ignore
       }
       return updated;
     });
@@ -124,13 +96,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
-  /**
-   * Finalize Google sign-in with user profile details
-   */
   const loginWithGoogleAccount = useCallback(
     async (account: { email: string; name: string; avatar?: string }): Promise<User> => {
       setIsLoading(true);
-      await new Promise((r) => setTimeout(r, 250));
 
       const cleanEmail = account.email.toLowerCase().trim();
       const role = isEmailAdmin(cleanEmail) ? 'admin' : 'student';
@@ -166,86 +134,128 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [saveKnownAccount]
   );
 
-  // Listen for OAuth popup callback messages
+  // Sync user session across tabs/popups via BroadcastChannel and storage events
   useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data?.type === 'UNISTAY_GOOGLE_AUTH_SUCCESS' && event.data?.payload) {
-        const { email, name, avatar } = event.data.payload;
-        if (email) {
-          await loginWithGoogleAccount({ email, name, avatar });
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('unistay_auth_channel');
+      channel.onmessage = (event) => {
+        if (event.data?.type === 'UNISTAY_GOOGLE_AUTH_SUCCESS' && event.data?.user) {
+          setUser(event.data.user);
+          setIsLoading(false);
+        }
+      };
+    } catch {
+      // BroadcastChannel not supported in older environments
+    }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'unistay_auth_user') {
+        if (e.newValue) {
+          try {
+            setUser(JSON.parse(e.newValue));
+          } catch {
+            // ignore
+          }
+        } else {
+          setUser(null);
         }
       }
     };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [loginWithGoogleAccount]);
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   /**
-   * Trigger Google Login.
-   * If real Google Client ID is configured, opens Google OAuth 2.0 popup window (or redirects).
-   * Otherwise, opens the realistic Google Account Chooser modal.
+   * Opens the real Google OAuth 2.0 Account Chooser (`accounts.google.com`)
    */
   const loginWithGoogle = async (): Promise<{ requiresModal?: boolean; user?: User }> => {
-    if (googleClientId) {
-      const redirectUri = `${window.location.origin}/auth/callback`;
-      const targetUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
-        googleClientId
-      )}&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&response_type=token%20id_token&scope=openid%20email%20profile&prompt=select_account&nonce=${Date.now()}`;
-
-      // Open centered popup window for smooth OAuth experience
-      const width = 500;
-      const height = 620;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-
-      const popup = window.open(
-        targetUrl,
-        'google_oauth_popup',
-        `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
-      );
-
-      if (!popup) {
-        // Fallback to full page redirect if popup blocked
-        window.location.href = targetUrl;
-        return { requiresModal: false };
-      }
-
-      // Wait for popup to complete authentication via postMessage
-      return new Promise((resolve) => {
-        const checkClosed = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(checkClosed);
-            const saved = localStorage.getItem('unistay_auth_user');
-            if (saved) {
-              try {
-                resolve({ requiresModal: false, user: JSON.parse(saved) });
-                return;
-              } catch {
-                // ignore
-              }
-            }
-            resolve({ requiresModal: false });
-          }
-        }, 400);
-      });
+    const activeClientId = googleClientId || DEFAULT_GOOGLE_CLIENT_ID;
+    if (!activeClientId) {
+      return { requiresModal: true };
     }
 
-    return { requiresModal: true };
+    const redirectUri = `${window.location.origin}/auth/callback`;
+    const targetUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+      activeClientId
+    )}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&response_type=token%20id_token&scope=openid%20email%20profile&prompt=select_account&state=popup&nonce=${Date.now()}`;
+
+    const width = 500;
+    const height = 640;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+      targetUrl,
+      'google_oauth_popup',
+      `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+    );
+
+    if (!popup) {
+      // Fallback to full page redirect if popup blocker prevented window.open
+      const fullRedirectUrl = targetUrl.replace('&state=popup', '');
+      window.location.href = fullRedirectUrl;
+      return { requiresModal: false };
+    }
+
+    return new Promise((resolve) => {
+      let resolved = false;
+      let channel: BroadcastChannel | null = null;
+
+      const finish = (loggedUser?: User) => {
+        if (resolved) return;
+        resolved = true;
+        clearInterval(pollTimer);
+        if (channel) channel.close();
+        if (loggedUser) {
+          setUser(loggedUser);
+        }
+        resolve({ requiresModal: false, user: loggedUser });
+      };
+
+      try {
+        channel = new BroadcastChannel('unistay_auth_channel');
+        channel.onmessage = (event) => {
+          if (event.data?.type === 'UNISTAY_GOOGLE_AUTH_SUCCESS' && event.data?.user) {
+            finish(event.data.user);
+          } else if (event.data?.type === 'UNISTAY_GOOGLE_AUTH_CANCEL') {
+            finish(undefined);
+          }
+        };
+      } catch {
+        // ignore
+      }
+
+      const pollTimer = setInterval(() => {
+        try {
+          if (popup.closed) {
+            const saved = localStorage.getItem('unistay_auth_user');
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              finish(parsed);
+            } else {
+              finish(undefined);
+            }
+          }
+        } catch {
+          // Cross-origin access while on accounts.google.com is normal
+        }
+      }, 400);
+    });
   };
 
-  /**
-   * Standard Email + Password Login
-   */
   const loginWithEmail = async (email: string, pass: string): Promise<User> => {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 350));
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // Check registered users first (in case admin updated password)
     let registeredList: StoredAccount[] = [];
     try {
       registeredList = JSON.parse(localStorage.getItem('unistay_registered_users') || '[]');
@@ -254,8 +264,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const matchedRegistered = registeredList.find((u) => u.email.toLowerCase() === cleanEmail);
-
-    // Check predefined Admin accounts
     const predefined = PREDEFINED_ADMINS.find((adm) => adm.email.toLowerCase() === cleanEmail);
 
     if (predefined) {
@@ -315,9 +323,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return loggedUser;
   };
 
-  /**
-   * Register a new account
-   */
   const register = async (name: string, email: string, pass: string): Promise<User> => {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 400));
@@ -375,9 +380,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return newUser;
   };
 
-  /**
-   * Reset password for an existing email account
-   */
   const resetPassword = async (email: string, newPass: string): Promise<void> => {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 350));
