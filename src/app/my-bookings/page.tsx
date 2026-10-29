@@ -147,6 +147,30 @@ export default function MyBookingsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+        {/* Banner nhắc đăng nhập cho khách */}
+        {!user && (
+          <div className="p-4 sm:p-5 bg-gradient-to-r from-indigo-50 via-blue-50 to-indigo-50 border border-indigo-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">Bạn đang xem với tư cách Khách chưa đăng nhập</h4>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Vui lòng đăng nhập để đồng bộ đầy đủ các giao dịch cọc phòng, lưu biên lai thanh toán vĩnh viễn và xem trên mọi thiết bị.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/auth/login?next=/my-bookings"
+              className="shrink-0 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all inline-flex items-center gap-1.5"
+            >
+              <span>Đăng nhập ngay</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
+
         {/* Filter Tabs */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs">
           <div className="flex flex-nowrap overflow-x-auto sm:flex-wrap gap-1.5 pb-1 sm:pb-0 scrollbar-none w-full sm:w-auto">

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, X, Send, Phone, ExternalLink } from 'lucide-react';
+import { MessageCircle, X, Send, Phone, ExternalLink, ArrowRight } from 'lucide-react';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -178,40 +179,36 @@ export const WhatsAppFloat: React.FC = () => {
           </div>
 
           {/* Chat Content */}
-          {!isProfileSaved ? (
-            <form onSubmit={handleSaveGuestProfile} className="p-4 space-y-3 text-xs bg-white">
-              <p className="text-slate-600 leading-relaxed">
-                👋 Chào bạn! Nhập tên và số điện thoại/Zalo để bắt đầu chat trực tiếp với Quản lý phòng trọ ngay trên web:
-              </p>
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Tên của bạn *</label>
-                <input
-                  type="text"
-                  required
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Ví dụ: Minh Khôi"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
-                />
+          {!user ? (
+            <div className="p-6 text-center flex flex-col items-center justify-center space-y-4 bg-white">
+              <div className="w-14 h-14 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
+                <MessageCircle className="w-7 h-7" />
               </div>
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Số điện thoại / Zalo *</label>
-                <input
-                  type="text"
-                  required
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
-                  placeholder="0939 123 456"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
-                />
+              <div className="space-y-1">
+                <h5 className="font-bold text-slate-900 text-sm">Yêu cầu đăng nhập để Chat</h5>
+                <p className="text-[11px] text-slate-500 leading-relaxed px-1">
+                  Vui lòng đăng nhập tài khoản sinh viên để nhắn tin trực tiếp với Quản lý phòng trọ và lưu lại lịch sử tư vấn.
+                </p>
               </div>
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm cursor-pointer"
-              >
-                Bắt Đầu Chat Ngay
-              </button>
-            </form>
+              <div className="w-full space-y-2 pt-1">
+                <Link
+                  href={`/auth/login?next=${encodeURIComponent(pathname || '/')}`}
+                  className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                >
+                  <span>Đăng nhập ngay</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+                <Link
+                  href={`/auth/register?next=${encodeURIComponent(pathname || '/')}`}
+                  className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center transition-all"
+                >
+                  <span>Tạo tài khoản mới</span>
+                </Link>
+              </div>
+              <div className="text-[10px] text-slate-400 pt-1 leading-snug">
+                💡 Cần hỏi gấp mà chưa có tài khoản? Bạn có thể bấm nút <strong>Chat qua App Zalo</strong> hoặc <strong>Gọi Hotline</strong> ở thanh trên nhé!
+              </div>
+            </div>
           ) : (
             <>
               <div className="flex-1 p-3.5 overflow-y-auto space-y-2.5 bg-slate-50/60 min-h-[230px] max-h-[290px] text-xs">

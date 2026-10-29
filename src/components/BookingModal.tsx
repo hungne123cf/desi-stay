@@ -176,7 +176,67 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
 
         {/* Modal Body */}
         <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
-          {step === 'details' && (
+          {!user ? (
+            <div className="py-4 text-center flex flex-col items-center justify-center space-y-5">
+              <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-1.5 max-w-md">
+                <h3 className="text-lg sm:text-xl font-black text-slate-900">
+                  Yêu cầu đăng nhập để giữ chỗ phòng
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  Để đảm bảo quyền lợi sinh viên, lưu biên lai cọc phòng và đồng bộ giao dịch phòng{' '}
+                  <strong className="text-indigo-600 font-bold">{property.title} ({property.code})</strong>,
+                  bạn vui lòng đăng nhập trước khi tiến hành đặt chỗ.
+                </p>
+              </div>
+
+              {/* Quyền lợi khi đăng nhập */}
+              <div className="w-full max-w-sm bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-left space-y-2.5 text-xs text-slate-700">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Bảo lưu vé cọc &amp; đồng bộ trên mọi thiết bị</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Ưu tiên xác nhận lịch hẹn trực tiếp với chủ phòng</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Quyền gửi đánh giá &amp; phản hồi công khai sau khi thuê</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="w-full max-w-sm space-y-2.5 pt-2">
+                <Link
+                  href={`/auth/login?next=/properties/${property.id}`}
+                  className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-sm transition-all"
+                >
+                  <span>Đăng nhập ngay</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href={`/auth/register?next=/properties/${property.id}`}
+                  className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center transition-all"
+                >
+                  <span>Chưa có tài khoản? Đăng ký miễn phí</span>
+                </Link>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-600 pt-1 cursor-pointer"
+              >
+                Để sau, tôi muốn xem tiếp danh sách phòng
+              </button>
+            </div>
+          ) : (
+            <>
+              {step === 'details' && (
             <form onSubmit={handleProceedToPayment} className="space-y-4">
               {/* Chọn Hình Thức Ngay Từ Bước 1 */}
               <div className="grid grid-cols-2 gap-3">
@@ -672,6 +732,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                 </button>
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>
