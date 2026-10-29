@@ -41,46 +41,46 @@ const DEFAULT_SETTINGS: SiteSettings = {
 const INITIAL_BOOKINGS: Booking[] = [
   {
     id: 'lead-1',
-    reference: 'BK-VN98A1',
-    propertyId: 'prop-vn-1',
-    propertyTitle: 'The Green Studio – Căn hộ dịch vụ cao cấp Quận 10',
+    reference: 'BK-CT88A1',
+    propertyId: 'prop-vn-ct-1',
+    propertyTitle: 'Mekong Green Studio – Căn hộ ban công gần ĐH Cần Thơ & ĐH Y Dược',
     propertyCode: 'VN-101',
     userId: 'usr-1',
-    studentName: 'Nguyễn Hoàng Nam',
-    studentEmail: 'nam.nguyen@gmail.com',
-    studentContact: '0909 123 456',
-    college: 'ĐH Bách Khoa TP.HCM',
-    moveInDate: '2026-11-15',
+    studentName: 'Lê Minh Khôi',
+    studentEmail: 'khoi.le@student.ctu.edu.vn',
+    studentContact: '0939 123 456',
+    college: 'ĐH Cần Thơ (CTU - Khu II Đường 3/2)',
+    moveInDate: '2026-11-10',
     roomType: 'studio',
     tokenAmountUSD: 20,
     tokenAmountLocal: '500.000 ₫',
     currency: 'VND',
     status: 'token_paid',
     paymentMethod: 'vietqr_bank',
-    transactionReference: 'VCB_MB_883921',
-    adminNotes: 'Đã nhận chuyển khoản cọc giữ phòng 500k. Đã hẹn 15/11 nhận phòng.',
-    createdAt: '2026-10-27 09:30'
+    transactionReference: 'VCB_CT_992817',
+    adminNotes: 'Đã nhận chuyển khoản cọc giữ chỗ 500k qua VietQR. Hẹn chiều thứ 7 nhận phòng.',
+    createdAt: '2026-10-28 09:30'
   },
   {
     id: 'lead-2',
-    reference: 'BK-IN44B2',
-    propertyId: 'prop-in-1',
-    propertyTitle: 'The Elite Heights – Boys Luxury PG',
-    propertyCode: 'IN-201',
+    reference: 'BK-FPT29B',
+    propertyId: 'prop-vn-ct-2',
+    propertyTitle: 'FPT Smart Duplex – Phòng gác lửng KDC Hồng Phát gần ĐH FPT Cần Thơ',
+    propertyCode: 'VN-102',
     userId: 'usr-2',
-    studentName: 'Kabir Mehta',
-    studentEmail: 'kabir.m@gmail.com',
-    studentContact: '+91 98450 12345',
-    college: 'Christ University (Central Campus)',
-    moveInDate: '2026-11-20',
+    studentName: 'Nguyễn Hoàng Nam',
+    studentEmail: 'namnhce180122@fpt.edu.vn',
+    studentContact: '0909 888 777',
+    college: 'ĐH FPT Cần Thơ (Cầu Rau Răm - Nguyễn Văn Cừ)',
+    moveInDate: '2026-11-15',
     roomType: 'double',
-    tokenAmountUSD: 24,
-    tokenAmountLocal: '₹2,000',
-    currency: 'INR',
+    tokenAmountUSD: 20,
+    tokenAmountLocal: '500.000 ₫',
+    currency: 'VND',
     status: 'confirmed',
-    paymentMethod: 'razorpay_upi',
-    transactionReference: 'pay_UPI_98a7sd76f',
-    adminNotes: 'Paid token via Google Pay. Warden notified.',
+    paymentMethod: 'vietqr_bank',
+    transactionReference: 'MB_FPT_554120',
+    adminNotes: 'Đã xác nhận giữ phòng KDC Hồng Phát cho 2 bạn sinh viên K18 FPT.',
     createdAt: '2026-10-28 14:15'
   }
 ];
@@ -93,10 +93,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     try {
-      const savedProps = localStorage.getItem('unistay_properties');
+      const savedProps = localStorage.getItem('unistay_vn_properties_v2');
       if (savedProps) setProperties(JSON.parse(savedProps));
 
-      const savedBookings = localStorage.getItem('unistay_bookings');
+      const savedBookings = localStorage.getItem('unistay_vn_bookings_v2');
       if (savedBookings) setBookings(JSON.parse(savedBookings));
 
       const savedCurrency = localStorage.getItem('unistay_currency') as CurrencyCode;
@@ -112,14 +112,14 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const saveProperties = (data: Property[]) => {
     setProperties(data);
     try {
-      localStorage.setItem('unistay_properties', JSON.stringify(data));
+      localStorage.setItem('unistay_vn_properties_v2', JSON.stringify(data));
     } catch {}
   };
 
   const saveBookings = (data: Booking[]) => {
     setBookings(data);
     try {
-      localStorage.setItem('unistay_bookings', JSON.stringify(data));
+      localStorage.setItem('unistay_vn_bookings_v2', JSON.stringify(data));
     } catch {}
   };
 

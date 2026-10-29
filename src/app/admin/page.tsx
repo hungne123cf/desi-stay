@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
 import { Property, RoomType, GenderPreference, FoodPreference, CurrencyCode } from '@/types';
 import {
-  LOCATION_CATALOG,
+  VIETNAM_LOCATIONS,
   DISTANCE_PRESETS,
   CURFEW_PRESETS,
   SAMPLE_ROOM_IMAGES
@@ -61,9 +61,8 @@ export default function AdminPage() {
   const [stripeKey, setStripeKey] = useState(settings.stripePublishableKey);
   const [razorpayKey, setRazorpayKey] = useState(settings.razorpayKeyId);
 
-  // Add Property Form State
+  // Add Property Form State (100% Vietnam)
   const [newTitle, setNewTitle] = useState('');
-  const [newCountry, setNewCountry] = useState('Vietnam');
   const [newCity, setNewCity] = useState('Cần Thơ');
   const [newArea, setNewArea] = useState('Quận Ninh Kiều');
   const [customArea, setCustomArea] = useState('');
@@ -73,14 +72,10 @@ export default function AdminPage() {
   const [newDistance, setNewDistance] = useState('300m (4 phút đi bộ)');
   const [newRoomType, setNewRoomType] = useState<RoomType>('studio');
   const [newGender, setNewGender] = useState<GenderPreference>('all');
-  const [newFoodPref, setNewFoodPref] = useState<FoodPreference>('self_cook');
-  const [priceInputMode, setPriceInputMode] = useState<'VND' | 'USD'>('VND');
-  const [newPriceVND, setNewPriceVND] = useState(3500000);
-  const [newDepositVND, setNewDepositVND] = useState(3500000);
+  const [newFoodPref] = useState<FoodPreference>('self_cook');
+  const [newPriceVND, setNewPriceVND] = useState(3000000);
+  const [newDepositVND, setNewDepositVND] = useState(3000000);
   const [newTokenVND, setNewTokenVND] = useState(500000);
-  const [newPriceUSD, setNewPriceUSD] = useState(140);
-  const [newDepositUSD, setNewDepositUSD] = useState(140);
-  const [newTokenUSD, setNewTokenUSD] = useState(20);
   const [newImageUrl, setNewImageUrl] = useState(
     'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'
   );
@@ -88,25 +83,12 @@ export default function AdminPage() {
   const [newCurfew, setNewCurfew] = useState('Giờ giấc tự do 24/7 (Khóa vân tay)');
   const [showMapPreview, setShowMapPreview] = useState(true);
 
-  const countryCatalog = LOCATION_CATALOG[newCountry] || LOCATION_CATALOG.Vietnam;
   const currentCityData =
-    countryCatalog.cities.find((c) => c.city === newCity) || countryCatalog.cities[0];
-
-  const handleCountryChange = (countryKey: string) => {
-    setNewCountry(countryKey);
-    const catalog = LOCATION_CATALOG[countryKey];
-    if (catalog && catalog.cities.length > 0) {
-      const firstCity = catalog.cities[0];
-      setNewCity(firstCity.city);
-      setNewArea(firstCity.districts[0] || '');
-      setNewUniversity(firstCity.universities[0] || '');
-    }
-    setPriceInputMode(countryKey === 'Vietnam' ? 'VND' : 'USD');
-  };
+    VIETNAM_LOCATIONS.find((c) => c.city === newCity) || VIETNAM_LOCATIONS[0];
 
   const handleCityChange = (cityName: string) => {
     setNewCity(cityName);
-    const foundCity = countryCatalog.cities.find((c) => c.city === cityName);
+    const foundCity = VIETNAM_LOCATIONS.find((c) => c.city === cityName);
     if (foundCity) {
       setNewArea(foundCity.districts[0] || '');
       setNewUniversity(foundCity.universities[0] || '');
@@ -140,18 +122,9 @@ export default function AdminPage() {
       newUniversity === '__custom__' ? customUniversity.trim() || 'Đại học khu vực' : newUniversity;
 
     const EXCHANGE_VND_PER_USD = 25400;
-    const computedPriceUSD =
-      priceInputMode === 'VND'
-        ? Math.max(1, Math.round(newPriceVND / EXCHANGE_VND_PER_USD))
-        : Number(newPriceUSD);
-    const computedDepositUSD =
-      priceInputMode === 'VND'
-        ? Math.max(1, Math.round(newDepositVND / EXCHANGE_VND_PER_USD))
-        : Number(newDepositUSD);
-    const computedTokenUSD =
-      priceInputMode === 'VND'
-        ? Math.max(1, Math.round(newTokenVND / EXCHANGE_VND_PER_USD))
-        : Number(newTokenUSD);
+    const computedPriceUSD = Math.max(1, Math.round(newPriceVND / EXCHANGE_VND_PER_USD));
+    const computedDepositUSD = Math.max(1, Math.round(newDepositVND / EXCHANGE_VND_PER_USD));
+    const computedTokenUSD = Math.max(1, Math.round(newTokenVND / EXCHANGE_VND_PER_USD));
 
     const fullAddress = newAddress.trim()
       ? `${newAddress.trim()}, ${finalArea}, ${newCity}`
@@ -162,7 +135,7 @@ export default function AdminPage() {
       slug: `${newTitle.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now().toString().slice(-4)}`,
       address: fullAddress,
       city: newCity,
-      country: newCountry,
+      country: 'Vietnam',
       area: finalArea,
       nearbyUniversity: finalUniversity,
       distanceToCampus: newDistance,
@@ -692,32 +665,16 @@ export default function AdminPage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* 1. Quốc gia */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* 1. Tỉnh / Thành phố Việt Nam */}
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">1. Quốc gia</label>
-                    <select
-                      value={newCountry}
-                      onChange={(e) => handleCountryChange(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 focus:border-indigo-600 outline-none"
-                    >
-                      {Object.values(LOCATION_CATALOG).map((c) => (
-                        <option key={c.countryCode} value={c.countryCode}>
-                          {c.countryName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 2. Tỉnh / Thành phố (Tự động đổi theo Quốc gia) */}
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">2. Tỉnh / Thành phố</label>
+                    <label className="font-bold text-slate-700 block mb-1">1. Tỉnh / Thành phố (Việt Nam 🇻🇳)</label>
                     <select
                       value={newCity}
                       onChange={(e) => handleCityChange(e.target.value)}
                       className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 focus:border-indigo-600 outline-none"
                     >
-                      {countryCatalog.cities.map((c) => (
+                      {VIETNAM_LOCATIONS.map((c) => (
                         <option key={c.city} value={c.city}>
                           {c.city}
                         </option>
@@ -725,9 +682,9 @@ export default function AdminPage() {
                     </select>
                   </div>
 
-                  {/* 3. Quận / Huyện / Khu dân cư (Tự động lọc theo Tỉnh/TP) */}
+                  {/* 2. Quận / Huyện / Khu dân cư (Tự động lọc theo Tỉnh/TP) */}
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">3. Quận / Huyện / KDC</label>
+                    <label className="font-bold text-slate-700 block mb-1">2. Quận / Huyện / KDC tại {newCity}</label>
                     <select
                       value={newArea}
                       onChange={(e) => setNewArea(e.target.value)}
@@ -752,10 +709,10 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* 4. Địa chỉ thường trú / Số nhà, tên đường cụ thể */}
+                {/* 3. Địa chỉ thường trú / Số nhà, tên đường cụ thể */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">
-                    4. Địa chỉ chi tiết (Số nhà, Hẻm/Ngõ, Tên đường, Phường/Xã) *
+                    3. Địa chỉ thường trú chi tiết (Số nhà, Hẻm/Ngõ, Tên đường, Phường/Xã) *
                   </label>
                   <input
                     type="text"
@@ -769,12 +726,12 @@ export default function AdminPage() {
                   />
                 </div>
 
-                {/* 5. Trường Đại học gần nhất (Sổ xuống đúng các trường thuộc Tỉnh/TP đã chọn) & Khoảng cách */}
+                {/* 4. Trường Đại học gần nhất (Sổ xuống đúng các trường thuộc Tỉnh/TP đã chọn) & Khoảng cách */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="font-bold text-slate-700 flex items-center gap-1 mb-1">
                       <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>5. Trường Đại học / Cao đẳng tại {newCity}</span>
+                      <span>4. Trường Đại học / Cao đẳng tại {newCity}</span>
                     </label>
                     <select
                       value={newUniversity}
@@ -801,7 +758,7 @@ export default function AdminPage() {
 
                   <div>
                     <label className="font-bold text-slate-700 block mb-1">
-                      6. Khoảng cách di chuyển tới trường
+                      5. Khoảng cách di chuyển tới trường
                     </label>
                     <select
                       value={DISTANCE_PRESETS.includes(newDistance) ? newDistance : '__custom__'}
@@ -911,118 +868,53 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Bảng giá linh hoạt VNĐ hoặc USD */}
+              {/* Bảng giá VNĐ */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800">Chi phí thuê &amp; Tiền đặt cọc</span>
-                  <div className="inline-flex rounded-xl bg-white p-0.5 border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setPriceInputMode('VND')}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
-                        priceInputMode === 'VND'
-                          ? 'bg-indigo-600 text-white'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Nhập bằng VNĐ (₫)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPriceInputMode('USD')}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
-                        priceInputMode === 'USD'
-                          ? 'bg-indigo-600 text-white'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Nhập bằng USD ($)
-                    </button>
-                  </div>
+                  <span className="font-bold text-slate-800">Chi phí thuê &amp; Tiền đặt cọc (VNĐ)</span>
                 </div>
 
-                {priceInputMode === 'VND' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Giá thuê / tháng (VNĐ)</label>
-                      <input
-                        type="number"
-                        step={100000}
-                        value={newPriceVND}
-                        onChange={(e) => setNewPriceVND(Number(e.target.value))}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-900"
-                      />
-                      <span className="text-[10px] text-emerald-700 font-semibold mt-1 block">
-                        = {newPriceVND.toLocaleString('vi-VN')} ₫ / tháng
-                      </span>
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Tiền cọc hợp đồng (VNĐ)</label>
-                      <input
-                        type="number"
-                        step={100000}
-                        value={newDepositVND}
-                        onChange={(e) => setNewDepositVND(Number(e.target.value))}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
-                      />
-                      <span className="text-[10px] text-slate-500 mt-1 block">
-                        = {newDepositVND.toLocaleString('vi-VN')} ₫
-                      </span>
-                    </div>
-                    <div>
-                      <label className="font-bold text-indigo-700 block mb-1">Cọc giữ chỗ Online (VNĐ)</label>
-                      <input
-                        type="number"
-                        step={50000}
-                        value={newTokenVND}
-                        onChange={(e) => setNewTokenVND(Number(e.target.value))}
-                        className="w-full px-3.5 py-2.5 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-700"
-                      />
-                      <span className="text-[10px] text-indigo-600 font-semibold mt-1 block">
-                        = {newTokenVND.toLocaleString('vi-VN')} ₫ (Giữ chỗ 48h)
-                      </span>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Giá thuê / tháng (VNĐ)</label>
+                    <input
+                      type="number"
+                      step={100000}
+                      value={newPriceVND}
+                      onChange={(e) => setNewPriceVND(Number(e.target.value))}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-900"
+                    />
+                    <span className="text-[10px] text-emerald-700 font-semibold mt-1 block">
+                      = {newPriceVND.toLocaleString('vi-VN')} ₫ / tháng
+                    </span>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Giá thuê (USD / tháng)</label>
-                      <input
-                        type="number"
-                        value={newPriceUSD}
-                        onChange={(e) => setNewPriceUSD(Number(e.target.value))}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-bold"
-                      />
-                      <span className="text-[10px] text-slate-500 mt-1 block">
-                        Quy đổi: {formatPrice(newPriceUSD)}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Tiền cọc đảm bảo (USD)</label>
-                      <input
-                        type="number"
-                        value={newDepositUSD}
-                        onChange={(e) => setNewDepositUSD(Number(e.target.value))}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl"
-                      />
-                      <span className="text-[10px] text-slate-500 mt-1 block">
-                        Quy đổi: {formatPrice(newDepositUSD)}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="font-bold text-indigo-700 block mb-1">Cọc giữ phòng Token (USD)</label>
-                      <input
-                        type="number"
-                        value={newTokenUSD}
-                        onChange={(e) => setNewTokenUSD(Number(e.target.value))}
-                        className="w-full px-3.5 py-2.5 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-700"
-                      />
-                      <span className="text-[10px] text-indigo-600 mt-1 block">
-                        Quy đổi: {formatPrice(newTokenUSD)}
-                      </span>
-                    </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Tiền cọc hợp đồng (VNĐ)</label>
+                    <input
+                      type="number"
+                      step={100000}
+                      value={newDepositVND}
+                      onChange={(e) => setNewDepositVND(Number(e.target.value))}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      = {newDepositVND.toLocaleString('vi-VN')} ₫
+                    </span>
                   </div>
-                )}
+                  <div>
+                    <label className="font-bold text-indigo-700 block mb-1">Cọc giữ chỗ Online (VNĐ)</label>
+                    <input
+                      type="number"
+                      step={50000}
+                      value={newTokenVND}
+                      onChange={(e) => setNewTokenVND(Number(e.target.value))}
+                      className="w-full px-3.5 py-2.5 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-700"
+                    />
+                    <span className="text-[10px] text-indigo-600 font-semibold mt-1 block">
+                      = {newTokenVND.toLocaleString('vi-VN')} ₫ (Giữ chỗ 48h)
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Hình ảnh phòng trọ: Tải từ máy hoặc chọn ảnh mẫu hoặc dán URL */}

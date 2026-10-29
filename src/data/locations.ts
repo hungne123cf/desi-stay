@@ -4,245 +4,174 @@ export interface CityLocationData {
   universities: string[];
 }
 
-export interface CountryLocationData {
-  countryCode: string;
-  countryName: string;
-  cities: CityLocationData[];
-}
-
-export const LOCATION_CATALOG: Record<string, CountryLocationData> = {
-  Vietnam: {
-    countryCode: 'Vietnam',
-    countryName: 'Việt Nam 🇻🇳',
-    cities: [
-      {
-        city: 'Cần Thơ',
-        districts: [
-          'Quận Ninh Kiều',
-          'Quận Cái Răng',
-          'Quận Bình Thủy',
-          'Quận Ô Môn',
-          'Huyện Phong Điền',
-          'KDC Hồng Phát (An Bình)',
-          'KDC 91B (An Khánh)',
-          'KDC Metro Hưng Lợi'
-        ],
-        universities: [
-          'ĐH Cần Thơ (CTU - Khu II Đường 3/2)',
-          'ĐH FPT Cần Thơ (Cầu Rau Răm - Nguyễn Văn Cừ)',
-          'ĐH Y Dược Cần Thơ (CTUMP)',
-          'ĐH Nam Cần Thơ (DNC)',
-          'ĐH Kỹ thuật - Công nghệ Cần Thơ (CTUT)',
-          'ĐH Tây Đô (Cái Răng)',
-          'CĐ FPT Polytechnic Cần Thơ',
-          'CĐ Kinh tế - Kỹ thuật Cần Thơ'
-        ]
-      },
-      {
-        city: 'TP. Hồ Chí Minh',
-        districts: [
-          'Quận 10',
-          'Quận 1',
-          'Quận 3',
-          'Quận 5',
-          'Quận 7 (Nam Sài Gòn)',
-          'Quận Bình Thạnh',
-          'TP. Thủ Đức (Làng Đại Học)',
-          'TP. Thủ Đức (Khu Công Nghệ Cao Q.9)',
-          'Quận Gò Vấp',
-          'Quận Tân Bình',
-          'Quận Phú Nhuận'
-        ],
-        universities: [
-          'ĐH Bách Khoa TP.HCM & ĐH Y Dược',
-          'Làng Đại Học Quốc Gia TP.HCM (Thủ Đức)',
-          'ĐH FPT TP.HCM (Khu Công Nghệ Cao)',
-          'ĐH Kinh Tế TP.HCM (UEH)',
-          'ĐH Công Nghệ TP.HCM (HUTECH) & Ngoại Thương',
-          'ĐH Tôn Đức Thắng (TDTU) & RMIT Quận 7',
-          'ĐH Văn Lang (VLU) & ĐH Công Nghiệp (IUH)',
-          'ĐH Sư Phạm Kỹ Thuật TP.HCM (HCMUTE)',
-          'ĐH Luật TP.HCM & ĐH Nguyễn Tất Thành'
-        ]
-      },
-      {
-        city: 'Hà Nội',
-        districts: [
-          'Quận Cầu Giấy',
-          'Quận Đống Đa',
-          'Quận Hai Bà Trưng',
-          'Quận Thanh Xuân',
-          'Quận Bắc Từ Liêm',
-          'Quận Nam Từ Liêm',
-          'Khu CNC Hòa Lạc (Thạch Thất)',
-          'Quận Ba Đình',
-          'Quận Hoàng Mai'
-        ],
-        universities: [
-          'ĐH Quốc Gia Hà Nội & ĐH Sư Phạm',
-          'ĐH Bách Khoa Hà Nội - KTQD - Xây Dựng',
-          'ĐH FPT Hà Nội (Hòa Lạc Campus)',
-          'ĐH Ngoại Thương (FTU) & HV Ngoại Giao',
-          'ĐH Thương Mại & HV Báo Chí Tuyên Truyền',
-          'ĐH Hà Nội (HANU) & ĐH Kiến Trúc',
-          'Học viện Tài Chính & ĐH Mỏ Địa Chất'
-        ]
-      },
-      {
-        city: 'Đà Nẵng',
-        districts: [
-          'Quận Hải Châu',
-          'Quận Liên Chiểu',
-          'Quận Ngũ Hành Sơn (FPT City)',
-          'Quận Sơn Trà',
-          'Quận Thanh Khê',
-          'Quận Cẩm Lệ'
-        ],
-        universities: [
-          'ĐH Bách Khoa - ĐH Đà Nẵng (Liên Chiểu)',
-          'ĐH Kinh Tế - ĐH Đà Nẵng (Ngũ Hành Sơn)',
-          'ĐH FPT Đà Nẵng (KĐT FPT City)',
-          'ĐH Duy Tân (DTU)',
-          'ĐH Sư Phạm & ĐH Ngoại Ngữ Đà Nẵng',
-          'ĐH Đông Á & ĐH Kiến Trúc Đà Nẵng'
-        ]
-      },
-      {
-        city: 'Bình Dương',
-        districts: [
-          'TP. Đông Hòa (Dĩ An - Giáp Làng ĐH)',
-          'TP. Thủ Dầu Một',
-          'TP. Thuận An',
-          'TP. Bến Cát'
-        ],
-        universities: [
-          'Làng Đại Học Quốc Gia (Khu vực Dĩ An)',
-          'ĐH Thủ Dầu Một (TDMU)',
-          'ĐH Quốc Tế Miền Đông (EIU)',
-          'ĐH Việt Đức (VGU - Bến Cát)',
-          'ĐH Bình Dương'
-        ]
-      },
-      {
-        city: 'Thừa Thiên Huế',
-        districts: [
-          'Quận Thuận Hóa (Trung tâm Nam Sông Hương)',
-          'Quận Phú Xuân',
-          'Khu quy hoạch An Vân Dương'
-        ],
-        universities: [
-          'ĐH Y Dược - ĐH Huế',
-          'ĐH Khoa Học & ĐH Sư Phạm Huế',
-          'ĐH Kinh Tế & ĐH Ngoại Ngữ Huế',
-          'ĐH Luật - ĐH Huế'
-        ]
-      },
-      {
-        city: 'Khánh Hòa (Nha Trang)',
-        districts: ['Phường Vĩnh Hải', 'Phường Vĩnh Thọ', 'Trung tâm TP. Nha Trang'],
-        universities: [
-          'ĐH Nha Trang (NTU)',
-          'ĐH Khánh Hòa',
-          'ĐH Thái Bình Dương'
-        ]
-      },
-      {
-        city: 'Lâm Đồng (Đà Lạt)',
-        districts: ['Phường 8 (Đồi Sinh Viên)', 'Phường 2', 'Phường 9'],
-        universities: ['ĐH Đà Lạt (DLU)', 'ĐH Yersin Đà Lạt']
-      }
+export const VIETNAM_LOCATIONS: CityLocationData[] = [
+  {
+    city: 'Cần Thơ',
+    districts: [
+      'Quận Ninh Kiều',
+      'Quận Cái Răng',
+      'Quận Bình Thủy',
+      'Quận Ô Môn',
+      'Huyện Phong Điền',
+      'KDC Hồng Phát (P. An Bình)',
+      'KDC 91B (P. An Khánh)',
+      'KDC Metro Hưng Lợi',
+      'Đường 3/2 - Xuân Khánh',
+      'Đường Nguyễn Văn Cừ nối dài'
+    ],
+    universities: [
+      'ĐH Cần Thơ (CTU - Khu II Đường 3/2)',
+      'ĐH FPT Cần Thơ (Cầu Rau Răm - Nguyễn Văn Cừ)',
+      'ĐH Y Dược Cần Thơ (CTUMP)',
+      'ĐH Nam Cần Thơ (DNC)',
+      'ĐH Kỹ thuật - Công nghệ Cần Thơ (CTUT)',
+      'ĐH Tây Đô (Cái Răng)',
+      'CĐ FPT Polytechnic Cần Thơ',
+      'CĐ Kinh tế - Kỹ thuật Cần Thơ',
+      'CĐ Y tế Cần Thơ'
     ]
   },
-  India: {
-    countryCode: 'India',
-    countryName: 'Ấn Độ (India) 🇮🇳',
-    cities: [
-      {
-        city: 'Bengaluru',
-        districts: ['Koramangala', 'SG Palya (Christ Univ)', 'HSR Layout', 'Indiranagar', 'Electronic City'],
-        universities: [
-          'Christ University (Central Campus)',
-          'Jain University (Jayanagar)',
-          'PES University & BMSCE',
-          'Mount Carmel College'
-        ]
-      },
-      {
-        city: 'Pune',
-        districts: ['Shivajinagar (FC Road)', 'Viman Nagar', 'Kothrud', 'Wakad', 'Hinjewadi'],
-        universities: [
-          'Fergusson College & Symbiosis Pune',
-          'Symbiosis International University (Viman Nagar)',
-          'MIT World Peace University (Kothrud)',
-          'Savitribai Phule Pune University'
-        ]
-      },
-      {
-        city: 'Delhi NCR',
-        districts: ['GTB Nagar (Hudson Lane)', 'Kamla Nagar', 'Satya Niketan', 'Noida Sector 125'],
-        universities: [
-          'Delhi University (DU North Campus)',
-          'Delhi University (DU South Campus)',
-          'IIT Delhi & JNU',
-          'Amity University Noida'
-        ]
-      },
-      {
-        city: 'Kota',
-        districts: ['Rajeev Gandhi Nagar', 'Talwandi', 'Landmark City (Kunhari)', 'Mahaveer Nagar'],
-        universities: [
-          'Allen Career Institute (Sankalp / Samarth)',
-          'Resonance & Motion Education Hub',
-          'PhysicsWallah Vidyapeeth Kota'
-        ]
-      }
+  {
+    city: 'TP. Hồ Chí Minh',
+    districts: [
+      'Quận 10',
+      'Quận 1',
+      'Quận 3',
+      'Quận 5',
+      'Quận 7 (Nam Sài Gòn)',
+      'Quận Bình Thạnh',
+      'TP. Thủ Đức (Làng Đại Học)',
+      'TP. Thủ Đức (Khu Công Nghệ Cao Q.9)',
+      'Quận Gò Vấp',
+      'Quận Tân Bình',
+      'Quận Phú Nhuận',
+      'Quận 8',
+      'Huyện Nhà Bè'
+    ],
+    universities: [
+      'ĐH Bách Khoa TP.HCM & ĐH Y Dược',
+      'Làng Đại Học Quốc Gia TP.HCM (Thủ Đức)',
+      'ĐH FPT TP.HCM (Khu Công Nghệ Cao)',
+      'ĐH Kinh Tế TP.HCM (UEH)',
+      'ĐH Công Nghệ TP.HCM (HUTECH) & ĐH Ngoại Thương',
+      'ĐH Tôn Đức Thắng (TDTU) & RMIT Quận 7',
+      'ĐH Văn Lang (VLU) & ĐH Công Nghiệp (IUH)',
+      'ĐH Sư Phạm Kỹ Thuật TP.HCM (HCMUTE)',
+      'ĐH Luật TP.HCM & ĐH Nguyễn Tất Thành',
+      'ĐH Tài Chính - Marketing (UFM)'
     ]
   },
-  Australia: {
-    countryCode: 'Australia',
-    countryName: 'Úc (Australia) 🇦🇺',
-    cities: [
-      {
-        city: 'Melbourne',
-        districts: ['Carlton', 'Melbourne CBD', 'Clayton', 'Parkville', 'Southbank'],
-        universities: [
-          'University of Melbourne & RMIT',
-          'Monash University (Clayton Campus)',
-          'Deakin University & Swinburne'
-        ]
-      },
-      {
-        city: 'Sydney',
-        districts: ['Ultimo', 'Camperdown / Darlington', 'Kensington', 'Macquarie Park'],
-        universities: [
-          'University of Sydney (USYD) & UTS',
-          'UNSW Sydney (Kensington)',
-          'Macquarie University'
-        ]
-      }
+  {
+    city: 'Hà Nội',
+    districts: [
+      'Quận Cầu Giấy',
+      'Quận Đống Đa',
+      'Quận Hai Bà Trưng',
+      'Quận Thanh Xuân',
+      'Quận Bắc Từ Liêm',
+      'Quận Nam Từ Liêm',
+      'Khu CNC Hòa Lạc (Thạch Thất)',
+      'Quận Hà Đông',
+      'Quận Hoàng Mai',
+      'Quận Ba Đình'
+    ],
+    universities: [
+      'ĐH Quốc Gia Hà Nội & ĐH Sư Phạm (Cầu Giấy)',
+      'ĐH Bách Khoa Hà Nội - KTQD - Xây Dựng',
+      'ĐH FPT Hà Nội (Hòa Lạc Campus)',
+      'ĐH Ngoại Thương (FTU) & HV Ngoại Giao',
+      'ĐH Thương Mại & HV Báo Chí Tuyên Truyền',
+      'ĐH Hà Nội (HANU) & ĐH Kiến Trúc (Hà Đông)',
+      'Học viện Tài Chính & ĐH Mỏ Địa Chất',
+      'ĐH Công Nghiệp Hà Nội (HaUI)'
     ]
   },
-  'United Kingdom': {
-    countryCode: 'United Kingdom',
-    countryName: 'Vương Quốc Anh (UK) 🇬🇧',
-    cities: [
-      {
-        city: 'London',
-        districts: ['Bloomsbury', 'King’s Cross', 'South Kensington', 'Stratford', 'Shoreditch'],
-        universities: [
-          'UCL (University College London) & LSE',
-          'Imperial College London',
-          'King’s College London (KCL)'
-        ]
-      },
-      {
-        city: 'Manchester',
-        districts: ['Fallowfield', 'Oxford Road Corridor', 'Victoria Park'],
-        universities: ['University of Manchester & Manchester Met']
-      }
+  {
+    city: 'Đà Nẵng',
+    districts: [
+      'Quận Hải Châu',
+      'Quận Liên Chiểu',
+      'Quận Ngũ Hành Sơn (FPT City)',
+      'Quận Sơn Trà',
+      'Quận Thanh Khê',
+      'Quận Cẩm Lệ'
+    ],
+    universities: [
+      'ĐH Bách Khoa - ĐH Đà Nẵng (Liên Chiểu)',
+      'ĐH Kinh Tế - ĐH Đà Nẵng (Ngũ Hành Sơn)',
+      'ĐH FPT Đà Nẵng (KĐT FPT City)',
+      'ĐH Duy Tân (DTU)',
+      'ĐH Sư Phạm & ĐH Ngoại Ngữ Đà Nẵng',
+      'ĐH CNTT & Truyền thông Việt - Hàn (VKU)',
+      'ĐH Đông Á & ĐH Kiến Trúc Đà Nẵng'
     ]
+  },
+  {
+    city: 'Bình Dương',
+    districts: [
+      'TP. Dĩ An (Giáp Làng Đại Học)',
+      'TP. Thủ Dầu Một',
+      'TP. Thuận An',
+      'TP. Bến Cát'
+    ],
+    universities: [
+      'Làng Đại Học Quốc Gia (Khu vực Dĩ An)',
+      'ĐH Thủ Dầu Một (TDMU)',
+      'ĐH Quốc Tế Miền Đông (EIU)',
+      'ĐH Việt Đức (VGU - Bến Cát)',
+      'ĐH Bình Dương'
+    ]
+  },
+  {
+    city: 'Thừa Thiên Huế',
+    districts: [
+      'Quận Thuận Hóa (Nam Sông Hương)',
+      'Quận Phú Xuân',
+      'Phường An Cựu',
+      'Phường Trường An'
+    ],
+    universities: [
+      'ĐH Y Dược - ĐH Huế',
+      'ĐH Khoa Học & ĐH Sư Phạm Huế',
+      'ĐH Kinh Tế & ĐH Ngoại Ngữ Huế',
+      'ĐH Luật - ĐH Huế'
+    ]
+  },
+  {
+    city: 'Vĩnh Long',
+    districts: ['Phường 2', 'Phường 3', 'Phường 4', 'Phường Phước Hậu'],
+    universities: [
+      'ĐH Sư Phạm Kỹ Thuật Vĩnh Long (VLUTE)',
+      'ĐH Xây Dựng Miền Tây (MTU)',
+      'Phân hiệu ĐH Kinh Tế TP.HCM (UEH Mekong)'
+    ]
+  },
+  {
+    city: 'An Giang',
+    districts: ['Phường Đông Xuyên (TP. Long Xuyên)', 'Phường Mỹ Xuyên', 'Phường Mỹ Bình'],
+    universities: ['ĐH An Giang (AGU - ĐHQG TP.HCM)', 'CĐ Nghề An Giang']
+  },
+  {
+    city: 'Hải Phòng',
+    districts: ['Quận Lê Chân', 'Quận Ngô Quyền', 'Quận Kiến An', 'Quận Hải An'],
+    universities: ['ĐH Hàng Hải Việt Nam (VMU)', 'ĐH Y Dược Hải Phòng', 'ĐH Hải Phòng']
+  },
+  {
+    city: 'Khánh Hòa (Nha Trang)',
+    districts: ['Phường Vĩnh Hải', 'Phường Vĩnh Thọ', 'Trung tâm TP. Nha Trang'],
+    universities: ['ĐH Nha Trang (NTU)', 'ĐH Khánh Hòa', 'ĐH Thái Bình Dương']
+  },
+  {
+    city: 'Lâm Đồng (Đà Lạt)',
+    districts: ['Phường 8 (Đồi Sinh Viên)', 'Phường 2', 'Phường 9'],
+    universities: ['ĐH Đà Lạt (DLU)', 'ĐH Yersin Đà Lạt']
+  },
+  {
+    city: 'Đồng Nai (Biên Hòa)',
+    districts: ['Phường Bửu Long', 'Phường Tân Phong', 'Phường Trảng Dài'],
+    universities: ['ĐH Lạc Hồng (LHU)', 'ĐH Đồng Nai', 'ĐH Lâm Nghiệp (Phân hiệu Đồng Nai)']
   }
-};
+];
 
 export const DISTANCE_PRESETS = [
   '150m (2 phút đi bộ)',
@@ -262,23 +191,23 @@ export const CURFEW_PRESETS = [
 
 export const SAMPLE_ROOM_IMAGES = [
   {
-    label: 'Studio hiện đại ban công',
+    label: 'Studio ban công hiện đại',
     url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'
   },
   {
-    label: 'Phòng đơn sáng sủa',
-    url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    label: 'KTX / Sleepbox tiện nghi',
-    url: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    label: 'Căn hộ Duplex / Gác lửng',
+    label: 'Phòng trọ có gác lửng',
     url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80'
   },
   {
-    label: 'Phòng 2 giường đôi',
+    label: 'Phòng đơn full nội thất',
+    url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    label: 'KTX / Sleepbox máy lạnh',
+    url: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    label: 'Phòng đôi 2 giường',
     url: 'https://images.unsplash.com/photo-1540518614846-7ede433c4ef0?auto=format&fit=crop&w=1200&q=80'
   }
 ];

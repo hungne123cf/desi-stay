@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Search, MapPin, GraduationCap, Sparkles, Building2 } from 'lucide-react';
-import { LOCATION_CATALOG } from '@/data/locations';
+import { VIETNAM_LOCATIONS } from '@/data/locations';
 import { useProperties } from '@/context/PropertyContext';
 
 export interface MultiMarketFilters {
@@ -28,12 +28,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 }) => {
   const { properties } = useProperties();
 
-  // Danh sách tất cả Tỉnh/Thành phố từ Catalog + các phòng hiện có
+  // Danh sách tất cả Tỉnh/Thành phố Việt Nam
   const allCities = useMemo(() => {
     const citySet = new Set<string>();
-    Object.values(LOCATION_CATALOG).forEach((country) => {
-      country.cities.forEach((c) => citySet.add(c.city));
-    });
+    VIETNAM_LOCATIONS.forEach((c) => citySet.add(c.city));
     properties.forEach((p) => {
       if (p.city) citySet.add(p.city);
     });
@@ -45,25 +43,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     const uniSet = new Set<string>();
 
     if (filters.city) {
-      // Lấy các trường thuộc thành phố được chọn trong LOCATION_CATALOG
-      Object.values(LOCATION_CATALOG).forEach((country) => {
-        const matchedCity = country.cities.find((c) => c.city === filters.city);
-        if (matchedCity) {
-          matchedCity.universities.forEach((u) => uniSet.add(u));
-        }
-      });
-      // Cộng thêm các trường từ phòng trọ thực tế đang có ở thành phố đó
+      const matchedCity = VIETNAM_LOCATIONS.find((c) => c.city === filters.city);
+      if (matchedCity) {
+        matchedCity.universities.forEach((u) => uniSet.add(u));
+      }
       properties
         .filter((p) => p.city === filters.city)
         .forEach((p) => {
           if (p.nearbyUniversity) uniSet.add(p.nearbyUniversity);
         });
     } else {
-      // Nếu chưa chọn thành phố -> Hiển thị tất cả trường
-      Object.values(LOCATION_CATALOG).forEach((country) => {
-        country.cities.forEach((c) => {
-          c.universities.forEach((u) => uniSet.add(u));
-        });
+      VIETNAM_LOCATIONS.forEach((c) => {
+        c.universities.forEach((u) => uniSet.add(u));
       });
       properties.forEach((p) => {
         if (p.nearbyUniversity) uniSet.add(p.nearbyUniversity);
@@ -74,7 +65,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   }, [filters.city, properties]);
 
   const handleCityChange = (selectedCity: string) => {
-    // Khi đổi thành phố, reset trường ĐH để tránh lệch tỉnh
     setFilters((prev) => ({
       ...prev,
       city: selectedCity,
@@ -92,7 +82,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         <div className="flex justify-center mb-6">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-100 border border-indigo-200 text-indigo-900 text-xs sm:text-sm font-semibold shadow-sm">
             <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span>Nền tảng Phòng trọ &amp; Nhà ở Sinh viên Quốc tế • 0% Phí Môi Giới</span>
+            <span>Nền tảng Phòng trọ &amp; Căn hộ Sinh viên Việt Nam • 0% Phí Môi Giới</span>
           </div>
         </div>
 
@@ -106,7 +96,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             An Tâm Học Tập.
           </h1>
           <p className="mt-4 text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
-            Hàng ngàn phòng trọ, căn hộ studio và ký túc xá sinh viên quanh các trường Đại học lớn tại Việt Nam và quốc tế. Khóa vân tay, vệ sinh khép kín, giữ chỗ online minh bạch.
+            Hệ thống phòng trọ, căn hộ Studio và Sleepbox đã xác thực quanh các trường Đại học lớn tại Cần Thơ, TP.HCM, Hà Nội, Đà Nẵng và toàn quốc. Khóa vân tay, vệ sinh khép kín, đặt cọc giữ chỗ trực tuyến minh bạch.
           </p>
         </div>
 
@@ -124,7 +114,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 onChange={(e) => handleCityChange(e.target.value)}
                 className="w-full h-11 px-3 text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-slate-800"
               >
-                <option value="">Tất cả Tỉnh / Thành phố</option>
+                <option value="">Tất cả Tỉnh / Thành phố Việt Nam</option>
                 {allCities.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -146,7 +136,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               >
                 <option value="">
                   {filters.city
-                    ? `Tất cả trường tại ${filters.city} (${availableUniversities.length})`
+                    ? `Tất cả trường tại ${filters.city} (${availableUniversities.length} trường)`
                     : 'Tất cả trường Đại học / Cao đẳng'}
                 </option>
                 {availableUniversities.map((u) => (
@@ -169,9 +159,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 className="w-full h-11 px-3 text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-slate-800"
               >
                 <option value="">Tất cả loại phòng</option>
-                <option value="single">Phòng đơn / Sleepbox riêng tư</option>
-                <option value="double">Phòng ở ghép 2 người (Tiết kiệm)</option>
                 <option value="studio">Căn hộ Studio khép kín (Full đồ)</option>
+                <option value="double">Phòng gác lửng / Ở ghép 2-3 người</option>
+                <option value="single">Phòng đơn / Sleepbox riêng tư</option>
               </select>
             </div>
           </div>
@@ -211,16 +201,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
 
-        {/* Popular University Campuses Quick Bar */}
+        {/* Popular Vietnamese University Hubs Quick Bar */}
         <div id="cities" className="mt-8 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
-          <span className="font-semibold text-slate-700">Khu vực nổi bật:</span>
+          <span className="font-semibold text-slate-700">Khu vực sinh viên nổi bật:</span>
           {[
-            { label: '🇻🇳 Cần Thơ (ĐH Cần Thơ / FPT / Y Dược)', city: 'Cần Thơ' },
-            { label: '🇻🇳 TP.HCM (Bách Khoa / Thủ Đức)', city: 'TP. Hồ Chí Minh' },
-            { label: '🇻🇳 Hà Nội (Cầu Giấy / Bách Khoa)', city: 'Hà Nội' },
-            { label: '🇻🇳 Đà Nẵng', city: 'Đà Nẵng' },
-            { label: '🇮🇳 Bengaluru', city: 'Bengaluru' },
-            { label: '🇦🇺 Melbourne', city: 'Melbourne' }
+            { label: '📍 Cần Thơ (ĐH Cần Thơ / FPT / Y Dược / DNC)', city: 'Cần Thơ' },
+            { label: '📍 TP.HCM (Bách Khoa / Làng ĐH Thủ Đức)', city: 'TP. Hồ Chí Minh' },
+            { label: '📍 Hà Nội (Cầu Giấy / Bách Khoa / Hòa Lạc)', city: 'Hà Nội' },
+            { label: '📍 Đà Nẵng (Ngũ Hành Sơn / Liên Chiểu)', city: 'Đà Nẵng' },
+            { label: '📍 Bình Dương (Dĩ An / Thủ Dầu Một)', city: 'Bình Dương' },
+            { label: '📍 Huế', city: 'Thừa Thiên Huế' }
           ].map((tag) => (
             <button
               key={tag.city}
