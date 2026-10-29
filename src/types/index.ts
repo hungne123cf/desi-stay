@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'admin';
+export type UserRole = 'student' | 'staff' | 'admin';
 export type GenderPreference = 'all' | 'boys' | 'girls';
 export type RoomType = 'single' | 'double' | 'triple' | 'studio' | 'apartment';
 export type FoodPreference = 'self_cook' | 'pure_veg' | 'mess_included' | 'all' | 'none';
@@ -81,6 +81,19 @@ export interface CurrentUser {
 
 export type User = CurrentUser;
 
+export interface UserAccount {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  phone?: string | null;
+  college?: string | null;
+  avatar?: string | null;
+  createdAt: string;
+  lastLoginAt?: string;
+  isStaffAssigned?: boolean;
+}
+
 export interface SiteSettings {
   brandName: string;
   tagline: string;
@@ -109,7 +122,7 @@ export interface ChatMessage {
   conversationId: string;
   studentName: string;
   studentEmail?: string;
-  senderRole: 'student' | 'admin';
+  senderRole: 'student' | 'admin' | 'staff';
   senderName: string;
   text: string;
   createdAt: string;

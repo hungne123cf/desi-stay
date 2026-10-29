@@ -16,6 +16,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { GoogleAccountChooserModal } from '@/components/GoogleAccountChooserModal';
+import { UserRole } from '@/types';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -27,8 +28,8 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [showGoogleChooser, setShowGoogleChooser] = useState(false);
 
-  const handleRedirect = (role: 'student' | 'admin') => {
-    if (role === 'admin') {
+  const handleRedirect = (role: UserRole) => {
+    if (role === 'admin' || role === 'staff') {
       router.push('/admin');
     } else {
       router.push('/');

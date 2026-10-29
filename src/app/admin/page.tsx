@@ -44,7 +44,15 @@ import {
   MessageCircle,
   Send,
   Star,
-  LogOut
+  LogOut,
+  UserCheck,
+  UserPlus,
+  Search,
+  Mail,
+  ShieldAlert,
+  Check,
+  Crown,
+  Sparkles
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -55,6 +63,7 @@ export default function AdminPage() {
     bookings,
     messages,
     reviews,
+    accounts,
     currency,
     settings,
     formatPrice,
@@ -66,10 +75,13 @@ export default function AdminPage() {
     markConversationRead,
     deleteConversation,
     replyToReview,
-    deleteReview
+    deleteReview,
+    updateAccountRole,
+    addOrUpdateAccount,
+    deleteAccount
   } = useProperties();
 
-  const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'chat' | 'reviews' | 'settings'>('listings');
+  const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'chat' | 'reviews' | 'accounts' | 'settings'>('listings');
   const [selectedConvId, setSelectedConvId] = useState<string>('');
   const [adminReplyText, setAdminReplyText] = useState<string>('');
   const [replyingReviewId, setReplyingReviewId] = useState<string | null>(null);
@@ -80,6 +92,15 @@ export default function AdminPage() {
   const [selectedReceiptLead, setSelectedReceiptLead] = useState<Booking | null>(null);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [propertyCreatedToast, setPropertyCreatedToast] = useState(false);
+  const [accountSearchQuery, setAccountSearchQuery] = useState('');
+  const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'staff' | 'admin' | 'student'>('all');
+  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffEmail, setNewStaffEmail] = useState('');
+  const [newStaffPhone, setNewStaffPhone] = useState('');
+  const [newStaffCollege, setNewStaffCollege] = useState('');
+  const [newStaffRole, setNewStaffRole] = useState<'staff' | 'admin'>('staff');
+  const [accountToast, setAccountToast] = useState<string | null>(null);
 
   // Settings form state
   const [brandName, setBrandName] = useState(settings.brandName);
@@ -254,7 +275,7 @@ export default function AdminPage() {
     setTimeout(() => setSettingsSaved(false), 2500);
   };
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'staff') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white max-w-md w-full p-8 rounded-3xl border border-slate-200 shadow-xl text-center space-y-5">
@@ -262,17 +283,17 @@ export default function AdminPage() {
             <Lock className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Yêu cầu quyền Quản Trị</h3>
+            <h3 className="text-xl font-bold text-slate-900">Yêu cầu quyền Quản Trị hoặc Staff</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Khu vực này dành riêng cho Quản trị viên (Admin).
-              Vui lòng đăng nhập bằng tài khoản Admin để truy cập Bảng điều khiển quản lý phòng và khách đặt cọc.
+              Khu vực này dành riêng cho Quản trị viên (Admin) và Nhân viên (Staff).
+              Vui lòng đăng nhập bằng tài khoản được chỉ định quyền để truy cập Bảng điều khiển quản lý.
             </p>
           </div>
           <Link
             href="/auth/login"
             className="w-full block py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition-all text-center"
           >
-            Đăng nhập tài khoản Admin
+            Đăng nhập tài khoản
           </Link>
           <div>
             <Link href="/" className="text-xs text-slate-400 hover:text-slate-600">
@@ -290,7 +311,7 @@ export default function AdminPage() {
   const pendingBookingsCount = bookings.filter((b) => b.status === 'pending').length;
 
   const navItems: {
-    id: 'listings' | 'leads' | 'chat' | 'reviews' | 'settings';
+    id: 'listings' | 'leads' | 'chat' | 'reviews' | 'accounts' | 'settings';
     label: string;
     sublabel: string;
     icon: React.ReactNode;
@@ -339,12 +360,33 @@ export default function AdminPage() {
       badgeColor: 'bg-slate-800 text-amber-300 border border-slate-700'
     },
     {
+      id: 'accounts',
+      label: 'Quản Lý Tài Khoản',
+      sublabel: 'Chỉ định Staff & Phân quyền',
+      icon: <UserCheck className="w-4 h-4 shrink-0" />,
+      badge: `${accounts.length}`,
+      badgeColor: 'bg-indigo-950 text-indigo-300 border border-indigo-700/60 font-bold'
+    },
+    {
       id: 'settings',
       label: 'Cấu Hình VietQR & Liên Hệ',
       sublabel: 'Tài khoản NH & Zalo chủ trọ',
       icon: <Settings className="w-4 h-4 shrink-0" />
     }
   ];
+
+  const filteredAccounts = accounts.filter((acc) => {
+    const query = accountSearchQuery.toLowerCase().trim();
+    const matchesQuery =
+      !query ||
+      acc.name.toLowerCase().includes(query) ||
+      acc.email.toLowerCase().includes(query) ||
+      (acc.phone && acc.phone.includes(query)) ||
+      (acc.college && acc.college.toLowerCase().includes(query));
+    const matchesFilter =
+      accountRoleFilter === 'all' ? true : acc.role === accountRoleFilter;
+    return matchesQuery && matchesFilter;
+  });
 
   return (
     <div className="min-h-screen bg-slate-100/80 flex flex-col md:flex-row">
@@ -355,7 +397,9 @@ export default function AdminPage() {
             A
           </div>
           <div>
-            <span className="font-bold text-sm block leading-tight">{settings.brandName || 'UniStay'} Admin</span>
+            <span className="font-bold text-sm block leading-tight">
+              {settings.brandName || 'UniStay'} {user?.role === 'admin' ? 'Admin' : 'Staff'}
+            </span>
             <span className="text-[10px] text-slate-400 block">{user?.email}</span>
           </div>
         </div>
@@ -409,7 +453,7 @@ export default function AdminPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-bold uppercase tracking-wider">
                 <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <span>Admin Portal</span>
+                <span>{user?.role === 'admin' ? 'Admin Portal (Quản Trị)' : 'Staff Portal (Nhân Viên)'}</span>
               </div>
               <h1 className="text-sm font-black tracking-tight text-white truncate mt-0.5">
                 Xin chào, {user?.name.split(' ')[0]} 👋
@@ -1347,6 +1391,374 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* TAB 5: QUẢN LÝ TÀI KHOẢN & PHÂN QUYỀN STAFF */}
+        {/* ========================================================================= */}
+        {activeTab === 'accounts' && (
+          <div className="space-y-6">
+            {/* Header section with stats & primary button */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                    Quản Lý Tài Khoản &amp; Phân Quyền Staff
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+                  Quản lý danh sách thành viên, chỉ định tài khoản sinh viên/khách thành Nhân viên vận hành (Staff), hoặc phân quyền Quản trị viên (Admin).
+                </p>
+              </div>
+
+              {user?.role === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewStaffName('');
+                    setNewStaffEmail('');
+                    setNewStaffPhone('');
+                    setNewStaffCollege('');
+                    setNewStaffRole('staff');
+                    setShowAddStaffModal(true);
+                  }}
+                  className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-xs rounded-2xl shadow-md shadow-indigo-600/20 flex items-center gap-2 shrink-0 cursor-pointer transition-all active:scale-95"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>+ Chỉ Định / Thêm Nhân Viên (Staff)</span>
+                </button>
+              )}
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                <span className="text-[11px] font-bold text-slate-500 uppercase">Tổng Thành Viên</span>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-2xl font-black text-slate-900">{accounts.length}</span>
+                  <span className="text-xs text-slate-400 font-medium">người dùng</span>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50/50 p-4 rounded-2xl border border-indigo-200/80 shadow-xs">
+                <span className="text-[11px] font-bold text-indigo-700 uppercase flex items-center gap-1">
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Nhân Viên (Staff)</span>
+                </span>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-2xl font-black text-indigo-950">
+                    {accounts.filter((a) => a.role === 'staff').length}
+                  </span>
+                  <span className="text-xs text-indigo-600 font-bold">đang vận hành</span>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50/50 p-4 rounded-2xl border border-purple-200/80 shadow-xs">
+                <span className="text-[11px] font-bold text-purple-700 uppercase flex items-center gap-1">
+                  <Crown className="w-3.5 h-3.5" />
+                  <span>Quản Trị (Admin)</span>
+                </span>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-2xl font-black text-purple-950">
+                    {accounts.filter((a) => a.role === 'admin').length}
+                  </span>
+                  <span className="text-xs text-purple-600 font-bold">toàn quyền</span>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50/50 p-4 rounded-2xl border border-emerald-200/80 shadow-xs">
+                <span className="text-[11px] font-bold text-emerald-700 uppercase flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Sinh Viên / Khách</span>
+                </span>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-2xl font-black text-emerald-950">
+                    {accounts.filter((a) => a.role === 'student').length}
+                  </span>
+                  <span className="text-xs text-emerald-600 font-bold">khách thuê</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+              {/* Role Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                {(
+                  [
+                    { id: 'all', label: 'Tất Cả', count: accounts.length },
+                    {
+                      id: 'staff',
+                      label: 'Nhân Viên (Staff)',
+                      count: accounts.filter((a) => a.role === 'staff').length
+                    },
+                    {
+                      id: 'admin',
+                      label: 'Quản Trị Viên',
+                      count: accounts.filter((a) => a.role === 'admin').length
+                    },
+                    {
+                      id: 'student',
+                      label: 'Sinh Viên / Khách',
+                      count: accounts.filter((a) => a.role === 'student').length
+                    }
+                  ] as const
+                ).map((tab) => {
+                  const active = accountRoleFilter === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setAccountRoleFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        active
+                          ? 'bg-slate-900 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tab.label} ({tab.count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search Box */}
+              <div className="relative min-w-[260px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={accountSearchQuery}
+                  onChange={(e) => setAccountSearchQuery(e.target.value)}
+                  placeholder="Tìm theo tên, email, SĐT, trường..."
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Notification Toast */}
+            {accountToast && (
+              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>{accountToast}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAccountToast(null)}
+                  className="text-emerald-700 hover:text-emerald-950 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Account List / Table */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-500">
+                <span>DANH SÁCH TÀI KHOẢN ({filteredAccounts.length})</span>
+                <span className="text-[11px] text-slate-400">
+                  {user?.role === 'admin'
+                    ? 'Quản trị viên có toàn quyền chỉ định & thay đổi vai trò'
+                    : 'Chỉ xem danh bạ nhân sự (Quyền Staff)'}
+                </span>
+              </div>
+
+              {filteredAccounts.length === 0 ? (
+                <div className="p-12 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-700">Không tìm thấy tài khoản phù hợp</p>
+                  <p className="text-xs text-slate-400">
+                    Hãy thử đổi từ khóa tìm kiếm hoặc lọc lại danh mục vai trò.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {filteredAccounts.map((acc) => {
+                    const isSuper =
+                      acc.email.toLowerCase().trim() === 'truongvantuan43344@gmail.com';
+                    const isCurrentUser =
+                      user?.email.toLowerCase().trim() === acc.email.toLowerCase().trim();
+
+                    return (
+                      <div
+                        key={acc.id || acc.email}
+                        className="p-4 lg:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors"
+                      >
+                        {/* User Identity Info */}
+                        <div className="flex items-start gap-3.5 min-w-0">
+                          {acc.avatar ? (
+                            <img
+                              src={acc.avatar}
+                              alt={acc.name}
+                              className="w-11 h-11 rounded-2xl object-cover ring-2 ring-slate-100 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                              {acc.name ? acc.name[0]?.toUpperCase() : 'U'}
+                            </div>
+                          )}
+
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-sm font-bold text-slate-900 truncate">
+                                {acc.name}
+                              </h4>
+                              {isSuper && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                                  <Crown className="w-3 h-3 text-amber-600" />
+                                  <span>Super Admin Sáng Lập</span>
+                                </span>
+                              )}
+                              {isCurrentUser && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                                  Bạn
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-500">
+                              <a
+                                href={`mailto:${acc.email}`}
+                                className="flex items-center gap-1 hover:text-indigo-600 truncate"
+                              >
+                                <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span>{acc.email}</span>
+                              </a>
+                              {acc.phone && (
+                                <a
+                                  href={`tel:${acc.phone}`}
+                                  className="flex items-center gap-1 hover:text-indigo-600"
+                                >
+                                  <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                  <span>{acc.phone}</span>
+                                </a>
+                              )}
+                              {acc.college && (
+                                <span className="flex items-center gap-1 text-slate-600">
+                                  <GraduationCap className="w-3 h-3 text-slate-400 shrink-0" />
+                                  <span>{acc.college}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Middle: Role Badge */}
+                        <div className="flex items-center gap-3">
+                          {acc.role === 'admin' ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-purple-100 text-purple-900 border border-purple-200">
+                              <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                              <span>Quản Trị Viên (Admin)</span>
+                            </span>
+                          ) : acc.role === 'staff' ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-indigo-100 text-indigo-900 border border-indigo-200 shadow-xs">
+                              <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>Nhân Viên Vận Hành (Staff)</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                              <Users className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Sinh Viên / Khách Thuê</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Right: Actions / Role Assignment */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {user?.role === 'admin' ? (
+                            isSuper ? (
+                              <span className="text-[11px] font-bold text-slate-400 px-3 py-1.5 bg-slate-100 rounded-xl">
+                                Quyền mặc định bảo vệ
+                              </span>
+                            ) : (
+                              <>
+                                {/* Chỉ định Staff */}
+                                {acc.role !== 'staff' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      updateAccountRole(acc.email, 'staff');
+                                      setAccountToast(`Đã chỉ định ${acc.name} (${acc.email}) làm Nhân Viên (Staff)!`);
+                                      setTimeout(() => setAccountToast(null), 3500);
+                                    }}
+                                    className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
+                                    title="Chỉ định người này làm Staff để quản lý phòng & đơn cọc"
+                                  >
+                                    <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                                    <span>Chỉ định làm Staff</span>
+                                  </button>
+                                )}
+
+                                {/* Chuyển về Sinh viên */}
+                                {acc.role !== 'student' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      updateAccountRole(acc.email, 'student');
+                                      setAccountToast(`Đã chuyển ${acc.name} về quyền Sinh viên / Khách thuê!`);
+                                      setTimeout(() => setAccountToast(null), 3500);
+                                    }}
+                                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
+                                    title="Hạ quyền về Sinh viên bình thường"
+                                  >
+                                    <span>Về Sinh Viên</span>
+                                  </button>
+                                )}
+
+                                {/* Nâng làm Admin */}
+                                {acc.role !== 'admin' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm(`Bạn có chắc chắn muốn nâng ${acc.name} (${acc.email}) lên quyền Quản trị viên (Admin) cao nhất?`)) {
+                                        updateAccountRole(acc.email, 'admin');
+                                        setAccountToast(`Đã nâng ${acc.name} lên Quản trị viên (Admin)!`);
+                                        setTimeout(() => setAccountToast(null), 3500);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-semibold text-xs rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
+                                    title="Cấp toàn quyền Quản trị viên"
+                                  >
+                                    <Crown className="w-3.5 h-3.5" />
+                                    <span>Lên Admin</span>
+                                  </button>
+                                )}
+
+                                {/* Delete Account Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (confirm(`Bạn có chắc muốn xóa tài khoản ${acc.email} khỏi danh sách?`)) {
+                                      deleteAccount(acc.email);
+                                      setAccountToast(`Đã xóa tài khoản ${acc.email}`);
+                                      setTimeout(() => setAccountToast(null), 3000);
+                                    }
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                                  title="Xóa tài khoản"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">
+                              Chỉ Quản trị viên mới được phân quyền
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Add Property Modal */}
@@ -2073,6 +2485,189 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Thêm / Chỉ định Nhân Viên (Staff) Mới */}
+      {showAddStaffModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Chỉ Định &amp; Thêm Nhân Viên Mới</h3>
+                  <p className="text-[11px] text-slate-400">Bổ nhiệm nhân sự vận hành hệ thống UniStay</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddStaffModal(false)}
+                className="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newStaffEmail || !newStaffName) {
+                  alert('Vui lòng nhập đầy đủ Họ tên và Email nhân viên!');
+                  return;
+                }
+                addOrUpdateAccount({
+                  name: newStaffName.trim(),
+                  email: newStaffEmail.toLowerCase().trim(),
+                  phone: newStaffPhone.trim() || undefined,
+                  college: newStaffCollege.trim() || 'Nhân viên vận hành UniStay',
+                  role: newStaffRole
+                });
+                setShowAddStaffModal(false);
+                setAccountToast(
+                  `Đã bổ nhiệm thành công ${newStaffName} (${newStaffEmail}) làm ${
+                    newStaffRole === 'admin' ? 'Quản trị viên' : 'Nhân Viên (Staff)'
+                  }!`
+                );
+                setTimeout(() => setAccountToast(null), 3500);
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 space-y-1">
+                <p className="font-bold flex items-center gap-1.5 text-indigo-950">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span>Cách thức hoạt động:</span>
+                </p>
+                <p className="text-[11px] leading-relaxed text-indigo-800">
+                  Nhập địa chỉ Email (Google hoặc Email đăng nhập) của nhân viên. Khi người này đăng nhập vào UniStay, hệ thống sẽ tự động cấp quyền truy cập Bảng quản trị để quản lý phòng trọ, duyệt cọc và live chat với sinh viên.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Họ và Tên Nhân Viên <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newStaffName}
+                  onChange={(e) => setNewStaffName(e.target.value)}
+                  placeholder="Ví dụ: Nguyễn Văn Hoàng (CSKH Cần Thơ)"
+                  className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Địa Chỉ Email (Google / Login) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={newStaffEmail}
+                  onChange={(e) => setNewStaffEmail(e.target.value)}
+                  placeholder="staff@gmail.com hoặc hoang.nguyen@ctu.edu.vn"
+                  className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Số Điện Thoại / Zalo
+                  </label>
+                  <input
+                    type="tel"
+                    value={newStaffPhone}
+                    onChange={(e) => setNewStaffPhone(e.target.value)}
+                    placeholder="0901234567"
+                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Khu Vực / Trường Phụ Trách
+                  </label>
+                  <input
+                    type="text"
+                    value={newStaffCollege}
+                    onChange={(e) => setNewStaffCollege(e.target.value)}
+                    placeholder="Ví dụ: ĐH Cần Thơ (CTU)"
+                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Chỉ Định Vai Trò Phân Quyền
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label
+                    className={`p-3 rounded-2xl border text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
+                      newStaffRole === 'staff'
+                        ? 'bg-indigo-50 border-indigo-300 text-indigo-900 ring-2 ring-indigo-500/20'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value="staff"
+                      checked={newStaffRole === 'staff'}
+                      onChange={() => setNewStaffRole('staff')}
+                      className="accent-indigo-600"
+                    />
+                    <div>
+                      <span>Nhân Viên (Staff)</span>
+                      <p className="text-[10px] font-normal text-slate-500">Quản lý trọ, duyệt cọc, chat</p>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-3 rounded-2xl border text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
+                      newStaffRole === 'admin'
+                        ? 'bg-purple-50 border-purple-300 text-purple-900 ring-2 ring-purple-500/20'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value="admin"
+                      checked={newStaffRole === 'admin'}
+                      onChange={() => setNewStaffRole('admin')}
+                      className="accent-purple-600"
+                    />
+                    <div>
+                      <span>Quản Trị Viên (Admin)</span>
+                      <p className="text-[10px] font-normal text-slate-500">Toàn quyền hệ thống</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowAddStaffModal(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Xác Nhận &amp; Cấp Quyền</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

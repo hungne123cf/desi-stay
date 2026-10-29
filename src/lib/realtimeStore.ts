@@ -1,13 +1,15 @@
 import fs from 'fs';
 import path from 'path';
-import { Property, Booking, SiteSettings, ChatMessage, PropertyReview } from '@/types';
+import { Property, Booking, SiteSettings, ChatMessage, PropertyReview, UserAccount } from '@/types';
 import { siteConfig } from '@/config/site';
+import { DEFAULT_ACCOUNTS } from '@/config/auth';
 
 export interface RealtimeState {
   properties: Property[];
   bookings: Booking[];
   messages: ChatMessage[];
   reviews: PropertyReview[];
+  accounts: UserAccount[];
   settings: SiteSettings;
   updatedAt: number;
 }
@@ -89,6 +91,7 @@ export function getRealtimeState(): RealtimeState {
           : [],
         messages: Array.isArray(parsed.messages) ? parsed.messages : [],
         reviews: Array.isArray(parsed.reviews) ? parsed.reviews : [],
+        accounts: Array.isArray(parsed.accounts) ? parsed.accounts : DEFAULT_ACCOUNTS,
         settings: parsed.settings || DEFAULT_SETTINGS,
         updatedAt: parsed.updatedAt || Date.now()
       };
@@ -104,6 +107,7 @@ export function getRealtimeState(): RealtimeState {
     bookings: [],
     messages: [],
     reviews: [],
+    accounts: DEFAULT_ACCOUNTS,
     settings: DEFAULT_SETTINGS,
     updatedAt: Date.now()
   };
@@ -124,6 +128,7 @@ export function updateRealtimeState(partial: Partial<Omit<RealtimeState, 'update
         : current.bookings,
     messages: partial.messages !== undefined ? partial.messages : current.messages,
     reviews: partial.reviews !== undefined ? partial.reviews : current.reviews,
+    accounts: partial.accounts !== undefined ? partial.accounts : current.accounts,
     settings: partial.settings !== undefined ? { ...current.settings, ...partial.settings } : current.settings,
     updatedAt: Date.now()
   };

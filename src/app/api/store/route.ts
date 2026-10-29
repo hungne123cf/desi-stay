@@ -15,6 +15,7 @@ export async function POST(request: Request) {
       bookings: body.bookings,
       messages: body.messages,
       reviews: body.reviews,
+      accounts: body.accounts,
       settings: body.settings
     });
     return NextResponse.json(updated);

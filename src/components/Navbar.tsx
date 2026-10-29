@@ -99,13 +99,13 @@ export const Navbar: React.FC = () => {
                 <Receipt className="w-4 h-4 text-indigo-600" />
                 <span>Lịch Sử Đặt Phòng</span>
               </Link>
-              {user?.role === 'admin' && (
+              {(user?.role === 'admin' || user?.role === 'staff') && (
                 <Link
                   href="/admin"
                   className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-full border border-indigo-200 transition-colors"
                 >
                   <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                  <span>Quản Trị Phòng</span>
+                  <span>{user.role === 'admin' ? 'Quản Trị Phòng' : 'Kênh Nhân Viên (Staff)'}</span>
                 </Link>
               )}
             </nav>
@@ -136,7 +136,11 @@ export const Navbar: React.FC = () => {
                         {user.name}
                       </p>
                       <p className="text-[10px] text-slate-500 font-medium">
-                        {user.role === 'admin' ? 'Quản trị viên' : 'Thành viên'}
+                        {user.role === 'admin'
+                          ? 'Quản trị viên'
+                          : user.role === 'staff'
+                          ? 'Nhân viên (Staff)'
+                          : 'Thành viên'}
                       </p>
                     </div>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -148,7 +152,11 @@ export const Navbar: React.FC = () => {
                         <p className="text-xs font-bold text-slate-900 truncate">{user.name}</p>
                         <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
                         <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                          {user.role === 'admin' ? 'Tài khoản Quản trị (Admin)' : 'Tài khoản Khách thuê'}
+                          {user.role === 'admin'
+                            ? 'Tài khoản Quản trị (Admin)'
+                            : user.role === 'staff'
+                            ? 'Tài khoản Nhân viên (Staff)'
+                            : 'Tài khoản Khách thuê'}
                         </span>
                       </div>
 
@@ -259,13 +267,14 @@ export const Navbar: React.FC = () => {
               <Receipt className="w-4 h-4 text-indigo-600" />
               <span>Lịch Sử Đặt Cọc &amp; Giao Dịch</span>
             </Link>
-            {user?.role === 'admin' && (
+            {(user?.role === 'admin' || user?.role === 'staff') && (
               <Link
                 href="/admin"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-sm font-bold text-indigo-700 border-b border-slate-100"
+                className="block py-2 text-sm font-bold text-indigo-700 border-b border-slate-100 flex items-center gap-1.5"
               >
-                Trang Quản Trị (Admin)
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <span>{user.role === 'admin' ? 'Trang Quản Trị (Admin)' : 'Kênh Nhân Viên (Staff)'}</span>
               </Link>
             )}
             {user ? (

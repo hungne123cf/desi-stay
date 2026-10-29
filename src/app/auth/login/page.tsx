@@ -17,6 +17,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { GoogleAccountChooserModal } from '@/components/GoogleAccountChooserModal';
+import { UserRole } from '@/types';
 
 function LoginFormContent() {
   const router = useRouter();
@@ -35,12 +36,12 @@ function LoginFormContent() {
   const [successMsg, setSuccessMsg] = useState('');
   const [showGoogleChooser, setShowGoogleChooser] = useState(false);
 
-  const redirectAfterAuth = (role: 'student' | 'admin') => {
+  const redirectAfterAuth = (role: UserRole) => {
     if (nextUrl && nextUrl.startsWith('/')) {
       router.push(nextUrl);
       return;
     }
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'staff') {
       router.push('/admin');
     } else {
       router.push('/');

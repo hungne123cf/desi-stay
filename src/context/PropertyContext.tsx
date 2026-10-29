@@ -1,8 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Property, Booking, CurrencyCode, SiteSettings, ChatMessage, PropertyReview } from '@/types';
+import { Property, Booking, CurrencyCode, SiteSettings, ChatMessage, PropertyReview, UserAccount, UserRole } from '@/types';
 import { siteConfig } from '@/config/site';
+import { DEFAULT_ACCOUNTS } from '@/config/auth';
 
 export interface ReviewEligibility {
   hasPurchased: boolean;
@@ -17,6 +18,7 @@ interface PropertyContextType {
   bookings: Booking[];
   messages: ChatMessage[];
   reviews: PropertyReview[];
+  accounts: UserAccount[];
   currency: CurrencyCode;
   settings: SiteSettings;
   setCurrency: (c: CurrencyCode) => void;
@@ -39,6 +41,9 @@ interface PropertyContextType {
     user?: { id?: string; email?: string; phone?: string | null; name?: string } | null
   ) => ReviewEligibility;
   migrateConversationId: (oldConvId: string, newConvId: string) => void;
+  updateAccountRole: (email: string, role: UserRole) => void;
+  addOrUpdateAccount: (acc: Partial<UserAccount> & { email: string; name: string }) => void;
+  deleteAccount: (email: string) => void;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -129,11 +134,28 @@ function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): Prope
   return Array.from(map.values());
 }
 
+function mergeAccounts(prev: UserAccount[], incoming: UserAccount[]): UserAccount[] {
+  if (!incoming || incoming.length === 0) return prev;
+  const map = new Map<string, UserAccount>();
+  prev.forEach((a) => {
+    if (a && a.email) map.set(a.email.toLowerCase().trim(), a);
+  });
+  incoming.forEach((a) => {
+    if (a && a.email) {
+      const key = a.email.toLowerCase().trim();
+      const existing = map.get(key);
+      map.set(key, existing ? { ...existing, ...a } : a);
+    }
+  });
+  return Array.from(map.values());
+}
+
 export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reviews, setReviews] = useState<PropertyReview[]>([]);
+  const [accounts, setAccounts] = useState<UserAccount[]>(DEFAULT_ACCOUNTS);
   const [myBookingIds, setMyBookingIds] = useState<string[]>([]);
   const [currency, setCurrencyState] = useState<CurrencyCode>('VND');
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
@@ -160,6 +182,13 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const parsed = JSON.parse(savedReviews);
         if (Array.isArray(parsed) && parsed.length > 0) setReviews(parsed);
       }
+      const savedAccounts = localStorage.getItem('unistay_real_accounts_v4');
+      if (savedAccounts) {
+        const parsed = JSON.parse(savedAccounts);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAccounts((prev) => mergeAccounts(prev, parsed));
+        }
+      }
       const savedProps = localStorage.getItem('unistay_real_properties_v4');
       if (savedProps) {
         const parsed = JSON.parse(savedProps);
@@ -175,6 +204,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     bookings?: Booking[];
     messages?: ChatMessage[];
     reviews?: PropertyReview[];
+    accounts?: UserAccount[];
     settings?: SiteSettings;
   }) => {
     // 1. Đồng bộ Real-Time tức thì đa tab/cửa sổ qua BroadcastChannel
@@ -223,6 +253,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const serverReviews: PropertyReview[] = Array.isArray(serverState.reviews)
           ? serverState.reviews
           : [];
+        const serverAccounts: UserAccount[] = Array.isArray(serverState.accounts)
+          ? serverState.accounts
+          : DEFAULT_ACCOUNTS;
 
         const finalProps = serverProps.map((p) => {
           const pReviews = serverReviews.filter(
@@ -240,6 +273,13 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setBookings((prev) => mergeBookings(prev, serverBookings));
         setMessages((prev) => mergeMessages(prev, serverMessages));
         setReviews((prev) => mergeReviews(prev, serverReviews));
+        setAccounts((prev) => {
+          const merged = mergeAccounts(prev, serverAccounts);
+          try {
+            localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
         if (serverState.settings) setSettings(serverState.settings);
 
         try {
@@ -267,6 +307,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
           if (Array.isArray(p.reviews)) {
             setReviews((prev) => mergeReviews(prev, p.reviews));
+          }
+          if (Array.isArray(p.accounts)) {
+            setAccounts((prev) => mergeAccounts(prev, p.accounts));
           }
           if (p.settings) setSettings(p.settings);
         }
@@ -317,6 +360,15 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 return merged;
               });
             }
+            if (Array.isArray(data.accounts)) {
+              setAccounts((prev) => {
+                const merged = mergeAccounts(prev, data.accounts);
+                try {
+                  localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
+            }
             if (data.settings) {
               setSettings(data.settings);
             }
@@ -358,6 +410,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
           if (Array.isArray(data.reviews)) {
             setReviews((prev) => mergeReviews(prev, data.reviews));
+          }
+          if (Array.isArray(data.accounts)) {
+            setAccounts((prev) => mergeAccounts(prev, data.accounts));
           }
           if (data.settings) setSettings(data.settings);
         })
@@ -700,6 +755,219 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   };
 
+  // Auto-sync discovered accounts from bookings, messages, and registered users into accounts
+  useEffect(() => {
+    setAccounts((prev) => {
+      let changed = false;
+      const currentMap = new Map<string, UserAccount>();
+      prev.forEach((a) => {
+        if (a && a.email) currentMap.set(a.email.toLowerCase().trim(), a);
+      });
+
+      // From bookings
+      bookings.forEach((b) => {
+        const email = b.studentEmail?.toLowerCase().trim();
+        if (email && !currentMap.has(email)) {
+          currentMap.set(email, {
+            id: `acc-${email.replace(/[^a-z0-9]/g, '')}`,
+            email,
+            name: b.studentName || email.split('@')[0],
+            role: 'student',
+            phone: b.studentContact || null,
+            college: b.college || null,
+            createdAt: b.createdAt || new Date().toISOString(),
+            lastLoginAt: b.createdAt
+          });
+          changed = true;
+        }
+      });
+
+      // From messages
+      messages.forEach((m) => {
+        const email = m.studentEmail?.toLowerCase().trim();
+        if (email && !currentMap.has(email)) {
+          currentMap.set(email, {
+            id: `acc-${email.replace(/[^a-z0-9]/g, '')}`,
+            email,
+            name: m.studentName || email.split('@')[0],
+            role: 'student',
+            createdAt: m.createdAt || new Date().toISOString()
+          });
+          changed = true;
+        }
+      });
+
+      // From registered users in localStorage
+      try {
+        const rawRegistered = localStorage.getItem('unistay_registered_users');
+        if (rawRegistered) {
+          const registered = JSON.parse(rawRegistered);
+          if (Array.isArray(registered)) {
+            registered.forEach((u: any) => {
+              const email = u.email?.toLowerCase().trim();
+              if (email && !currentMap.has(email)) {
+                currentMap.set(email, {
+                  id: `acc-${email.replace(/[^a-z0-9]/g, '')}`,
+                  email,
+                  name: u.name || email.split('@')[0],
+                  role: u.role || 'student',
+                  createdAt: new Date().toISOString()
+                });
+                changed = true;
+              }
+            });
+          }
+        }
+      } catch {}
+
+      if (!changed) return prev;
+      const nextAccounts = Array.from(currentMap.values());
+      try {
+        localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(nextAccounts));
+      } catch {}
+      syncToServer({ accounts: nextAccounts });
+      return nextAccounts;
+    });
+  }, [bookings, messages]);
+
+  const updateAccountRole = (email: string, newRole: UserRole) => {
+    const cleanEmail = email.toLowerCase().trim();
+    if (!cleanEmail) return;
+
+    if (cleanEmail === 'truongvantuan43344@gmail.com' && newRole !== 'admin') {
+      alert('Không thể hạ quyền Quản trị viên tối cao (Super Admin)!');
+      return;
+    }
+
+    setAccounts((prev) => {
+      const exists = prev.some((a) => a.email.toLowerCase().trim() === cleanEmail);
+      let updated: UserAccount[];
+      if (exists) {
+        updated = prev.map((a) =>
+          a.email.toLowerCase().trim() === cleanEmail
+            ? { ...a, role: newRole, isStaffAssigned: newRole === 'staff' }
+            : a
+        );
+      } else {
+        updated = [
+          ...prev,
+          {
+            id: `acc-${cleanEmail.replace(/[^a-z0-9]/g, '')}`,
+            email: cleanEmail,
+            name: cleanEmail.split('@')[0],
+            role: newRole,
+            createdAt: new Date().toISOString(),
+            isStaffAssigned: newRole === 'staff'
+          }
+        ];
+      }
+
+      try {
+        const raw = localStorage.getItem('unistay_assigned_roles');
+        const map = raw ? JSON.parse(raw) : {};
+        map[cleanEmail] = newRole;
+        localStorage.setItem('unistay_assigned_roles', JSON.stringify(map));
+        localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(updated));
+      } catch {}
+
+      try {
+        const authChan = new BroadcastChannel('unistay_auth_channel');
+        authChan.postMessage({
+          type: 'ROLE_UPDATED',
+          email: cleanEmail,
+          role: newRole
+        });
+        authChan.close();
+      } catch {}
+
+      syncToServer({ accounts: updated });
+      return updated;
+    });
+  };
+
+  const addOrUpdateAccount = (acc: Partial<UserAccount> & { email: string; name: string }) => {
+    const cleanEmail = acc.email.toLowerCase().trim();
+    if (!cleanEmail) return;
+    const targetRole: UserRole = acc.role || 'staff';
+
+    setAccounts((prev) => {
+      const exists = prev.some((a) => a.email.toLowerCase().trim() === cleanEmail);
+      let updated: UserAccount[];
+      if (exists) {
+        updated = prev.map((a) =>
+          a.email.toLowerCase().trim() === cleanEmail
+            ? {
+                ...a,
+                name: acc.name || a.name,
+                role: targetRole,
+                phone: acc.phone ?? a.phone,
+                college: acc.college ?? a.college,
+                avatar: acc.avatar ?? a.avatar,
+                isStaffAssigned: targetRole === 'staff'
+              }
+            : a
+        );
+      } else {
+        const newAcc: UserAccount = {
+          id: `acc-${Date.now()}`,
+          email: cleanEmail,
+          name: acc.name.trim(),
+          role: targetRole,
+          phone: acc.phone?.trim() || null,
+          college: acc.college?.trim() || null,
+          avatar: acc.avatar || null,
+          createdAt: new Date().toISOString(),
+          isStaffAssigned: targetRole === 'staff'
+        };
+        updated = [newAcc, ...prev];
+      }
+
+      try {
+        const raw = localStorage.getItem('unistay_assigned_roles');
+        const map = raw ? JSON.parse(raw) : {};
+        map[cleanEmail] = targetRole;
+        localStorage.setItem('unistay_assigned_roles', JSON.stringify(map));
+        localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(updated));
+      } catch {}
+
+      try {
+        const authChan = new BroadcastChannel('unistay_auth_channel');
+        authChan.postMessage({
+          type: 'ROLE_UPDATED',
+          email: cleanEmail,
+          role: targetRole
+        });
+        authChan.close();
+      } catch {}
+
+      syncToServer({ accounts: updated });
+      return updated;
+    });
+  };
+
+  const deleteAccount = (email: string) => {
+    const cleanEmail = email.toLowerCase().trim();
+    if (cleanEmail === 'truongvantuan43344@gmail.com' || cleanEmail === 'admin@unistay.com') {
+      alert('Không thể xóa tài khoản Quản trị viên cấp cao!');
+      return;
+    }
+
+    setAccounts((prev) => {
+      const updated = prev.filter((a) => a.email.toLowerCase().trim() !== cleanEmail);
+      try {
+        localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(updated));
+        const raw = localStorage.getItem('unistay_assigned_roles');
+        if (raw) {
+          const map = JSON.parse(raw);
+          delete map[cleanEmail];
+          localStorage.setItem('unistay_assigned_roles', JSON.stringify(map));
+        }
+      } catch {}
+      syncToServer({ accounts: updated });
+      return updated;
+    });
+  };
+
   return (
     <PropertyContext.Provider
       value={{
@@ -707,6 +975,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         bookings,
         messages,
         reviews,
+        accounts,
         currency,
         settings,
         setCurrency,
@@ -724,7 +993,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         replyToReview,
         deleteReview,
         getReviewEligibility,
-        migrateConversationId
+        migrateConversationId,
+        updateAccountRole,
+        addOrUpdateAccount,
+        deleteAccount
       }}
     >
       {children}

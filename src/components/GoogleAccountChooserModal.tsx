@@ -15,11 +15,12 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { useAuth, StoredAccount } from '@/context/AuthContext';
+import { UserRole } from '@/types';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (role: 'student' | 'admin') => void;
+  onSuccess: (role: UserRole) => void;
 }
 
 type ModalStep = 'chooser' | 'email' | 'password' | 'oauth_config';

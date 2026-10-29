@@ -1,10 +1,34 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { User } from '@/types';
+import { User, UserRole } from '@/types';
 import { DEFAULT_GOOGLE_CLIENT_ID, isEmailAdmin, PREDEFINED_ADMINS } from '@/config/auth';
 import { isSupabaseConfigured } from '@/lib/env';
 import { createClient } from '@/lib/supabase/client';
+
+export function getAssignedRole(email: string): UserRole {
+  if (!email) return 'student';
+  const clean = email.toLowerCase().trim();
+  if (isEmailAdmin(clean)) return 'admin';
+  try {
+    const raw = localStorage.getItem('unistay_assigned_roles');
+    if (raw) {
+      const map = JSON.parse(raw);
+      if (map[clean]) return map[clean];
+    }
+  } catch {}
+  try {
+    const rawAccounts = localStorage.getItem('unistay_real_accounts_v4');
+    if (rawAccounts) {
+      const accounts = JSON.parse(rawAccounts);
+      if (Array.isArray(accounts)) {
+        const found = accounts.find((a: any) => a.email?.toLowerCase().trim() === clean);
+        if (found?.role) return found.role;
+      }
+    }
+  } catch {}
+  return 'student';
+}
 
 async function syncAccountToSupabase(account: {
   email: string;
@@ -12,7 +36,7 @@ async function syncAccountToSupabase(account: {
   password?: string;
   avatar?: string;
   phone?: string | null;
-  role: 'student' | 'admin';
+  role: UserRole;
   provider: 'google' | 'email';
 }) {
   if (!isSupabaseConfigured()) return;
@@ -41,7 +65,7 @@ export interface StoredAccount {
   email: string;
   password?: string;
   avatar?: string;
-  role: 'student' | 'admin';
+  role: UserRole;
   lastLoginAt?: string;
 }
 
@@ -86,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedUser = localStorage.getItem('unistay_auth_user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
-        parsed.role = isEmailAdmin(parsed.email) ? 'admin' : 'student';
+        parsed.role = getAssignedRole(parsed.email);
         setUser(parsed);
       } else {
         setUser(null);
@@ -134,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
 
       const cleanEmail = account.email.toLowerCase().trim();
-      const role = isEmailAdmin(cleanEmail) ? 'admin' : 'student';
+      const role = getAssignedRole(cleanEmail);
       const displayName =
         account.name?.trim() ||
         cleanEmail
@@ -185,6 +209,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event.data?.type === 'UNISTAY_GOOGLE_AUTH_SUCCESS' && event.data?.user) {
           setUser(event.data.user);
           setIsLoading(false);
+        } else if (event.data?.type === 'ROLE_UPDATED' && event.data?.email) {
+          setUser((curr) => {
+            if (curr && curr.email.toLowerCase().trim() === event.data.email.toLowerCase().trim()) {
+              const updated = { ...curr, role: event.data.role };
+              try {
+                localStorage.setItem('unistay_auth_user', JSON.stringify(updated));
+              } catch {}
+              return updated;
+            }
+            return curr;
+          });
         }
       };
     } catch {
@@ -202,6 +237,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setUser(null);
         }
+      } else if (e.key === 'unistay_assigned_roles' || e.key === 'unistay_real_accounts_v4') {
+        setUser((curr) => {
+          if (!curr?.email) return curr;
+          const freshRole = getAssignedRole(curr.email);
+          if (curr.role !== freshRole) {
+            const updated = { ...curr, role: freshRole };
+            try {
+              localStorage.setItem('unistay_auth_user', JSON.stringify(updated));
+            } catch {}
+            return updated;
+          }
+          return curr;
+        });
       }
     };
 
@@ -344,7 +392,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Email hoặc mật khẩu không chính xác.');
     }
 
-    const role = isEmailAdmin(matchedRegistered.email) ? 'admin' : 'student';
+    const role = getAssignedRole(matchedRegistered.email);
     const loggedUser: User = {
       id: `usr-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
       name: matchedRegistered.name,
@@ -392,7 +440,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Địa chỉ email này đã được đăng ký. Vui lòng chuyển sang Đăng nhập.');
     }
 
-    const role = isEmailAdmin(cleanEmail) ? 'admin' : 'student';
+    const role = getAssignedRole(cleanEmail);
 
     const newAccount: StoredAccount = {
       name: cleanName,
