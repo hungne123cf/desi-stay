@@ -11,7 +11,9 @@ import {
   Star,
   CheckCircle2,
   ArrowRight,
-  Phone
+  Phone,
+  Eye,
+  MessageSquare
 } from 'lucide-react';
 
 interface PropertyCardProps {
@@ -20,8 +22,13 @@ interface PropertyCardProps {
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow }) => {
-  const { formatPrice } = useProperties();
+  const { formatPrice, settings, reviews } = useProperties();
   const [activeImgIndex, setActiveImgIndex] = useState(0);
+
+  const propertyReviewsCount =
+    reviews.filter((r) => r.propertyId === property.id || r.propertyCode === property.code).length ||
+    property.reviewsCount ||
+    0;
 
   const getGenderBadge = () => {
     switch (property.gender) {
@@ -49,24 +56,30 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
 
   const genderBadge = getGenderBadge();
 
+  // Luôn kết nối về Zalo Trung tâm của Admin (Môi giới nắm đằng chuôi)
   const handleContactLandlord = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const phone = property.landlordContact.replace(/[^0-9]/g, '');
+    const phone = (settings.supportWhatsApp || settings.supportHotline || '0901234567').replace(
+      /[^0-9]/g,
+      ''
+    );
     window.open(`https://zalo.me/${phone}`, '_blank');
   };
 
   return (
     <div className="group bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300 flex flex-col">
-      {/* Image Preview & Carousel */}
+      {/* Image Preview & Carousel - Bấm vào ảnh để mở trang Chi tiết phòng */}
       <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
-        <img
-          src={property.images[activeImgIndex] || property.images[0]}
-          alt={property.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+        <Link href={`/properties/${property.id}`} className="block w-full h-full">
+          <img
+            src={property.images[activeImgIndex] || property.images[0]}
+            alt={property.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer"
+          />
+        </Link>
 
         {/* Floating Badges */}
-        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
+        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10 pointer-events-none">
           {property.isZeroBrokerage && (
             <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-sm">
               0% Phí Môi Giới
@@ -80,12 +93,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
           )}
         </div>
 
-        {/* Rating chip */}
-        <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-xl shadow-md flex items-center gap-1 text-xs font-bold text-slate-800">
+        {/* Rating chip - Bấm vào để nhảy thẳng tới mục Đánh giá & Bình luận */}
+        <Link
+          href={`/properties/${property.id}#reviews`}
+          title="Bấm để xem & gửi đánh giá sao, bình luận"
+          className="absolute bottom-3 right-3 z-10 bg-white/95 hover:bg-amber-50 backdrop-blur-sm px-2.5 py-1 rounded-xl shadow-md flex items-center gap-1 text-xs font-bold text-slate-800 border border-amber-200/60 transition-transform hover:scale-105"
+        >
           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-          <span>{property.rating}</span>
-          <span className="text-slate-400 font-normal">({property.reviewsCount})</span>
-        </div>
+          <span>{property.rating || 5}</span>
+          <span className="text-indigo-600 font-semibold">({propertyReviewsCount} đánh giá)</span>
+        </Link>
 
         {/* Dots */}
         {property.images.length > 1 && (
@@ -126,7 +143,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
         <div className="flex items-start justify-between gap-2 mb-1">
           <Link
             href={`/properties/${property.id}`}
-            className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1"
+            className="text-base font-bold text-slate-900 hover:text-indigo-600 group-hover:text-indigo-600 transition-colors line-clamp-1"
           >
             {property.title}
           </Link>
@@ -162,8 +179,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
         </div>
 
         {/* Price & Action */}
-        <div className="pt-3 border-t border-slate-100 mt-auto">
-          <div className="flex items-baseline justify-between mb-3">
+        <div className="pt-3 border-t border-slate-100 mt-auto space-y-2.5">
+          <div className="flex items-baseline justify-between">
             <div>
               <span className="text-xl font-black text-slate-900">
                 {formatPrice(property.pricePerMonthUSD, 'VND')}
@@ -178,8 +195,29 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
             </div>
           </div>
 
+          {/* Nút Xem Chi Tiết Phòng & Đánh Giá Bình Luận */}
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href={`/properties/${property.id}`}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-xl transition-colors"
+            >
+              <Eye className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span>Xem Chi Tiết</span>
+            </Link>
+
+            <Link
+              href={`/properties/${property.id}#reviews`}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-xl transition-colors"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>Đánh Giá ({propertyReviewsCount})</span>
+            </Link>
+          </div>
+
+          {/* Nút Nhắn Zalo & Đặt Cọc Giữ Chỗ */}
           <div className="grid grid-cols-2 gap-2">
             <button
+              type="button"
               onClick={handleContactLandlord}
               className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors cursor-pointer"
             >
@@ -188,6 +226,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
             </button>
 
             <button
+              type="button"
               onClick={() => onBookNow(property)}
               className="flex items-center justify-center gap-1 py-2 px-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all cursor-pointer"
             >

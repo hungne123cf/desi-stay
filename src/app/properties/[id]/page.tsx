@@ -1,17 +1,12 @@
-import { INITIAL_PROPERTIES } from '@/data/mockProperties';
+'use client';
+
+import React from 'react';
+import { useParams } from 'next/navigation';
 import { PropertyDetailView } from '@/components/PropertyDetailView';
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
+export default function PropertyDetailPage() {
+  const params = useParams<{ id: string }>();
+  const id = typeof params?.id === 'string' ? params.id : '';
 
-export async function generateStaticParams() {
-  return INITIAL_PROPERTIES.map((p) => ({
-    id: p.id
-  }));
-}
-
-export default async function PropertyDetailPage({ params }: PageProps) {
-  const { id } = await params;
   return <PropertyDetailView propertyId={id} />;
 }

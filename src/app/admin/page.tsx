@@ -1142,15 +1142,18 @@ export default function AdminPage() {
               ) : (
                 <div className="divide-y divide-slate-100">
                   {reviews.map((rev) => {
-                    const matchedProp = properties.find((p) => p.code === rev.propertyCode);
+                    const matchedProp = properties.find(
+                      (p) => p.id === rev.propertyId || p.code === rev.propertyCode
+                    );
                     const isVerifiedTenant = bookings.some(
                       (b) =>
-                        b.propertyCode === rev.propertyCode &&
+                        (b.propertyCode === rev.propertyCode ||
+                          b.propertyTitle === rev.propertyTitle) &&
                         (b.status === 'token_paid' || b.status === 'confirmed') &&
-                        (b.studentName.toLowerCase() === rev.authorName.toLowerCase() ||
-                          (rev.authorEmail &&
+                        (b.studentName.toLowerCase() === rev.userName.toLowerCase() ||
+                          (rev.userEmail &&
                             b.studentContact.replace(/[^0-9]/g, '') ===
-                              rev.authorEmail.replace(/[^0-9]/g, '')))
+                              rev.userEmail.replace(/[^0-9]/g, '')))
                     );
 
                     return (
@@ -1159,11 +1162,11 @@ export default function AdminPage() {
                           <div className="space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-xs font-bold text-slate-900">
-                                {rev.authorName}
+                                {rev.userName}
                               </span>
-                              {rev.college && (
+                              {rev.userCollege && (
                                 <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
-                                  🎓 {rev.college}
+                                  🎓 {rev.userCollege}
                                 </span>
                               )}
                               {isVerifiedTenant && (
@@ -1171,12 +1174,14 @@ export default function AdminPage() {
                                   ✅ Khách đã đặt phòng xác thực
                                 </span>
                               )}
-                              <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-mono text-[10px] font-bold">
-                                Phòng: {rev.propertyCode}
-                              </span>
+                              {rev.propertyCode && (
+                                <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-mono text-[10px] font-bold">
+                                  Phòng: {rev.propertyCode}
+                                </span>
+                              )}
                               {matchedProp && (
                                 <Link
-                                  href={`/properties/${matchedProp.id}`}
+                                  href={`/properties/${matchedProp.id}#reviews`}
                                   className="text-[11px] text-indigo-600 hover:underline font-semibold"
                                 >
                                   {matchedProp.title} ↗
