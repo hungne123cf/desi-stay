@@ -155,27 +155,27 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-md animate-fadeIn">
+      <div className="bg-white w-full max-w-3xl lg:max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white px-6 sm:px-8 py-5 flex items-center justify-between shrink-0">
           <div>
-            <div className="flex items-center gap-1.5 text-[11px] text-indigo-100 font-bold uppercase tracking-wider mb-0.5">
+            <div className="flex items-center gap-1.5 text-xs text-indigo-100 font-bold uppercase tracking-wider mb-1">
               <ShieldCheck className="w-4 h-4 text-emerald-300" />
               <span>Đặt Cọc Giữ Chỗ VietQR Napas 247 &amp; Đặt Lịch Xem Phòng</span>
             </div>
-            <h3 className="text-base sm:text-lg font-bold truncate max-w-[380px]">{property.title}</h3>
+            <h3 className="text-lg sm:text-xl font-bold truncate max-w-xl">{property.title}</h3>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-2xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-5">
+        <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
           {step === 'details' && (
             <form onSubmit={handleProceedToPayment} className="space-y-4">
               {/* Chọn Hình Thức Ngay Từ Bước 1 */}
@@ -352,10 +352,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
               {selectedMethod === 'vietqr_bank' ? (
                 <>
                   {/* VietQR Napas 247 Card */}
-                  <div className="p-4 bg-indigo-50/50 border border-indigo-200/80 rounded-2xl space-y-4">
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="p-5 sm:p-6 bg-indigo-50/60 border border-indigo-200/90 rounded-3xl space-y-4">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
                       {/* Dynamic QR Image */}
-                      <div className="w-48 h-48 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm shrink-0 flex items-center justify-center">
+                      <div className="w-52 h-52 sm:w-60 sm:h-60 bg-white p-3 rounded-2xl border border-slate-200 shadow-md shrink-0 flex items-center justify-center">
                         <img
                           src={vietQrImageUrl}
                           alt="Mã VietQR Napas 247"
@@ -364,33 +364,36 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                       </div>
 
                       {/* Bank Account Details with Copy Buttons */}
-                      <div className="flex-1 w-full space-y-2 text-xs bg-white p-3.5 rounded-2xl border border-slate-200">
-                        <div className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider pb-1 border-b border-slate-100">
-                          Thông tin chuyển khoản tự động (Napas 247)
+                      <div className="flex-1 w-full space-y-3 text-sm bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+                        <div className="text-xs font-bold text-indigo-700 uppercase tracking-wider pb-2 border-b border-slate-100 flex items-center justify-between">
+                          <span>Thông tin chuyển khoản Napas 247</span>
+                          <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
+                            Tự Động Báo Có
+                          </span>
                         </div>
 
-                        <div className="flex justify-between items-center py-0.5">
-                          <span className="text-slate-500">Ngân hàng:</span>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500 text-xs">Ngân hàng:</span>
                           <span className="font-bold text-slate-900">{settings.vietQrBankName}</span>
                         </div>
 
-                        <div className="flex justify-between items-center py-0.5">
-                          <span className="text-slate-500">Chủ tài khoản:</span>
-                          <span className="font-bold text-slate-900 uppercase">
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500 text-xs">Chủ tài khoản:</span>
+                          <span className="font-black text-slate-900 uppercase">
                             {settings.vietQrAccountHolder}
                           </span>
                         </div>
 
-                        <div className="flex justify-between items-center py-0.5">
-                          <span className="text-slate-500">Số tài khoản:</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-indigo-700 font-mono text-sm">
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500 text-xs">Số tài khoản:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-indigo-700 font-mono text-base">
                               {settings.vietQrAccountNumber}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleCopy(settings.vietQrAccountNumber, 'acc')}
-                              className="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 cursor-pointer"
+                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs font-bold cursor-pointer transition-colors flex items-center gap-1"
                               title="Sao chép số tài khoản"
                             >
                               {copiedField === 'acc' ? (
@@ -398,20 +401,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                               ) : (
                                 <Copy className="w-3.5 h-3.5" />
                               )}
+                              <span>{copiedField === 'acc' ? 'Đã chép' : 'Sao chép'}</span>
                             </button>
                           </div>
                         </div>
 
-                        <div className="flex justify-between items-center py-0.5">
-                          <span className="text-slate-500">Số tiền cọc:</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-black text-emerald-700 text-sm">
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500 text-xs">Số tiền cọc:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-emerald-700 text-base">
                               {amountVND.toLocaleString('vi-VN')} ₫
                             </span>
                             <button
                               type="button"
                               onClick={() => handleCopy(String(amountVND), 'amount')}
-                              className="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 cursor-pointer"
+                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs font-bold cursor-pointer transition-colors flex items-center gap-1"
                               title="Sao chép số tiền"
                             >
                               {copiedField === 'amount' ? (
@@ -419,20 +423,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                               ) : (
                                 <Copy className="w-3.5 h-3.5" />
                               )}
+                              <span>{copiedField === 'amount' ? 'Đã chép' : 'Sao chép'}</span>
                             </button>
                           </div>
                         </div>
 
-                        <div className="flex justify-between items-center pt-1 border-t border-slate-100">
-                          <span className="text-slate-500">Nội dung CK:</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-indigo-700 font-mono bg-indigo-50 px-2 py-0.5 rounded">
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                          <span className="text-slate-500 text-xs">Nội dung CK:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-indigo-700 font-mono bg-indigo-50 px-2.5 py-1 rounded-lg">
                               {transferContent}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleCopy(transferContent, 'content')}
-                              className="p-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 cursor-pointer"
+                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs font-bold cursor-pointer transition-colors flex items-center gap-1"
                               title="Sao chép nội dung chuyển khoản"
                             >
                               {copiedField === 'content' ? (
@@ -440,6 +445,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                               ) : (
                                 <Copy className="w-3.5 h-3.5" />
                               )}
+                              <span>{copiedField === 'content' ? 'Đã chép' : 'Sao chép'}</span>
                             </button>
                           </div>
                         </div>

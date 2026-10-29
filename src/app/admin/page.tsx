@@ -1273,24 +1273,24 @@ export default function AdminPage() {
 
       {/* Add Property Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-md">
+          <div className="bg-white w-full max-w-4xl lg:max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-slate-900 text-white px-7 py-5 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="text-base font-bold">Thêm Phòng Trọ Mới Vào Hệ Thống</h3>
-                <p className="text-[11px] text-slate-400">
+                <h3 className="text-lg font-bold">Thêm Phòng Trọ Mới Vào Hệ Thống</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
                   Chọn Tỉnh/Thành phố để hệ thống tự động gợi ý Quận/Huyện và các Trường Đại học tương ứng
                 </p>
               </div>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                className="w-10 h-10 rounded-2xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateProperty} className="p-6 overflow-y-auto space-y-5 text-xs">
+            <form onSubmit={handleCreateProperty} className="p-7 sm:p-8 overflow-y-auto space-y-6 text-sm">
               {/* Tiêu đề phòng */}
               <div>
                 <label className="font-bold text-slate-700 block mb-1.5">Tiêu đề phòng trọ / Căn hộ *</label>
@@ -1693,29 +1693,29 @@ export default function AdminPage() {
 
       {/* Property Detail Modal in Admin */}
       {selectedDetailProp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-md">
+          <div className="bg-white w-full max-w-3xl lg:max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-slate-900 text-white px-7 py-5 flex items-center justify-between shrink-0">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-[10px] font-mono font-bold">
+                  <span className="px-2.5 py-0.5 rounded-lg bg-indigo-600 text-[11px] font-mono font-bold">
                     {selectedDetailProp.code}
                   </span>
                   <span className="text-xs text-slate-300 uppercase font-semibold">
                     {selectedDetailProp.roomType}
                   </span>
                 </div>
-                <h3 className="text-base font-bold mt-1">{selectedDetailProp.title}</h3>
+                <h3 className="text-lg sm:text-xl font-bold mt-1 text-white">{selectedDetailProp.title}</h3>
               </div>
               <button
                 onClick={() => setSelectedDetailProp(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                className="w-10 h-10 rounded-2xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+            <div className="p-7 sm:p-8 overflow-y-auto space-y-6 text-sm">
               {/* Ảnh lớn */}
               <div className="aspect-[16/9] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
                 <img
@@ -1921,37 +1921,37 @@ export default function AdminPage() {
 
       {/* Receipt / Bill Inspection Modal */}
       {selectedReceiptLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-md">
+          <div className="bg-white w-full max-w-2xl sm:max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-slate-900 text-white px-7 py-5 flex items-center justify-between shrink-0">
               <div>
-                <span className="text-[10px] font-mono font-bold text-emerald-400 block">
-                  Mã đơn: {selectedReceiptLead.reference} • Phòng {selectedReceiptLead.propertyCode}
+                <span className="text-xs font-mono font-bold text-emerald-400 block">
+                  Mã đơn: #{selectedReceiptLead.reference} • Phòng: {selectedReceiptLead.propertyCode}
                 </span>
-                <h3 className="text-sm font-bold">
-                  Biên Lai Chuyển Khoản – {selectedReceiptLead.studentName}
+                <h3 className="text-lg font-bold text-white mt-0.5">
+                  Kiểm Tra Ảnh Biên Lai Chuyển Khoản – {selectedReceiptLead.studentName}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedReceiptLead(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                className="w-10 h-10 rounded-2xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-5 text-sm">
               {selectedReceiptLead.receiptImageUrl && (
-                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-950 flex items-center justify-center max-h-[420px]">
+                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-950 flex items-center justify-center min-h-[320px] max-h-[520px] p-2">
                   <img
                     src={selectedReceiptLead.receiptImageUrl}
                     alt="Ảnh chụp màn hình chuyển khoản"
-                    className="max-h-[420px] w-auto object-contain"
+                    className="max-h-[500px] w-auto object-contain rounded-xl shadow-lg"
                   />
                 </div>
               )}
 
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs sm:text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Người chuyển:</span>
                   <span className="font-bold text-slate-900">

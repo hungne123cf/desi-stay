@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Property } from '@/types';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
+import { ReviewModal } from '@/components/ReviewModal';
 import {
   MapPin,
   GraduationCap,
@@ -26,6 +27,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
   const { formatPrice, settings, reviews, getReviewEligibility } = useProperties();
   const { user } = useAuth();
   const [activeImgIndex, setActiveImgIndex] = useState(0);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const propertyReviewsCount =
     reviews.filter((r) => r.propertyId === property.id || r.propertyCode === property.code).length ||
@@ -211,13 +213,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
               </Link>
 
               {eligibility.remainingReviews > 0 ? (
-                <Link
-                  href={`/properties/${property.id}#reviews`}
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-xl transition-colors shadow-2xs"
+                <button
+                  type="button"
+                  onClick={() => setIsReviewModalOpen(true)}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-amber-900 bg-amber-100/90 hover:bg-amber-200 border border-amber-300 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                   <span>Đánh Giá ({eligibility.remainingReviews} lượt)</span>
-                </Link>
+                </button>
               ) : (
                 <Link
                   href={`/properties/${property.id}#reviews`}
@@ -261,6 +264,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
           </div>
         </div>
       </div>
+
+      {/* Review Modal Popup khi bấm nút Đánh Giá */}
+      <ReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        property={property}
+        booking={eligibility.nextBookingToReview}
+        remainingQuota={eligibility.remainingReviews}
+        totalPurchases={eligibility.totalPurchases}
+        usedReviews={eligibility.usedReviews}
+      />
     </div>
   );
 };
