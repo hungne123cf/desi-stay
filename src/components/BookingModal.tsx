@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Property, PaymentMethod } from '@/types';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
@@ -48,10 +48,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
   const [studentEmail, setStudentEmail] = useState(user?.email || '');
   const [studentContact, setStudentContact] = useState(user?.phone || '');
   const [college, setCollege] = useState(user?.college || property?.nearbyUniversity || '');
-  const [moveInDate, setMoveInDate] = useState(
-    new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10)
-  );
+  const [moveInDate, setMoveInDate] = useState('');
   const [visitTimeSlot, setVisitTimeSlot] = useState(VISIT_TIME_SLOTS[1]);
+
+  useEffect(() => {
+    setMoveInDate(new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10));
+  }, []);
 
   // Payment proof fields
   const [receiptImageUrl, setReceiptImageUrl] = useState('');
