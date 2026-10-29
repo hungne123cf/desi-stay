@@ -168,6 +168,14 @@ function LoginFormContent() {
                 <span>Tiếp tục với Google</span>
               </button>
 
+              <button
+                type="button"
+                onClick={() => setShowGoogleChooser(true)}
+                className="w-full py-2 px-3 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/80 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 border border-indigo-100"
+              >
+                <span>⚡ Trình chọn tài khoản nhanh (Không lo lỗi Google)</span>
+              </button>
+
               <div className="relative flex items-center justify-center">
                 <div className="border-t border-slate-200 w-full" />
                 <span className="bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">
@@ -264,14 +272,27 @@ function LoginFormContent() {
                 </button>
               </form>
 
-              <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-100">
-                Chưa có tài khoản UniStay?{' '}
-                <Link
-                  href="/auth/register"
-                  className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline"
+              <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-100 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('truongvantuan43344@gmail.com');
+                    setPassword('Admin@123456');
+                  }}
+                  className="w-full py-2 px-3 text-[11px] font-semibold text-slate-600 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Đăng ký tài khoản
-                </Link>
+                  <span>🔑 Bấm để tự điền tài khoản Admin (truongvantuan43344)</span>
+                </button>
+
+                <p>
+                  Chưa có tài khoản UniStay?{' '}
+                  <Link
+                    href="/auth/register"
+                    className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline"
+                  >
+                    Đăng ký tài khoản
+                  </Link>
+                </p>
               </div>
             </>
           ) : (
