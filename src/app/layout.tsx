@@ -53,7 +53,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-white text-slate-900 selection:bg-indigo-600 selection:text-white">
         <AuthProvider>
           <PropertyProvider>
-            <Navbar />
+            <Suspense fallback={<div className="h-20 bg-white border-b border-slate-200/80" />}>
+              <Navbar />
+            </Suspense>
             <div className="flex-1">{children}</div>
             <Suspense fallback={null}>
               <Footer />

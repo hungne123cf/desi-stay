@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
 import { GoogleAccountChooserModal } from '@/components/GoogleAccountChooserModal';
@@ -21,6 +21,7 @@ import {
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, logout, loginWithGoogle } = useAuth();
   const { settings } = useProperties();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -28,6 +29,10 @@ export const Navbar: React.FC = () => {
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   const handleSwitchGoogleAccount = async () => {
     setUserDropdownOpen(false);
