@@ -68,28 +68,10 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        const accessToken = hashParams.get('access_token');
         const idToken = hashParams.get('id_token');
+        const accessToken = hashParams.get('access_token');
 
-        // Prefer Google UserInfo API with access_token for verified high-res profile
-        if (accessToken) {
-          const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            await finalizeUser(
-              {
-                email: data.email,
-                name: data.name || data.email.split('@')[0],
-                avatar: data.picture
-              },
-              isPopup
-            );
-            return;
-          }
-        }
-
+        // 1. Decode Google id_token JWT directly (instant, zero external fetch)
         if (idToken) {
           const base64Url = idToken.split('.')[1];
           const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -114,6 +96,29 @@ export default function AuthCallbackPage() {
             isPopup
           );
           return;
+        }
+
+        // 2. Fallback to Google UserInfo API if only access_token is present
+        if (accessToken) {
+          try {
+            const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              await finalizeUser(
+                {
+                  email: data.email,
+                  name: data.name || data.email.split('@')[0],
+                  avatar: data.picture
+                },
+                isPopup
+              );
+              return;
+            }
+          } catch {
+            // ignore network fetch failure
+          }
         }
 
         router.replace('/auth/login');
