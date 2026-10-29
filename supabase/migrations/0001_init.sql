@@ -1,337 +1,255 @@
 -- =====================================================================
--- YuvaStays – Initial schema
--- Run once in Supabase Dashboard > SQL Editor (or `supabase db push`).
+-- UniStay Global – Complete Database Schema (Roles, Admins, Accounts, Properties, Bookings)
+-- Copy toàn bộ file này dán vào Supabase > SQL Editor và bấm RUN.
 -- =====================================================================
 
 create extension if not exists "pgcrypto";
 
 -- ---------------------------------------------------------------------
--- Enums
+-- 1. BẢNG ROLES (Phân quyền hệ thống)
 -- ---------------------------------------------------------------------
-do $$ begin
-  create type user_role as enum ('student', 'admin');
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create type room_type as enum ('single', 'double', 'triple', 'studio');
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create type gender_pref as enum ('all', 'boys', 'girls');
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create type food_type as enum ('pure_veg', 'non_veg', 'jain_available', 'self_cook');
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create type booking_status as enum ('pending', 'token_paid', 'confirmed', 'cancelled', 'expired');
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create type payment_method as enum ('razorpay', 'pay_on_visit');
-exception when duplicate_object then null; end $$;
-
--- ---------------------------------------------------------------------
--- Profiles (1-1 with auth.users)
--- ---------------------------------------------------------------------
-create table if not exists public.profiles (
-  id          uuid primary key references auth.users(id) on delete cascade,
-  full_name   text,
-  email       text,
-  avatar_url  text,
-  phone       text,
-  college     text,
-  role        user_role not null default 'student',
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+create table if not exists public.roles (
+  code         text primary key,
+  name         text not null,
+  description  text not null default '',
+  permissions  text[] not null default '{}',
+  created_at   timestamptz not null default now()
 );
 
--- Auto-create a profile whenever a user signs up (Google or email)
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer set search_path = public
-as $$
-begin
-  insert into public.profiles (id, email, full_name, avatar_url)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name'),
-    new.raw_user_meta_data->>'avatar_url'
+insert into public.roles (code, name, description, permissions)
+values
+  ('admin', 'Quản trị viên (Admin)', 'Toàn quyền quản lý hệ thống, phòng trọ, duyệt đơn cọc và cấu hình ngân hàng', array['manage_all', 'manage_properties', 'manage_bookings', 'manage_accounts', 'manage_settings']),
+  ('landlord', 'Chủ nhà / Đối tác (Landlord)', 'Đăng tin phòng trọ và tiếp nhận sinh viên đặt lịch xem phòng', array['manage_own_properties', 'view_own_bookings']),
+  ('student', 'Sinh viên / Khách thuê (Student)', 'Tìm kiếm phòng trọ, đặt cọc giữ chỗ trực tuyến và liên hệ chủ nhà', array['view_properties', 'create_booking'])
+on conflict (code) do update set
+  name = excluded.name,
+  description = excluded.description,
+  permissions = excluded.permissions;
+
+-- ---------------------------------------------------------------------
+-- 2. BẢNG ADMINS (Danh sách Quản trị viên hệ thống)
+-- ---------------------------------------------------------------------
+create table if not exists public.admins (
+  id           uuid primary key default gen_random_uuid(),
+  email        text unique not null,
+  full_name    text not null,
+  phone        text not null default '',
+  avatar_url   text,
+  admin_level  text not null default 'super_admin' check (admin_level in ('super_admin', 'moderator', 'support')),
+  is_active    boolean not null default true,
+  note         text not null default '',
+  created_at   timestamptz not null default now()
+);
+
+insert into public.admins (email, full_name, phone, avatar_url, admin_level, is_active, note)
+values
+  (
+    'truongvantuan43344@gmail.com',
+    'Trương Hùng (Owner & Super Admin)',
+    '+84 901 234 567',
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    'super_admin',
+    true,
+    'Tài khoản Google Admin chính chủ'
+  ),
+  (
+    'admin@unistay.com',
+    'UniStay System Admin',
+    '+84 909 888 777',
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
+    'super_admin',
+    true,
+    'Tài khoản quản trị dự phòng'
   )
-  on conflict (id) do nothing;
-  return new;
-end;
-$$;
+on conflict (email) do update set
+  full_name = excluded.full_name,
+  admin_level = excluded.admin_level,
+  is_active = excluded.is_active;
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- ---------------------------------------------------------------------
+-- 3. BẢNG ACCOUNTS (Tài khoản người dùng Google & Email)
+-- ---------------------------------------------------------------------
+create table if not exists public.accounts (
+  id             uuid primary key default gen_random_uuid(),
+  email          text unique not null,
+  full_name      text not null,
+  password_hash  text,
+  avatar_url     text,
+  phone          text,
+  college        text,
+  role_code      text not null default 'student' references public.roles(code) on update cascade,
+  auth_provider  text not null default 'google' check (auth_provider in ('google', 'email')),
+  is_verified    boolean not null default true,
+  last_login_at  timestamptz not null default now(),
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
 
--- Helper used by RLS policies. SECURITY DEFINER avoids recursive RLS on profiles.
-create or replace function public.is_admin()
-returns boolean
-language sql
-stable
-security definer set search_path = public
-as $$
-  select exists (
-    select 1 from public.profiles where id = auth.uid() and role = 'admin'
-  );
-$$;
-
--- Prevent users from promoting themselves to admin
-create or replace function public.protect_profile_role()
+-- Tự động kiểm tra nếu email nằm trong bảng `admins` thì tự động cấp role = 'admin'
+create or replace function public.sync_account_admin_role()
 returns trigger
 language plpgsql
-security definer set search_path = public
 as $$
 begin
-  if new.role is distinct from old.role and not public.is_admin() then
-    raise exception 'Only admins can change roles';
+  new.email := lower(trim(new.email));
+  if exists (select 1 from public.admins where lower(email) = new.email and is_active = true) then
+    new.role_code := 'admin';
   end if;
   new.updated_at := now();
   return new;
 end;
 $$;
 
-drop trigger if exists profiles_protect_role on public.profiles;
-create trigger profiles_protect_role
-  before update on public.profiles
-  for each row execute function public.protect_profile_role();
+drop trigger if exists trg_sync_account_admin_role on public.accounts;
+create trigger trg_sync_account_admin_role
+  before insert or update on public.accounts
+  for each row execute function public.sync_account_admin_role();
+
+-- Nạp sẵn tài khoản mẫu vào bảng accounts
+insert into public.accounts (email, full_name, password_hash, avatar_url, phone, college, role_code, auth_provider)
+values
+  (
+    'truongvantuan43344@gmail.com',
+    'Trương Hùng',
+    'Admin@123456',
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    '+84 901 234 567',
+    'FPT University',
+    'admin',
+    'google'
+  ),
+  (
+    'hungtce181568@fpt.edu.vn',
+    'Truong Hung (K18 CT)',
+    null,
+    null,
+    '+84 987 654 321',
+    'ĐH FPT Cần Thơ',
+    'student',
+    'google'
+  ),
+  (
+    'nam.nguyen@gmail.com',
+    'Nguyễn Hoàng Nam',
+    '123456',
+    null,
+    '0909 123 456',
+    'ĐH Bách Khoa TP.HCM',
+    'student',
+    'email'
+  )
+on conflict (email) do update set
+  full_name = excluded.full_name,
+  role_code = excluded.role_code;
 
 -- ---------------------------------------------------------------------
--- Properties
+-- 4. BẢNG PROPERTIES (Danh sách Phòng trọ / Căn hộ sinh viên)
 -- ---------------------------------------------------------------------
 create table if not exists public.properties (
   id                   uuid primary key default gen_random_uuid(),
   code                 text unique not null,
-  title                text not null check (char_length(title) between 3 and 160),
+  title                text not null,
   slug                 text unique not null,
   description          text not null default '',
   address              text not null default '',
   city                 text not null,
+  country              text not null default 'Vietnam',
   area                 text not null default '',
   nearby_university    text not null default '',
   distance_to_campus   text not null default '',
-  room_type            room_type not null default 'double',
-  gender               gender_pref not null default 'all',
-  food_type            food_type not null default 'pure_veg',
-  price_per_month_inr  integer not null check (price_per_month_inr >= 0),
-  security_deposit_inr integer not null default 0 check (security_deposit_inr >= 0),
-  token_deposit_inr    integer not null default 0 check (token_deposit_inr >= 0),
+  room_type            text not null default 'studio',
+  gender               text not null default 'all',
+  food_preference      text not null default 'self_cook',
+  price_per_month_usd  numeric(10,2) not null default 180,
+  security_deposit_usd numeric(10,2) not null default 180,
+  token_deposit_usd    numeric(10,2) not null default 20,
   highlights           text[] not null default '{}',
   amenities            text[] not null default '{}',
   images               text[] not null default '{}',
-  curfew_time          text,
-  latitude             double precision,
-  longitude            double precision,
-  available_beds       integer not null default 0 check (available_beds >= 0),
-  is_verified          boolean not null default false,
+  curfew_time          text not null default 'Giờ giấc tự do 24/7',
+  available_beds       integer not null default 2,
+  is_verified          boolean not null default true,
   is_zero_brokerage    boolean not null default true,
-  is_published         boolean not null default false,
+  is_published         boolean not null default true,
   landlord_name        text not null default '',
-  landlord_whatsapp    text not null default '',
-  created_by           uuid references auth.users(id) on delete set null,
+  landlord_contact     text not null default '',
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
 
-create index if not exists properties_published_idx on public.properties (is_published, city);
-
-create sequence if not exists public.property_code_seq start 101;
-
-create or replace function public.properties_before_write()
-returns trigger
-language plpgsql
-as $$
-begin
-  if tg_op = 'INSERT' and (new.code is null or new.code = '') then
-    new.code := 'YS-' || nextval('public.property_code_seq');
-  end if;
-  new.updated_at := now();
-  return new;
-end;
-$$;
-
-drop trigger if exists properties_before_write on public.properties;
-create trigger properties_before_write
-  before insert or update on public.properties
-  for each row execute function public.properties_before_write();
+-- Đảm bảo các cột mới tồn tại nếu bảng properties đã được tạo từ bản cũ
+alter table public.properties add column if not exists country text not null default 'Vietnam';
+alter table public.properties add column if not exists food_preference text not null default 'self_cook';
+alter table public.properties add column if not exists price_per_month_usd numeric(10,2) not null default 180;
+alter table public.properties add column if not exists security_deposit_usd numeric(10,2) not null default 180;
+alter table public.properties add column if not exists token_deposit_usd numeric(10,2) not null default 20;
+alter table public.properties add column if not exists landlord_contact text not null default '';
 
 -- ---------------------------------------------------------------------
--- Bookings
+-- 5. BẢNG BOOKINGS (Danh sách Đơn đặt cọc giữ phòng)
 -- ---------------------------------------------------------------------
 create table if not exists public.bookings (
-  id                   uuid primary key default gen_random_uuid(),
-  reference            text unique not null default ('BK-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))),
-  property_id          uuid not null references public.properties(id) on delete restrict,
-  user_id              uuid not null references auth.users(id) on delete cascade,
-  student_name         text not null check (char_length(student_name) between 2 and 120),
-  student_email        text not null,
-  student_whatsapp     text not null,
-  college              text not null default '',
-  move_in_date         date not null,
-  room_type            room_type not null,
-  token_amount_inr     integer not null check (token_amount_inr >= 0),
-  status               booking_status not null default 'pending',
-  payment_method       payment_method not null default 'pay_on_visit',
-  razorpay_order_id    text unique,
-  razorpay_payment_id  text unique,
-  admin_notes          text not null default '',
-  hold_expires_at      timestamptz,
-  created_at           timestamptz not null default now(),
-  updated_at           timestamptz not null default now()
-);
-
-create index if not exists bookings_user_idx on public.bookings (user_id, created_at desc);
-create index if not exists bookings_property_idx on public.bookings (property_id);
-
--- Never trust the client for money: copy price data from the property on insert.
-create or replace function public.bookings_before_write()
-returns trigger
-language plpgsql
-security definer set search_path = public
-as $$
-declare
-  p public.properties%rowtype;
-  hours integer;
-begin
-  if tg_op = 'INSERT' then
-    select * into p from public.properties where id = new.property_id and is_published;
-    if not found then
-      raise exception 'Property not available';
-    end if;
-    select hold_hours into hours from public.site_settings where id = 1;
-    new.token_amount_inr := p.token_deposit_inr;
-    new.room_type        := p.room_type;
-    new.hold_expires_at  := now() + make_interval(hours => coalesce(hours, 48));
-  end if;
-  new.updated_at := now();
-  return new;
-end;
-$$;
-
-drop trigger if exists bookings_before_write on public.bookings;
-create trigger bookings_before_write
-  before insert or update on public.bookings
-  for each row execute function public.bookings_before_write();
-
--- ---------------------------------------------------------------------
--- Favorites
--- ---------------------------------------------------------------------
-create table if not exists public.favorites (
-  user_id      uuid not null references auth.users(id) on delete cascade,
-  property_id  uuid not null references public.properties(id) on delete cascade,
-  created_at   timestamptz not null default now(),
-  primary key (user_id, property_id)
+  id                    uuid primary key default gen_random_uuid(),
+  reference             text unique not null,
+  property_code         text not null,
+  property_title        text not null,
+  account_email         text not null,
+  student_name          text not null,
+  student_contact       text not null,
+  college               text not null default '',
+  move_in_date          date not null,
+  room_type             text not null default 'studio',
+  token_amount_usd      numeric(10,2) not null default 20,
+  token_amount_display  text not null default '500.000 ₫',
+  currency              text not null default 'VND',
+  status                text not null default 'token_paid',
+  payment_method        text not null default 'vietqr_bank',
+  transaction_reference text,
+  admin_notes           text not null default '',
+  created_at            timestamptz not null default now()
 );
 
 -- ---------------------------------------------------------------------
--- Site settings (single row, id = 1)
+-- 6. BẢNG SITE_SETTINGS (Cấu hình hệ thống & Ngân hàng VietQR)
 -- ---------------------------------------------------------------------
 create table if not exists public.site_settings (
   id                     integer primary key default 1 check (id = 1),
-  support_whatsapp       text not null default '',
-  support_email          text not null default '',
-  default_token_inr      integer not null default 2000,
-  hold_hours             integer not null default 48,
+  brand_name             text not null default 'UniStay',
+  default_currency       text not null default 'VND',
+  support_whatsapp       text not null default '+84901234567',
+  support_hotline        text not null default '1900 6868',
+  vietqr_bank_name       text not null default 'Vietcombank (VCB)',
+  vietqr_account_number  text not null default '1029384756',
+  vietqr_account_holder  text not null default 'CONG TY CP UNISTAY VIETNAM',
   updated_at             timestamptz not null default now()
 );
-insert into public.site_settings (id) values (1) on conflict (id) do nothing;
 
--- =====================================================================
--- Row Level Security
--- =====================================================================
-alter table public.profiles      enable row level security;
-alter table public.properties    enable row level security;
-alter table public.bookings      enable row level security;
-alter table public.favorites     enable row level security;
-alter table public.site_settings enable row level security;
+alter table public.site_settings add column if not exists brand_name text not null default 'UniStay';
+alter table public.site_settings add column if not exists default_currency text not null default 'VND';
+alter table public.site_settings add column if not exists support_hotline text not null default '1900 6868';
+alter table public.site_settings add column if not exists vietqr_bank_name text not null default 'Vietcombank (VCB)';
+alter table public.site_settings add column if not exists vietqr_account_number text not null default '1029384756';
+alter table public.site_settings add column if not exists vietqr_account_holder text not null default 'CONG TY CP UNISTAY VIETNAM';
 
--- Profiles
-drop policy if exists "profiles: read own or admin" on public.profiles;
-create policy "profiles: read own or admin" on public.profiles
-  for select using (id = auth.uid() or public.is_admin());
-
-drop policy if exists "profiles: update own or admin" on public.profiles;
-create policy "profiles: update own or admin" on public.profiles
-  for update using (id = auth.uid() or public.is_admin());
-
--- Properties
-drop policy if exists "properties: public read published" on public.properties;
-create policy "properties: public read published" on public.properties
-  for select using (is_published or public.is_admin());
-
-drop policy if exists "properties: admin insert" on public.properties;
-create policy "properties: admin insert" on public.properties
-  for insert with check (public.is_admin());
-
-drop policy if exists "properties: admin update" on public.properties;
-create policy "properties: admin update" on public.properties
-  for update using (public.is_admin());
-
-drop policy if exists "properties: admin delete" on public.properties;
-create policy "properties: admin delete" on public.properties
-  for delete using (public.is_admin());
-
--- Bookings: students create & read their own; only admins update/delete.
-drop policy if exists "bookings: read own or admin" on public.bookings;
-create policy "bookings: read own or admin" on public.bookings
-  for select using (user_id = auth.uid() or public.is_admin());
-
-drop policy if exists "bookings: student insert own pending" on public.bookings;
-create policy "bookings: student insert own pending" on public.bookings
-  for insert with check (
-    user_id = auth.uid()
-    and status = 'pending'
-    and razorpay_payment_id is null
-  );
-
-drop policy if exists "bookings: admin update" on public.bookings;
-create policy "bookings: admin update" on public.bookings
-  for update using (public.is_admin());
-
-drop policy if exists "bookings: admin delete" on public.bookings;
-create policy "bookings: admin delete" on public.bookings
-  for delete using (public.is_admin());
-
--- Favorites
-drop policy if exists "favorites: own" on public.favorites;
-create policy "favorites: own" on public.favorites
-  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-
--- Settings: public read (WhatsApp number shown on site), admin write
-drop policy if exists "settings: public read" on public.site_settings;
-create policy "settings: public read" on public.site_settings
-  for select using (true);
-
-drop policy if exists "settings: admin update" on public.site_settings;
-create policy "settings: admin update" on public.site_settings
-  for update using (public.is_admin());
-
--- =====================================================================
--- Storage: property images (public read, admin write)
--- =====================================================================
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('property-images', 'property-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+insert into public.site_settings (id, brand_name, default_currency, support_whatsapp, support_hotline, vietqr_bank_name, vietqr_account_number, vietqr_account_holder)
+values (1, 'UniStay', 'VND', '+84901234567', '1900 6868', 'Vietcombank (VCB)', '1029384756', 'CONG TY CP UNISTAY VIETNAM')
 on conflict (id) do nothing;
 
-drop policy if exists "property-images: public read" on storage.objects;
-create policy "property-images: public read" on storage.objects
-  for select using (bucket_id = 'property-images');
+-- ---------------------------------------------------------------------
+-- 7. PHÂN QUYỀN TRUY CẬP (RLS Policies cho phép Web đọc/ghi)
+-- ---------------------------------------------------------------------
+alter table public.roles         enable row level security;
+alter table public.admins        enable row level security;
+alter table public.accounts      enable row level security;
+alter table public.properties    enable row level security;
+alter table public.bookings      enable row level security;
+alter table public.site_settings enable row level security;
 
-drop policy if exists "property-images: admin insert" on storage.objects;
-create policy "property-images: admin insert" on storage.objects
-  for insert with check (bucket_id = 'property-images' and public.is_admin());
+drop policy if exists "public_access_roles" on public.roles;
+create policy "public_access_roles" on public.roles for all using (true) with check (true);
 
-drop policy if exists "property-images: admin update" on storage.objects;
-create policy "property-images: admin update" on storage.objects
-  for update using (bucket_id = 'property-images' and public.is_admin());
+drop policy if exists "public_access_admins" on public.admins;
+create policy "public_access_admins" on public.admins for all using (true) with check (true);
 
-drop policy if exists "property-images: admin delete" on storage.objects;
-create policy "property-images: admin delete" on storage.objects
-  for delete using (bucket_id = 'property-images' and public.is_admin());
+drop policy if exists "public_access_accounts" on public.accounts;
+create policy "public_access_accounts" on public.accounts for all using (true) with check (true);

@@ -3,6 +3,38 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '@/types';
 import { DEFAULT_GOOGLE_CLIENT_ID, isEmailAdmin, PREDEFINED_ADMINS } from '@/config/auth';
+import { isSupabaseConfigured } from '@/lib/env';
+import { createClient } from '@/lib/supabase/client';
+
+async function syncAccountToSupabase(account: {
+  email: string;
+  name: string;
+  password?: string;
+  avatar?: string;
+  phone?: string;
+  role: 'student' | 'admin';
+  provider: 'google' | 'email';
+}) {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const supabase = createClient();
+    await supabase.from('accounts').upsert(
+      {
+        email: account.email.toLowerCase().trim(),
+        full_name: account.name,
+        ...(account.password ? { password_hash: account.password } : {}),
+        ...(account.avatar ? { avatar_url: account.avatar } : {}),
+        ...(account.phone ? { phone: account.phone } : {}),
+        role_code: account.role,
+        auth_provider: account.provider,
+        last_login_at: new Date().toISOString()
+      },
+      { onConflict: 'email' }
+    );
+  } catch {
+    // Non-blocking sync
+  }
+}
 
 export interface StoredAccount {
   name: string;
@@ -126,6 +158,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: loggedUser.email,
         avatar: loggedUser.avatar,
         role: loggedUser.role
+      });
+
+      void syncAccountToSupabase({
+        email: loggedUser.email,
+        name: loggedUser.name,
+        avatar: loggedUser.avatar,
+        phone: loggedUser.phone,
+        role: loggedUser.role,
+        provider: 'google'
       });
 
       setIsLoading(false);
@@ -375,6 +416,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: newUser.name,
       email: newUser.email,
       role: newUser.role
+    });
+    void syncAccountToSupabase({
+      email: newUser.email,
+      name: newUser.name,
+      password: pass,
+      role: newUser.role,
+      provider: 'email'
     });
     setIsLoading(false);
     return newUser;
