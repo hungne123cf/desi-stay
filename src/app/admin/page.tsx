@@ -29,7 +29,10 @@ import {
   GraduationCap,
   Upload,
   Image as ImageIcon,
-  Map
+  Map,
+  Eye,
+  ExternalLink,
+  Clock
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -48,6 +51,7 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'settings'>('listings');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedDetailProp, setSelectedDetailProp] = useState<Property | null>(null);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [propertyCreatedToast, setPropertyCreatedToast] = useState(false);
 
@@ -388,47 +392,91 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {properties.map((prop) => (
-                      <tr key={prop.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="p-4 flex items-center gap-3">
-                          <img
-                            src={prop.images[0]}
-                            alt=""
-                            className="w-12 h-10 object-cover rounded-xl shrink-0"
-                          />
-                          <div>
-                            <span className="font-bold text-slate-900 block truncate max-w-[220px]">
-                              {prop.title}
-                            </span>
-                            <span className="font-mono text-[10px] text-slate-400">
-                              {prop.code}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-slate-600 font-medium">
-                          {prop.area}, <span className="font-semibold text-slate-800">{prop.city}</span>
-                        </td>
-                        <td className="p-4 text-indigo-700 font-medium truncate max-w-[180px]">
-                          {prop.nearbyUniversity}
-                        </td>
-                        <td className="p-4 uppercase font-semibold text-slate-700">{prop.roomType}</td>
-                        <td className="p-4 font-bold text-slate-900">
-                          {formatPrice(prop.pricePerMonthUSD, 'VND')}
-                        </td>
-                        <td className="p-4 font-bold text-indigo-600">
-                          {formatPrice(prop.tokenDepositUSD, 'VND')}
-                        </td>
-                        <td className="p-4 text-right">
+                    {properties.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-12 text-center text-slate-500">
+                          <Building className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                          <p className="font-bold text-slate-700 text-sm">Chưa có phòng trọ nào trong hệ thống</p>
+                          <p className="text-xs text-slate-400 mt-1 mb-4">
+                            Toàn bộ dữ liệu mẫu đã được xóa sạch. Hãy bấm &ldquo;+ Thêm Phòng Mới&rdquo; để đăng phòng trọ thực tế đầu tiên!
+                          </p>
                           <button
-                            onClick={() => deleteProperty(prop.id)}
-                            title="Xóa phòng"
-                            className="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                            onClick={() => setShowAddModal(true)}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Plus className="w-4 h-4" />
+                            <span>Thêm Phòng Trọ Đầu Tiên</span>
                           </button>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      properties.map((prop) => (
+                        <tr key={prop.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="p-4">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDetailProp(prop)}
+                              className="flex items-center gap-3 text-left group cursor-pointer"
+                            >
+                              <img
+                                src={prop.images[0]}
+                                alt=""
+                                className="w-12 h-10 object-cover rounded-xl shrink-0 border border-slate-200 group-hover:ring-2 group-hover:ring-indigo-500/40 transition-all"
+                              />
+                              <div>
+                                <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors block truncate max-w-[220px]">
+                                  {prop.title}
+                                </span>
+                                <span className="font-mono text-[10px] text-slate-400">
+                                  {prop.code} • Bấm để xem chi tiết
+                                </span>
+                              </div>
+                            </button>
+                          </td>
+                          <td className="p-4 text-slate-600 font-medium">
+                            {prop.area}, <span className="font-semibold text-slate-800">{prop.city}</span>
+                          </td>
+                          <td className="p-4 text-indigo-700 font-medium truncate max-w-[180px]">
+                            {prop.nearbyUniversity}
+                          </td>
+                          <td className="p-4 uppercase font-semibold text-slate-700">{prop.roomType}</td>
+                          <td className="p-4 font-bold text-slate-900">
+                            {formatPrice(prop.pricePerMonthUSD, 'VND')}
+                          </td>
+                          <td className="p-4 font-bold text-indigo-600">
+                            {formatPrice(prop.tokenDepositUSD, 'VND')}
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="inline-flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedDetailProp(prop)}
+                                title="Xem chi tiết phòng"
+                                className="px-2.5 py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl font-bold text-[11px] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Chi tiết</span>
+                              </button>
+                              <Link
+                                href={`/properties/${prop.id}`}
+                                title="Mở trang hiển thị bên User"
+                                className="p-2 text-slate-500 hover:text-indigo-600 rounded-xl hover:bg-slate-100 transition-colors"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => deleteProperty(prop.id)}
+                                title="Xóa phòng"
+                                className="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -991,6 +1039,151 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Property Detail Modal in Admin */}
+      {selectedDetailProp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-[10px] font-mono font-bold">
+                    {selectedDetailProp.code}
+                  </span>
+                  <span className="text-xs text-slate-300 uppercase font-semibold">
+                    {selectedDetailProp.roomType}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold mt-1">{selectedDetailProp.title}</h3>
+              </div>
+              <button
+                onClick={() => setSelectedDetailProp(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+              {/* Ảnh lớn */}
+              <div className="aspect-[16/9] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
+                <img
+                  src={selectedDetailProp.images[0]}
+                  alt={selectedDetailProp.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Giá thuê & Cọc */}
+              <div className="grid grid-cols-3 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <div>
+                  <span className="text-slate-500 block">Giá thuê / tháng</span>
+                  <span className="text-base font-black text-slate-900">
+                    {formatPrice(selectedDetailProp.pricePerMonthUSD, 'VND')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">Tiền cọc hợp đồng</span>
+                  <span className="text-base font-bold text-slate-800">
+                    {formatPrice(selectedDetailProp.securityDepositUSD, 'VND')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-indigo-600 font-semibold block">Cọc giữ chỗ Online</span>
+                  <span className="text-base font-black text-indigo-600">
+                    {formatPrice(selectedDetailProp.tokenDepositUSD, 'VND')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Địa chỉ & Trường học */}
+              <div className="space-y-2.5 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-slate-800">Địa chỉ: </span>
+                    <span className="text-slate-700">
+                      {selectedDetailProp.address} ({selectedDetailProp.area}, {selectedDetailProp.city})
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <GraduationCap className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-slate-800">Trường ĐH gần nhất: </span>
+                    <span className="text-indigo-800 font-semibold">
+                      {selectedDetailProp.nearbyUniversity} ({selectedDetailProp.distanceToCampus})
+                    </span>
+                  </div>
+                </div>
+                {selectedDetailProp.curfewTime && (
+                  <div className="flex items-start gap-2">
+                    <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-slate-800">Giờ giấc: </span>
+                      <span className="text-slate-700">{selectedDetailProp.curfewTime}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mô tả */}
+              <div>
+                <h4 className="font-bold text-slate-800 mb-1">Mô tả chi tiết</h4>
+                <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+                  {selectedDetailProp.description}
+                </p>
+              </div>
+
+              {/* Bản đồ Google Maps */}
+              <div className="rounded-2xl overflow-hidden border border-slate-200 h-44 bg-slate-100">
+                <iframe
+                  title="Bản đồ vị trí phòng"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(
+                    `${selectedDetailProp.address}, ${selectedDetailProp.city}`
+                  )}&output=embed`}
+                />
+              </div>
+
+              {/* Footer Actions */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    deleteProperty(selectedDetailProp.id);
+                    setSelectedDetailProp(null);
+                  }}
+                  className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Xóa phòng này</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/properties/${selectedDetailProp.id}`}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Mở Trang Hiển Thị Bên User</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDetailProp(null)}
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

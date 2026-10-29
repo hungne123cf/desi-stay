@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Property, Booking, CurrencyCode, SiteSettings } from '@/types';
-import { INITIAL_PROPERTIES } from '@/data/mockProperties';
 import { siteConfig } from '@/config/site';
 
 interface PropertyContextType {
@@ -26,209 +25,174 @@ const DEFAULT_SETTINGS: SiteSettings = {
   brandName: siteConfig.name,
   tagline: siteConfig.tagline,
   defaultCurrency: 'VND',
-  supportWhatsApp: '+84901234567',
-  supportEmail: 'contact@unistay.app',
+  supportWhatsApp: '0901234567',
+  supportEmail: 'contact@unistay.vn',
   supportHotline: '1900 6868',
   vietQrBankName: 'Vietcombank (VCB)',
   vietQrAccountNumber: '1029384756',
-  vietQrAccountHolder: 'CONG TY CP UNISTAY VIETNAM',
-  razorpayKeyId: 'rzp_test_sample',
-  stripePublishableKey: 'pk_test_sample',
+  vietQrAccountHolder: 'CONG TY CP UNISTAY VIET NAM',
+  razorpayKeyId: '',
+  stripePublishableKey: '',
   defaultTokenUSD: 20,
-  holdHours: 48,
+  holdHours: 48
 };
 
-const INITIAL_BOOKINGS: Booking[] = [
-  {
-    id: 'lead-1',
-    reference: 'BK-CT88A1',
-    propertyId: 'prop-vn-ct-1',
-    propertyTitle: 'Mekong Green Studio – Căn hộ ban công gần ĐH Cần Thơ & ĐH Y Dược',
-    propertyCode: 'VN-101',
-    userId: 'usr-1',
-    studentName: 'Lê Minh Khôi',
-    studentEmail: 'khoi.le@student.ctu.edu.vn',
-    studentContact: '0939 123 456',
-    college: 'ĐH Cần Thơ (CTU - Khu II Đường 3/2)',
-    moveInDate: '2026-11-10',
-    roomType: 'studio',
-    tokenAmountUSD: 20,
-    tokenAmountLocal: '500.000 ₫',
-    currency: 'VND',
-    status: 'token_paid',
-    paymentMethod: 'vietqr_bank',
-    transactionReference: 'VCB_CT_992817',
-    adminNotes: 'Đã nhận chuyển khoản cọc giữ chỗ 500k qua VietQR. Hẹn chiều thứ 7 nhận phòng.',
-    createdAt: '2026-10-28 09:30'
-  },
-  {
-    id: 'lead-2',
-    reference: 'BK-FPT29B',
-    propertyId: 'prop-vn-ct-2',
-    propertyTitle: 'FPT Smart Duplex – Phòng gác lửng KDC Hồng Phát gần ĐH FPT Cần Thơ',
-    propertyCode: 'VN-102',
-    userId: 'usr-2',
-    studentName: 'Nguyễn Hoàng Nam',
-    studentEmail: 'namnhce180122@fpt.edu.vn',
-    studentContact: '0909 888 777',
-    college: 'ĐH FPT Cần Thơ (Cầu Rau Răm - Nguyễn Văn Cừ)',
-    moveInDate: '2026-11-15',
-    roomType: 'double',
-    tokenAmountUSD: 20,
-    tokenAmountLocal: '500.000 ₫',
-    currency: 'VND',
-    status: 'confirmed',
-    paymentMethod: 'vietqr_bank',
-    transactionReference: 'MB_FPT_554120',
-    adminNotes: 'Đã xác nhận giữ phòng KDC Hồng Phát cho 2 bạn sinh viên K18 FPT.',
-    createdAt: '2026-10-28 14:15'
+// Kiểm tra xem có phải dữ liệu mẫu cũ không (chỉ giữ lại dữ liệu thật do Admin/User tạo)
+function isRealAdminProperty(p: Property): boolean {
+  if (!p || !p.id) return false;
+  if (
+    p.id.startsWith('prop-vn-') ||
+    p.id.startsWith('prop-in-') ||
+    p.id.startsWith('prop-eu-')
+  ) {
+    return false;
   }
-];
+  return true;
+}
+
+function isRealUserBooking(b: Booking): boolean {
+  if (!b || !b.id) return false;
+  if (b.id === 'lead-1' || b.id === 'lead-2' || b.id === 'lead-3') {
+    return false;
+  }
+  return true;
+}
 
 export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
-  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [currency, setCurrencyState] = useState<CurrencyCode>('VND');
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
 
-  useEffect(() => {
+  // Gửi dữ liệu mới lên Server Real-time Hub để phát sóng sang mọi trình duyệt (Chrome <-> Edge <-> Mobile)
+  const syncToServer = async (payload: {
+    properties?: Property[];
+    bookings?: Booking[];
+    settings?: SiteSettings;
+  }) => {
     try {
-      // Khôi phục cả các phòng do Admin tự tạo ở các phiên bản localStorage trước đó
-      const v3Raw = localStorage.getItem('unistay_vn_properties_v3');
-      const v2Raw = localStorage.getItem('unistay_vn_properties_v2');
-      const v1Raw = localStorage.getItem('unistay_properties');
+      await fetch('/api/store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch {
+      // fallback localStorage
+    }
+  };
 
-      const customMap = new Map<string, Property>();
+  useEffect(() => {
+    let isMounted = true;
 
-      const normalizeProp = (p: Property): Property => {
-        const cityTrim = (p.city || '').trim();
-        const normalizedCity =
-          cityTrim.toLowerCase() === 'cần thơ' || cityTrim.toLowerCase() === 'can tho'
-            ? 'Cần Thơ'
-            : cityTrim || 'Cần Thơ';
-        return {
-          ...p,
-          city: normalizedCity,
-          country: 'Việt Nam',
-          isPublished: true
-        };
-      };
-
-      [v1Raw, v2Raw, v3Raw].forEach((raw) => {
-        if (!raw) return;
-        try {
+    // 1. Lấy các phòng thật do Admin từng tạo trên trình duyệt này (nếu có) và loại bỏ hoàn toàn phòng mẫu
+    const localRealProps = new Map<string, Property>();
+    try {
+      ['unistay_properties', 'unistay_vn_properties_v2', 'unistay_vn_properties_v3', 'unistay_real_properties_v4'].forEach(
+        (key) => {
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
           const parsed: Property[] = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            parsed.forEach((item) => {
-              // Giữ lại mọi phòng do Admin tạo (id bắt đầu bằng prop-17...)
-              if (item && item.id && /^prop-\d+$/.test(item.id)) {
-                customMap.set(item.id, normalizeProp(item));
+            parsed.forEach((p) => {
+              if (isRealAdminProperty(p)) {
+                localRealProps.set(p.id, {
+                  ...p,
+                  country: 'Việt Nam',
+                  isPublished: true
+                });
               }
             });
           }
+        }
+      );
+      // Xóa các khóa chứa dữ liệu mẫu cũ
+      localStorage.removeItem('unistay_properties');
+      localStorage.removeItem('unistay_vn_properties_v2');
+      localStorage.removeItem('unistay_vn_properties_v3');
+      localStorage.removeItem('unistay_vn_bookings_v3');
+    } catch {}
+
+    // 2. Tải trạng thái từ Server Real-time Store và đồng bộ
+    fetch('/api/store')
+      .then((res) => res.json())
+      .then((serverState) => {
+        if (!isMounted) return;
+        const serverProps: Property[] = Array.isArray(serverState.properties)
+          ? serverState.properties.filter(isRealAdminProperty)
+          : [];
+        const serverBookings: Booking[] = Array.isArray(serverState.bookings)
+          ? serverState.bookings.filter(isRealUserBooking)
+          : [];
+
+        // Nếu trình duyệt Admin đang có phòng thật vừa tạo mà Server chưa có thì đẩy lên Server
+        const mergedMap = new Map<string, Property>();
+        serverProps.forEach((p) => mergedMap.set(p.id, p));
+        let hasNewLocalToPush = false;
+        localRealProps.forEach((p, id) => {
+          if (!mergedMap.has(id)) {
+            mergedMap.set(id, p);
+            hasNewLocalToPush = true;
+          }
+        });
+
+        const finalProps = Array.from(mergedMap.values());
+        setProperties(finalProps);
+        setBookings(serverBookings);
+        if (serverState.settings) setSettings(serverState.settings);
+
+        try {
+          localStorage.setItem('unistay_real_properties_v4', JSON.stringify(finalProps));
+          localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(serverBookings));
         } catch {}
+
+        if (hasNewLocalToPush) {
+          syncToServer({ properties: finalProps });
+        }
+      })
+      .catch(() => {
+        // Nếu offline, dùng bản lưu thực tế ở localStorage
+        const fallbackProps = Array.from(localRealProps.values());
+        setProperties(fallbackProps);
       });
 
-      if (v3Raw) {
-        const parsedV3: Property[] = JSON.parse(v3Raw);
-        const existingIds = new Set(parsedV3.map((p) => p.id));
-        const recoveredCustoms = Array.from(customMap.values()).filter(
-          (c) => !existingIds.has(c.id)
-        );
-        const merged = [...recoveredCustoms, ...parsedV3.map(normalizeProp)];
-        setProperties(merged);
-        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(merged));
-      } else {
-        const recoveredCustoms = Array.from(customMap.values());
-        const merged = [...recoveredCustoms, ...INITIAL_PROPERTIES];
-        setProperties(merged);
-        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(merged));
-      }
-
-      const savedBookings = localStorage.getItem('unistay_vn_bookings_v3');
-      if (savedBookings) setBookings(JSON.parse(savedBookings));
-
-      setCurrencyState('VND');
-
-      const savedSettings = localStorage.getItem('unistay_settings');
-      if (savedSettings) setSettings(JSON.parse(savedSettings));
-    } catch {
-      // fallback
-    }
-
-    // Đồng bộ tức thời giữa tab Admin và tab User
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'unistay_vn_properties_v3' && e.newValue) {
+    // 3. Kết nối Real-Time Stream (SSE - hoạt động giống SignalR Hub giữa Chrome, Edge, Điện thoại)
+    let eventSource: EventSource | null = null;
+    if (typeof window !== 'undefined' && 'EventSource' in window) {
+      eventSource = new EventSource('/api/stream');
+      eventSource.onmessage = (event) => {
         try {
-          setProperties(JSON.parse(e.newValue));
+          const data = JSON.parse(event.data);
+          if (Array.isArray(data.properties)) {
+            const cleanProps = data.properties.filter(isRealAdminProperty);
+            setProperties(cleanProps);
+            localStorage.setItem('unistay_real_properties_v4', JSON.stringify(cleanProps));
+          }
+          if (Array.isArray(data.bookings)) {
+            const cleanBookings = data.bookings.filter(isRealUserBooking);
+            setBookings(cleanBookings);
+            localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(cleanBookings));
+          }
+          if (data.settings) {
+            setSettings(data.settings);
+          }
         } catch {}
-      }
-      if (e.key === 'unistay_vn_bookings_v3' && e.newValue) {
-        try {
-          setBookings(JSON.parse(e.newValue));
-        } catch {}
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-
-    let bc: BroadcastChannel | null = null;
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      bc = new BroadcastChannel('unistay_properties_sync');
-      bc.onmessage = (event) => {
-        if (event.data?.type === 'PROPERTIES_UPDATED' && Array.isArray(event.data.payload)) {
-          setProperties(event.data.payload);
-        }
-        if (event.data?.type === 'BOOKINGS_UPDATED' && Array.isArray(event.data.payload)) {
-          setBookings(event.data.payload);
-        }
       };
     }
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      if (bc) bc.close();
+      isMounted = false;
+      if (eventSource) eventSource.close();
     };
   }, []);
 
-  const broadcastUpdate = (type: 'PROPERTIES_UPDATED' | 'BOOKINGS_UPDATED', payload: unknown) => {
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const bc = new BroadcastChannel('unistay_properties_sync');
-        bc.postMessage({ type, payload });
-        bc.close();
-      }
-    } catch {}
-  };
-
-  const saveProperties = (data: Property[]) => {
-    setProperties(data);
-    try {
-      localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(data));
-      broadcastUpdate('PROPERTIES_UPDATED', data);
-    } catch {}
-  };
-
-  const saveBookings = (data: Booking[]) => {
-    setBookings(data);
-    try {
-      localStorage.setItem('unistay_vn_bookings_v3', JSON.stringify(data));
-      broadcastUpdate('BOOKINGS_UPDATED', data);
-    } catch {}
-  };
-
   const setCurrency = (c: CurrencyCode) => {
     setCurrencyState(c);
-    try {
-      localStorage.setItem('unistay_currency', c);
-    } catch {}
   };
 
   const updateSettings = (newSettings: Partial<SiteSettings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
-      try {
-        localStorage.setItem('unistay_settings', JSON.stringify(updated));
-      } catch {}
+      syncToServer({ settings: updated });
       return updated;
     });
   };
@@ -240,17 +204,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const vnd = Math.round(priceUSD * siteConfig.currencyRates.VND);
         return `${vnd.toLocaleString('vi-VN')} ₫`;
       }
-      case 'INR': {
-        const inr = Math.round(priceUSD * siteConfig.currencyRates.INR);
-        return `₹${inr.toLocaleString('en-IN')}`;
+      default: {
+        const vnd = Math.round(priceUSD * siteConfig.currencyRates.VND);
+        return `${vnd.toLocaleString('vi-VN')} ₫`;
       }
-      case 'EUR': {
-        const eur = Math.round(priceUSD * siteConfig.currencyRates.EUR);
-        return `€${eur.toLocaleString()}`;
-      }
-      case 'USD':
-      default:
-        return `$${priceUSD.toLocaleString()}`;
     }
   };
 
@@ -270,9 +227,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
       const updated = [created, ...prev];
       try {
-        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(updated));
-        broadcastUpdate('PROPERTIES_UPDATED', updated);
+        localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
       } catch {}
+      syncToServer({ properties: updated });
       return updated;
     });
   };
@@ -281,9 +238,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setProperties((prev) => {
       const updated = prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p));
       try {
-        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(updated));
-        broadcastUpdate('PROPERTIES_UPDATED', updated);
+        localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
       } catch {}
+      syncToServer({ properties: updated });
       return updated;
     });
   };
@@ -292,9 +249,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setProperties((prev) => {
       const updated = prev.filter((p) => p.id !== id);
       try {
-        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(updated));
-        broadcastUpdate('PROPERTIES_UPDATED', updated);
+        localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
       } catch {}
+      syncToServer({ properties: updated });
       return updated;
     });
   };
@@ -307,12 +264,26 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       reference: ref,
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
     };
-    saveBookings([newBooking, ...bookings]);
+    setBookings((prev) => {
+      const updated = [newBooking, ...prev];
+      try {
+        localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ bookings: updated });
+      return updated;
+    });
     return ref;
   };
 
   const updateBookingStatus = (id: string, status: Booking['status']) => {
-    saveBookings(bookings.map((b) => (b.id === id ? { ...b, status } : b)));
+    setBookings((prev) => {
+      const updated = prev.map((b) => (b.id === id ? { ...b, status } : b));
+      try {
+        localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ bookings: updated });
+      return updated;
+    });
   };
 
   return (

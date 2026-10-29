@@ -358,16 +358,24 @@ export default function HomePage() {
         ) : (
           <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 mt-8 p-8">
             <SearchX className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-800">Không tìm thấy phòng phù hợp</h3>
+            <h3 className="text-lg font-bold text-slate-800">
+              {properties.length === 0
+                ? 'Hiện chưa có phòng trọ nào được đăng'
+                : 'Không tìm thấy phòng phù hợp với bộ lọc'}
+            </h3>
             <p className="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-5">
-              Thử xóa bớt bộ lọc hoặc nhập từ khóa khác để xem toàn bộ danh sách phòng trọ đang trống.
+              {properties.length === 0
+                ? 'Tất cả dữ liệu mẫu đã được xóa. Khi Quản trị viên (Admin) thêm phòng mới, danh sách phòng sẽ tự động hiển thị tại đây theo thời gian thực.'
+                : 'Bạn đang bật bộ lọc hoặc nhập từ khóa tìm kiếm (ví dụ trên thanh Search đang có chữ). Hãy xóa bộ lọc để xem toàn bộ danh sách phòng.'}
             </p>
-            <button
-              onClick={resetFilters}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer"
-            >
-              Xem tất cả {properties.length} phòng trọ
-            </button>
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer"
+              >
+                Xóa bộ lọc &amp; Xem tất cả ({properties.length} phòng)
+              </button>
+            )}
           </div>
         )}
 
