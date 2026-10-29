@@ -11,6 +11,7 @@ import {
   CURFEW_PRESETS,
   SAMPLE_ROOM_IMAGES
 } from '@/data/locations';
+import { uploadOrCompressImage } from '@/lib/supabase/storage';
 import {
   ShieldCheck,
   Building,
@@ -52,6 +53,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'settings'>('listings');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDetailProp, setSelectedDetailProp] = useState<Property | null>(null);
+  const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [propertyCreatedToast, setPropertyCreatedToast] = useState(false);
 
@@ -102,33 +104,20 @@ export default function AdminPage() {
     }
   };
 
-  const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const handleLocalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        // Nén ảnh qua Canvas để không bị tràn bộ nhớ localStorage khi lưu phòng mới
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1000;
-          const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.78);
-            setNewImageUrl(compressedDataUrl);
-          } else {
-            setNewImageUrl(reader.result as string);
-          }
-        };
-        img.src = reader.result;
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsUploadingImage(true);
+    try {
+      const { url } = await uploadOrCompressImage(file);
+      setNewImageUrl(url);
+    } catch {
+      // fallback
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const totalRevenueUSD = bookings
@@ -466,7 +455,7 @@ export default function AdminPage() {
                               </Link>
                               <button
                                 type="button"
-                                onClick={() => deleteProperty(prop.id)}
+                                onClick={() => setPropertyToDelete(prop)}
                                 title="Xóa phòng"
                                 className="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
                               >
@@ -968,7 +957,7 @@ export default function AdminPage() {
                   </label>
                   <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl border border-indigo-200 cursor-pointer transition-colors">
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Tải ảnh từ máy tính</span>
+                    <span>{isUploadingImage ? 'Đang tải ảnh lên Cloud...' : 'Tải ảnh từ máy tính'}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1157,8 +1146,9 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    deleteProperty(selectedDetailProp.id);
+                    const target = selectedDetailProp;
                     setSelectedDetailProp(null);
+                    setPropertyToDelete(target);
                   }}
                   className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
                 >
@@ -1183,6 +1173,65 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Popup Modal */}
+      {propertyToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Xác nhận xóa phòng trọ?</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Bạn có chắc chắn muốn xóa phòng trọ này khỏi hệ thống? Phòng sẽ bị gỡ khỏi trang User ngay lập tức và không thể hoàn tác.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-3">
+              <img
+                src={propertyToDelete.images[0]}
+                alt={propertyToDelete.title}
+                className="w-14 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                  {propertyToDelete.code}
+                </span>
+                <p className="text-xs font-bold text-slate-900 truncate mt-0.5">
+                  {propertyToDelete.title}
+                </p>
+                <p className="text-[11px] text-slate-500 truncate">
+                  {propertyToDelete.area}, {propertyToDelete.city}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setPropertyToDelete(null)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteProperty(propertyToDelete.id);
+                  setPropertyToDelete(null);
+                }}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md shadow-red-600/20 inline-flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Xác nhận xóa vĩnh viễn</span>
+              </button>
             </div>
           </div>
         </div>

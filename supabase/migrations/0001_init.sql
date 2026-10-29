@@ -253,3 +253,30 @@ create policy "public_access_admins" on public.admins for all using (true) with 
 
 drop policy if exists "public_access_accounts" on public.accounts;
 create policy "public_access_accounts" on public.accounts for all using (true) with check (true);
+
+drop policy if exists "public_access_properties" on public.properties;
+create policy "public_access_properties" on public.properties for all using (true) with check (true);
+
+drop policy if exists "public_access_bookings" on public.bookings;
+create policy "public_access_bookings" on public.bookings for all using (true) with check (true);
+
+drop policy if exists "public_access_site_settings" on public.site_settings;
+create policy "public_access_site_settings" on public.site_settings for all using (true) with check (true);
+
+-- ---------------------------------------------------------------------
+-- 8. CLOUD STORAGE BUCKET LƯU TRỮ HÌNH ẢNH PHÒNG TRỌ (Supabase Storage)
+-- ---------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('property-images', 'property-images', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "public_read_property_images" on storage.objects;
+create policy "public_read_property_images"
+  on storage.objects for select
+  using (bucket_id = 'property-images');
+
+drop policy if exists "public_upload_property_images" on storage.objects;
+create policy "public_upload_property_images"
+  on storage.objects for insert
+  with check (bucket_id = 'property-images');
+
