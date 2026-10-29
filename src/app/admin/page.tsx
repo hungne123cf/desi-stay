@@ -38,7 +38,9 @@ import {
   Map,
   Eye,
   ExternalLink,
-  Clock
+  Clock,
+  MessageCircle,
+  Send
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -46,16 +48,22 @@ export default function AdminPage() {
   const {
     properties,
     bookings,
+    messages,
     currency,
     settings,
     formatPrice,
     addProperty,
     deleteProperty,
     updateBookingStatus,
-    updateSettings
+    updateSettings,
+    sendChatMessage,
+    markConversationRead,
+    deleteConversation
   } = useProperties();
 
-  const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'settings'>('listings');
+  const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'chat' | 'settings'>('listings');
+  const [selectedConvId, setSelectedConvId] = useState<string>('');
+  const [adminReplyText, setAdminReplyText] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDetailProp, setSelectedDetailProp] = useState<Property | null>(null);
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
@@ -108,6 +116,8 @@ export default function AdminPage() {
   );
   const [newDescription, setNewDescription] = useState('');
   const [newCurfew, setNewCurfew] = useState('Giờ giấc tự do 24/7 (Khóa vân tay)');
+  const [newLandlordName, setNewLandlordName] = useState('');
+  const [newLandlordContact, setNewLandlordContact] = useState('');
   const [showMapPreview, setShowMapPreview] = useState(true);
 
   const currentCityData =
@@ -195,13 +205,15 @@ export default function AdminPage() {
       isVerified: true,
       isZeroBrokerage: true,
       isPublished: true,
-      landlordName: user?.name || 'Chủ trọ trực tiếp',
-      landlordContact: supportWhatsApp || '0901234567'
+      landlordName: newLandlordName.trim() || 'Chủ nhà đối tác',
+      landlordContact: newLandlordContact.trim() || supportWhatsApp || '0901234567'
     });
 
     setShowAddModal(false);
     setNewTitle('');
     setNewAddress('');
+    setNewLandlordName('');
+    setNewLandlordContact('');
     setPropertyCreatedToast(true);
     setTimeout(() => setPropertyCreatedToast(false), 6000);
   };
@@ -353,7 +365,7 @@ export default function AdminPage() {
 
           <button
             onClick={() => setActiveTab('leads')}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 ${
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'leads'
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -364,8 +376,25 @@ export default function AdminPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('chat')}
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'chat'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Tin Nhắn Khách Hỏi</span>
+            {messages.filter((m) => m.senderRole === 'student' && !m.isReadByAdmin).length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold">
+                {messages.filter((m) => m.senderRole === 'student' && !m.isReadByAdmin).length}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('settings')}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 ${
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'settings'
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -809,6 +838,165 @@ export default function AdminPage() {
             </form>
           </div>
         )}
+
+        {/* Tab 4: Real-Time Customer Chat Inbox */}
+        {activeTab === 'chat' && (
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-5 bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs min-h-[480px]">
+            {/* Danh sách cuộc hội thoại bên trái */}
+            <div className="border-r border-slate-200 flex flex-col">
+              <div className="p-4 border-b border-slate-100 bg-slate-50 font-bold text-xs text-slate-700">
+                Danh Sách Khách Đang Nhắn Tin ({Array.from(new Set(messages.map((m) => m.conversationId))).length})
+              </div>
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+                {Array.from(new Set(messages.map((m) => m.conversationId))).length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400">
+                    Chưa có tin nhắn nào từ khách hàng.
+                  </div>
+                ) : (
+                  Array.from(new Set(messages.map((m) => m.conversationId))).map((convId) => {
+                    const convMsgs = messages.filter((m) => m.conversationId === convId);
+                    const lastMsg = convMsgs[convMsgs.length - 1];
+                    const unread = convMsgs.filter(
+                      (m) => m.senderRole === 'student' && !m.isReadByAdmin
+                    ).length;
+                    const active = (selectedConvId || messages[0]?.conversationId) === convId;
+
+                    return (
+                      <div
+                        key={convId}
+                        onClick={() => {
+                          setSelectedConvId(convId);
+                          markConversationRead(convId);
+                        }}
+                        className={`p-3.5 cursor-pointer transition-colors flex items-start justify-between gap-2 ${
+                          active ? 'bg-indigo-50/80' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-900 block truncate">
+                            {lastMsg?.studentName || convId}
+                          </span>
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                            {lastMsg?.senderRole === 'admin' ? 'Bạn: ' : ''}
+                            {lastMsg?.text}
+                          </p>
+                          <span className="text-[10px] text-slate-400">{lastMsg?.createdAt}</span>
+                        </div>
+                        {unread > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold shrink-0">
+                            {unread} mới
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Khung nội dung chat bên phải */}
+            <div className="lg:col-span-2 flex flex-col">
+              {(() => {
+                const activeConvId = selectedConvId || messages[0]?.conversationId;
+                const convMsgs = messages.filter((m) => m.conversationId === activeConvId);
+                const studentInfo = convMsgs[0];
+
+                if (!activeConvId || convMsgs.length === 0) {
+                  return (
+                    <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400 text-xs">
+                      <MessageCircle className="w-10 h-10 text-slate-300 mb-2" />
+                      <p className="font-bold text-slate-600">Hộp Thư Hỗ Trợ Trực Tuyến</p>
+                      <p className="mt-1 max-w-sm">
+                        Khi sinh viên bấm vào nút Chat ở góc phải màn hình User và gửi câu hỏi, tin nhắn sẽ hiện ngay tại đây theo thời gian thực để bạn trả lời.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 block">
+                          {studentInfo?.studentName}
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          Liên hệ: {studentInfo?.studentEmail || activeConvId}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteConversation(activeConvId)}
+                        className="text-[11px] text-red-600 hover:underline font-semibold cursor-pointer"
+                      >
+                        Xóa hội thoại
+                      </button>
+                    </div>
+
+                    <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30 max-h-[340px] text-xs">
+                      {convMsgs.map((m) => {
+                        const isAdmin = m.senderRole === 'admin';
+                        return (
+                          <div
+                            key={m.id}
+                            className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
+                          >
+                            <div
+                              className={`px-3.5 py-2.5 rounded-2xl max-w-[75%] ${
+                                isAdmin
+                                  ? 'bg-indigo-600 text-white rounded-br-xs'
+                                  : 'bg-white border border-slate-200 text-slate-800 rounded-bl-xs'
+                              }`}
+                            >
+                              {m.text}
+                            </div>
+                            <span className="text-[10px] text-slate-400 mt-0.5 px-1">
+                              {m.createdAt}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!adminReplyText.trim()) return;
+                        sendChatMessage({
+                          conversationId: activeConvId,
+                          studentName: studentInfo?.studentName || 'Sinh viên',
+                          studentEmail: studentInfo?.studentEmail,
+                          senderRole: 'admin',
+                          senderName: user?.name || 'Quản lý',
+                          text: adminReplyText.trim(),
+                          isReadByAdmin: true
+                        });
+                        markConversationRead(activeConvId);
+                        setAdminReplyText('');
+                      }}
+                      className="p-3 border-t border-slate-200 flex items-center gap-2 bg-white"
+                    >
+                      <input
+                        type="text"
+                        value={adminReplyText}
+                        onChange={(e) => setAdminReplyText(e.target.value)}
+                        placeholder="Nhập câu trả lời gửi trực tiếp sang màn hình của khách..."
+                        className="flex-1 px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-indigo-600"
+                      />
+                      <button
+                        type="submit"
+                        className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Gửi</span>
+                      </button>
+                    </form>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add Property Modal */}
@@ -1177,6 +1365,40 @@ export default function AdminPage() {
                 />
               </div>
 
+              {/* Ghi chú Chủ nhà Nội bộ (Chỉ mình Admin thấy, ẩn hoàn toàn bên User) */}
+              <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl space-y-2.5">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                  <Lock className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Ghi chú Chủ nhà gốc (Chỉ Admin thấy • Ẩn hoàn toàn với khách thuê để chống cắt cầu)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Tên chủ nhà trọ &amp; Ghi chú hoa hồng
+                    </label>
+                    <input
+                      type="text"
+                      value={newLandlordName}
+                      onChange={(e) => setNewLandlordName(e.target.value)}
+                      placeholder="VD: Chú Bảy Hẻm 51 (Hoa hồng 500k)"
+                      className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      SĐT / Zalo riêng của Chủ nhà gốc
+                    </label>
+                    <input
+                      type="text"
+                      value={newLandlordContact}
+                      onChange={(e) => setNewLandlordContact(e.target.value)}
+                      placeholder="VD: 0918 123 456"
+                      className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
@@ -1282,6 +1504,29 @@ export default function AdminPage() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Thông tin Chủ nhà Gốc (Chỉ hiển thị nội bộ trong Admin) */}
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-amber-700 block">
+                      Thông tin Chủ nhà gốc (Nội bộ Admin • Khách không thấy)
+                    </span>
+                    <span className="font-bold text-slate-900">
+                      {selectedDetailProp.landlordName} — SĐT: {selectedDetailProp.landlordContact}
+                    </span>
+                  </div>
+                </div>
+                <a
+                  href={`https://zalo.me/${selectedDetailProp.landlordContact.replace(/[^0-9]/g, '')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-900 font-bold rounded-xl border border-amber-300 shrink-0"
+                >
+                  Zalo Chủ nhà
+                </a>
               </div>
 
               {/* Mô tả */}

@@ -23,7 +23,7 @@ interface PropertyDetailViewProps {
 }
 
 export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ propertyId }) => {
-  const { properties, formatPrice } = useProperties();
+  const { properties, formatPrice, settings } = useProperties();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -55,9 +55,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
     }
   };
 
+  // Luôn kết nối về Zalo Trung tâm của Admin (Môi giới nắm đằng chuôi, không lộ SĐT chủ nhà gốc)
   const handleContactLandlord = () => {
-    const contact = property.landlordContact.replace(/[^0-9]/g, '');
-    window.open(`https://zalo.me/${contact}`, '_blank');
+    const adminZalo = (settings.supportWhatsApp || settings.supportHotline || '0901234567').replace(
+      /[^0-9]/g,
+      ''
+    );
+    window.open(`https://zalo.me/${adminZalo}`, '_blank');
   };
 
   const roomTypeLabels: Record<string, string> = {
@@ -261,27 +265,29 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
               </div>
             </div>
 
-            {/* Landlord Profile */}
+            {/* Central Broker / Management Profile (Ẩn SĐT chủ nhà gốc để chống cắt cầu) */}
             <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm flex items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white font-bold text-lg flex items-center justify-center shadow-md">
-                  {property.landlordName.charAt(0)}
+                  {(settings.brandName || 'U').charAt(0)}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">{property.landlordName}</h4>
+                  <h4 className="text-sm font-bold text-slate-900">
+                    Ban Quản Lý &amp; Hỗ Trợ Xem Phòng – {settings.brandName}
+                  </h4>
                   <p className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    Chủ nhà đã xác minh giấy tờ
+                    Đơn vị xác thực &amp; bảo lãnh tiền cọc giữ chỗ 100%
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={handleContactLandlord}
-                className="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors"
+                className="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
               >
                 <Phone className="w-4 h-4 text-emerald-600" />
-                <span>Liên Hệ Trực Tiếp</span>
+                <span>Nhắn Zalo Hỗ Trợ Xem Phòng</span>
               </button>
             </div>
           </div>

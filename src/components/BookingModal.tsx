@@ -143,7 +143,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
   };
 
   const handleOpenZaloOrCall = () => {
-    const contact = (property.landlordContact || settings.supportWhatsApp || '0901234567').replace(
+    const contact = (settings.supportWhatsApp || settings.supportHotline || '0901234567').replace(
       /[^0-9]/g,
       ''
     );
