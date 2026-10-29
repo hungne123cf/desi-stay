@@ -142,7 +142,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onSearch();
                 }}
-                placeholder="Tìm theo tên trọ, tên đường (3/2, Nguyễn Văn Cừ), KDC Hồng Phát, Ninh Kiều, Cái Răng, mã phòng..."
+                placeholder="Tìm phòng theo tên, đường (3/2, NV Cừ), KDC, trường ĐH, mã phòng..."
                 className="w-full h-12 pl-11 pr-10 text-sm font-medium bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 text-slate-900 placeholder:text-slate-400"
               />
               {filters.searchQuery && (
@@ -160,7 +160,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <button
               type="button"
               onClick={onSearch}
-              className="h-12 px-7 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-2xl shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer shrink-0"
+              className="w-full sm:w-auto h-12 px-7 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-2xl shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer shrink-0"
             >
               <Search className="w-4 h-4" />
               <span>Tìm Phòng ({totalListingsCount})</span>
@@ -305,10 +305,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
         {/* Popular Vietnamese University Hubs Quick Bar */}
         <div id="cities" className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
-          <span className="font-semibold text-slate-700">Chọn nhanh khu vực:</span>
+          <span className="font-semibold text-slate-700 hidden sm:inline">Chọn nhanh khu vực:</span>
           {[
-            { label: '📍 Cần Thơ (ĐH Cần Thơ / FPT / Y Dược / DNC)', city: 'Cần Thơ' },
-            { label: '📍 TP.HCM (Bách Khoa / Làng ĐH Thủ Đức)', city: 'TP. Hồ Chí Minh' },
+            { label: '📍 Cần Thơ (ĐHCT / FPT / Y Dược / DNC)', city: 'Cần Thơ' },
+            { label: '📍 TP.HCM (Bách Khoa / Làng ĐH)', city: 'TP. Hồ Chí Minh' },
             { label: '📍 Hà Nội (Cầu Giấy / Bách Khoa / Hòa Lạc)', city: 'Hà Nội' },
             { label: '📍 Đà Nẵng (Ngũ Hành Sơn / Liên Chiểu)', city: 'Đà Nẵng' },
             { label: '📍 Bình Dương (Dĩ An / Thủ Dầu Một)', city: 'Bình Dương' }
@@ -323,10 +323,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   university: ''
                 }));
               }}
-              className={`px-3 py-1 rounded-full border transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-full border transition-all text-xs cursor-pointer ${
                 filters.city === tag.city
-                  ? 'bg-indigo-100 border-indigo-300 text-indigo-800 font-bold'
-                  : 'bg-white/80 border-slate-200 hover:border-indigo-200 text-slate-600'
+                  ? 'bg-indigo-600 border-indigo-600 text-white font-bold shadow-xs'
+                  : 'bg-white/90 border-slate-200 hover:border-indigo-300 text-slate-700 shadow-2xs'
               }`}
             >
               {tag.label}

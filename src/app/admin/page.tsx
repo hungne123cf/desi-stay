@@ -375,7 +375,7 @@ export default function AdminPage() {
             <span className="px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
               Danh Mục Quản Trị Hệ Thống
             </span>
-            <nav className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-visible pb-1 md:pb-0">
+            <nav className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-none">
               {navItems.map((item) => {
                 const isActive = activeTab === item.id;
                 return (
@@ -383,7 +383,7 @@ export default function AdminPage() {
                     key={item.id}
                     type="button"
                     onClick={() => setActiveTab(item.id)}
-                    className={`w-full text-left px-3.5 py-2.5 rounded-2xl transition-all flex items-center justify-between gap-2.5 cursor-pointer shrink-0 md:shrink ${
+                    className={`w-auto md:w-full whitespace-nowrap md:whitespace-normal text-left px-3.5 py-2.5 rounded-2xl transition-all flex items-center justify-between gap-2.5 cursor-pointer shrink-0 md:shrink ${
                       isActive
                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
                         : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'

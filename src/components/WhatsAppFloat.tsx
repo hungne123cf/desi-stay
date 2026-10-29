@@ -98,11 +98,17 @@ export const WhatsAppFloat: React.FC = () => {
     return null;
   }
 
+  const isDetailPage = Boolean(pathname?.startsWith('/properties/'));
+
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end">
+    <div
+      className={`fixed ${
+        isDetailPage ? 'bottom-24 lg:bottom-5' : 'bottom-5'
+      } right-4 sm:right-5 z-40 flex flex-col items-end transition-all`}
+    >
       {/* Live Chat Popup Box */}
       {isOpen && (
-        <div className="mb-3 w-[340px] sm:w-[370px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[520px] animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="mb-3 w-[calc(100vw-2rem)] sm:w-[370px] max-w-[380px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[520px] animate-in fade-in slide-in-from-bottom-4 duration-200">
           {/* Chat Header */}
           <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2.5">

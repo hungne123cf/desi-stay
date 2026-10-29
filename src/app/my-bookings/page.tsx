@@ -148,23 +148,23 @@ export default function MyBookingsPage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
         {/* Filter Tabs */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs">
-          <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+          <div className="flex flex-nowrap overflow-x-auto sm:flex-wrap gap-1.5 pb-1 sm:pb-0 scrollbar-none w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setFilterTab('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink ${
                 filterTab === 'all'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              Tất cả giao dịch ({myBookings.length})
+              Tất cả ({myBookings.length})
             </button>
             <button
               type="button"
               onClick={() => setFilterTab('paid')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink ${
                 filterTab === 'paid'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -175,17 +175,17 @@ export default function MyBookingsPage() {
             <button
               type="button"
               onClick={() => setFilterTab('visit')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink ${
                 filterTab === 'visit'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              Hẹn xem phòng &amp; Chờ duyệt ({myBookings.filter((b) => b.paymentMethod === 'pay_on_visit' || b.status === 'pending').length})
+              Hẹn xem phòng ({myBookings.filter((b) => b.paymentMethod === 'pay_on_visit' || b.status === 'pending').length})
             </button>
           </div>
 
-          <span className="text-[11px] text-slate-400 px-2 font-medium">
+          <span className="text-[11px] text-slate-400 px-2 font-medium hidden sm:inline-block">
             Đồng bộ tự động theo thời gian thực
           </span>
         </div>
@@ -384,7 +384,7 @@ export default function MyBookingsPage() {
                               eligibility
                             })
                           }
-                          className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                          className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95"
                         >
                           <Star className="w-4 h-4 fill-slate-950" />
                           <span>Viết Đánh Giá Sao Cho Lần Đặt Này (1 lượt)</span>
@@ -397,11 +397,11 @@ export default function MyBookingsPage() {
                     </div>
 
                     {/* Nút Liên hệ Zalo & Xem lại phòng */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() => handleOpenZalo(b.reference || b.id, b.propertyCode)}
-                        className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs rounded-xl border border-emerald-200 flex items-center gap-1.5 cursor-pointer transition-colors"
+                        className="w-full sm:w-auto px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs rounded-xl border border-emerald-200 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                       >
                         <Phone className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Hỗ Trợ Zalo Mã #{b.reference || b.id}</span>
@@ -410,7 +410,7 @@ export default function MyBookingsPage() {
                       {matchedProp && (
                         <Link
                           href={`/properties/${matchedProp.id}`}
-                          className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1"
+                          className="w-full sm:w-auto px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>Xem Phòng</span>

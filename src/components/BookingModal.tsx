@@ -355,7 +355,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                   <div className="p-5 sm:p-6 bg-indigo-50/60 border border-indigo-200/90 rounded-3xl space-y-4">
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                       {/* Dynamic QR Image */}
-                      <div className="w-52 h-52 sm:w-60 sm:h-60 bg-white p-3 rounded-2xl border border-slate-200 shadow-md shrink-0 flex items-center justify-center">
+                      <div className="w-48 h-48 sm:w-60 sm:h-60 bg-white p-3 rounded-2xl border border-slate-200 shadow-md shrink-0 flex items-center justify-center">
                         <img
                           src={vietQrImageUrl}
                           alt="Mã VietQR Napas 247"
@@ -428,16 +428,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                           </div>
                         </div>
 
-                        <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5 pt-2 border-t border-slate-100">
                           <span className="text-slate-500 text-xs">Nội dung CK:</span>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-indigo-700 font-mono bg-indigo-50 px-2.5 py-1 rounded-lg">
+                            <span className="font-bold text-indigo-700 font-mono bg-indigo-50 px-2.5 py-1 rounded-lg text-xs break-all">
                               {transferContent}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleCopy(transferContent, 'content')}
-                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs font-bold cursor-pointer transition-colors flex items-center gap-1"
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 text-xs font-bold cursor-pointer transition-colors flex items-center gap-1 shrink-0"
                               title="Sao chép nội dung chuyển khoản"
                             >
                               {copiedField === 'content' ? (

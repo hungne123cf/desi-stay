@@ -192,16 +192,18 @@ export default function HomePage() {
           </div>
 
           {/* Sort Dropdown */}
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <div className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2 transition-colors">
-              <ArrowUpDown className="w-4 h-4 text-indigo-600 shrink-0" />
-              <span className="text-xs font-semibold text-slate-500">Sắp xếp:</span>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2 transition-colors">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <ArrowUpDown className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="text-xs font-semibold text-slate-500">Sắp xếp:</span>
+              </div>
               <select
                 value={filters.sortBy}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, sortBy: e.target.value as SortOption }))
                 }
-                className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer flex-1 sm:flex-initial text-right sm:text-left"
               >
                 <option value="newest">Mới đăng nhất</option>
                 <option value="price_asc">Giá: Thấp đến Cao</option>

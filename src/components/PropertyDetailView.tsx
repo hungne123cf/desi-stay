@@ -108,7 +108,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pb-20">
+    <div className="min-h-screen bg-slate-50/60 pb-32 lg:pb-20">
       {/* Top Breadcrumb & Share */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between text-xs text-slate-500">
         <Link
@@ -677,6 +677,46 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* MOBILE STICKY BOTTOM ACTION BAR (Hiện trên điện thoại / tablet, ẩn trên PC) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          {/* Thông tin giá tóm tắt */}
+          <div className="min-w-0">
+            <span className="text-[10px] text-slate-500 font-medium block">Giá thuê niêm yết</span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-lg font-black text-slate-900 truncate">
+                {formatPrice(property.pricePerMonthUSD, 'VND')}
+              </span>
+              <span className="text-[10px] text-slate-500">/th</span>
+            </div>
+            <span className="text-[10px] text-indigo-600 font-bold block truncate">
+              Cọc giữ: {formatPrice(property.tokenDepositUSD, 'VND')}
+            </span>
+          </div>
+
+          {/* Nút thao tác nhanh trên mobile */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleContactLandlord}
+              className="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-2xl font-bold transition-colors cursor-pointer"
+              title="Nhắn Zalo tư vấn phòng"
+            >
+              <Phone className="w-5 h-5 text-emerald-600" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsBookingOpen(true)}
+              className="py-3 px-4 sm:px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-indigo-600/25 flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
+            >
+              <Lock className="w-4 h-4" />
+              <span>Đặt Cọc Giữ Chỗ</span>
+            </button>
           </div>
         </div>
       </div>
