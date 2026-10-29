@@ -63,3 +63,4 @@ export function buildVietQrUrl(params: {
 
   return `https://img.vietqr.io/image/${bankCode}-${accNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${accName}`;
 }
+

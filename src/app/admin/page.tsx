@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
@@ -76,6 +76,17 @@ export default function AdminPage() {
   const [supportHotline, setSupportHotline] = useState(settings.supportHotline);
   const [stripeKey, setStripeKey] = useState(settings.stripePublishableKey);
   const [razorpayKey, setRazorpayKey] = useState(settings.razorpayKeyId);
+
+  useEffect(() => {
+    setBrandName(settings.brandName);
+    setDefaultCurrency(settings.defaultCurrency);
+    setVietQrBankCode(settings.vietQrBankCode || resolveVietQrBankCode(settings.vietQrBankName));
+    setVietQrBankName(settings.vietQrBankName);
+    setVietQrAccountNumber(settings.vietQrAccountNumber);
+    setVietQrAccountHolder(settings.vietQrAccountHolder);
+    setSupportWhatsApp(settings.supportWhatsApp);
+    setSupportHotline(settings.supportHotline);
+  }, [settings]);
 
   // Add Property Form State (100% Vietnam)
   const [newTitle, setNewTitle] = useState('');
@@ -262,13 +273,20 @@ export default function AdminPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
               <button
                 onClick={() => setShowAddModal(true)}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition-transform active:scale-95"
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition-transform active:scale-95 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Thêm Phòng Mới</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition-transform active:scale-95 cursor-pointer"
+              >
+                <QrCode className="w-4 h-4" />
+                <span>Đổi TK Ngân Hàng VietQR</span>
               </button>
               <Link
                 href="/"
