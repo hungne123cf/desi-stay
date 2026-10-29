@@ -236,14 +236,30 @@ values (1, 'UniStay', 'VND', '+84901234567', '1900 6868', 'Vietcombank (VCB)', '
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------
--- 7. PHÂN QUYỀN TRUY CẬP (RLS Policies cho phép Web đọc/ghi)
+-- 7. BẢNG PROPERTY_REVIEWS (Đánh giá Sao & Bình luận thực tế của Sinh viên)
 -- ---------------------------------------------------------------------
-alter table public.roles         enable row level security;
-alter table public.admins        enable row level security;
-alter table public.accounts      enable row level security;
-alter table public.properties    enable row level security;
-alter table public.bookings      enable row level security;
-alter table public.site_settings enable row level security;
+create table if not exists public.property_reviews (
+  id             uuid primary key default gen_random_uuid(),
+  property_code  text not null,
+  author_name    text not null,
+  author_email   text not null default '',
+  college        text not null default '',
+  rating         integer not null default 5 check (rating between 1 and 5),
+  comment        text not null,
+  admin_reply    text,
+  created_at     timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------
+-- 8. PHÂN QUYỀN TRUY CẬP (RLS Policies cho phép Web đọc/ghi)
+-- ---------------------------------------------------------------------
+alter table public.roles            enable row level security;
+alter table public.admins           enable row level security;
+alter table public.accounts         enable row level security;
+alter table public.properties       enable row level security;
+alter table public.bookings         enable row level security;
+alter table public.site_settings    enable row level security;
+alter table public.property_reviews enable row level security;
 
 drop policy if exists "public_access_roles" on public.roles;
 create policy "public_access_roles" on public.roles for all using (true) with check (true);
@@ -263,8 +279,11 @@ create policy "public_access_bookings" on public.bookings for all using (true) w
 drop policy if exists "public_access_site_settings" on public.site_settings;
 create policy "public_access_site_settings" on public.site_settings for all using (true) with check (true);
 
+drop policy if exists "public_access_property_reviews" on public.property_reviews;
+create policy "public_access_property_reviews" on public.property_reviews for all using (true) with check (true);
+
 -- ---------------------------------------------------------------------
--- 8. CLOUD STORAGE BUCKET LƯU TRỮ HÌNH ẢNH PHÒNG TRỌ (Supabase Storage)
+-- 9. CLOUD STORAGE BUCKET LƯU TRỮ HÌNH ẢNH PHÒNG TRỌ (Supabase Storage)
 -- ---------------------------------------------------------------------
 insert into storage.buckets (id, name, public)
 values ('property-images', 'property-images', true)

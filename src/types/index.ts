@@ -115,3 +115,19 @@ export interface ChatMessage {
   createdAt: string;
   isReadByAdmin?: boolean;
 }
+
+export interface PropertyReview {
+  id: string;
+  propertyId: string;
+  propertyCode?: string;
+  propertyTitle?: string;
+  userName: string;
+  userEmail?: string;
+  userAvatar?: string;
+  userCollege?: string;
+  rating: number;
+  comment: string;
+  adminReply?: string;
+  createdAt: string;
+}
+

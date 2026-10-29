@@ -1,13 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Property, Booking, CurrencyCode, SiteSettings, ChatMessage } from '@/types';
+import { Property, Booking, CurrencyCode, SiteSettings, ChatMessage, PropertyReview } from '@/types';
 import { siteConfig } from '@/config/site';
 
 interface PropertyContextType {
   properties: Property[];
   bookings: Booking[];
   messages: ChatMessage[];
+  reviews: PropertyReview[];
   currency: CurrencyCode;
   settings: SiteSettings;
   setCurrency: (c: CurrencyCode) => void;
@@ -21,6 +22,9 @@ interface PropertyContextType {
   sendChatMessage: (msg: Omit<ChatMessage, 'id' | 'createdAt'>) => void;
   markConversationRead: (conversationId: string) => void;
   deleteConversation: (conversationId: string) => void;
+  addReview: (review: Omit<PropertyReview, 'id' | 'createdAt'>) => void;
+  replyToReview: (reviewId: string, adminReply: string) => void;
+  deleteReview: (reviewId: string) => void;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -65,6 +69,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [reviews, setReviews] = useState<PropertyReview[]>([]);
   const [currency, setCurrencyState] = useState<CurrencyCode>('VND');
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
 
@@ -72,6 +77,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     properties?: Property[];
     bookings?: Booking[];
     messages?: ChatMessage[];
+    reviews?: PropertyReview[];
     settings?: SiteSettings;
   }) => {
     try {
@@ -127,6 +133,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const serverMessages: ChatMessage[] = Array.isArray(serverState.messages)
           ? serverState.messages
           : [];
+        const serverReviews: PropertyReview[] = Array.isArray(serverState.reviews)
+          ? serverState.reviews
+          : [];
 
         const mergedMap = new Map<string, Property>();
         serverProps.forEach((p) => mergedMap.set(p.id, p));
@@ -142,12 +151,14 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setProperties(finalProps);
         setBookings(serverBookings);
         setMessages(serverMessages);
+        setReviews(serverReviews);
         if (serverState.settings) setSettings(serverState.settings);
 
         try {
           localStorage.setItem('unistay_real_properties_v4', JSON.stringify(finalProps));
           localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(serverBookings));
           localStorage.setItem('unistay_real_messages_v4', JSON.stringify(serverMessages));
+          localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(serverReviews));
         } catch {}
 
         if (hasNewLocalToPush) {
@@ -179,6 +190,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (Array.isArray(data.messages)) {
             setMessages(data.messages);
             localStorage.setItem('unistay_real_messages_v4', JSON.stringify(data.messages));
+          }
+          if (Array.isArray(data.reviews)) {
+            setReviews(data.reviews);
+            localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(data.reviews));
           }
           if (data.settings) {
             setSettings(data.settings);
@@ -342,12 +357,87 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
+  const recalculatePropertyRating = (propertyId: string, allReviews: PropertyReview[]) => {
+    const propReviews = allReviews.filter((r) => r.propertyId === propertyId);
+    const count = propReviews.length;
+    const avg =
+      count > 0
+        ? Number(
+            (propReviews.reduce((sum, r) => sum + r.rating, 0) / count).toFixed(2)
+          )
+        : 5.0;
+
+    setProperties((prevProps) => {
+      const updatedProps = prevProps.map((p) =>
+        p.id === propertyId ? { ...p, rating: avg, reviewsCount: count } : p
+      );
+      try {
+        localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updatedProps));
+      } catch {}
+      syncToServer({ properties: updatedProps, reviews: allReviews });
+      return updatedProps;
+    });
+  };
+
+  const addReview = (reviewData: Omit<PropertyReview, 'id' | 'createdAt'>) => {
+    const now = new Date();
+    const createdAt = `${now.getHours().toString().padStart(2, '0')}:${now
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')} • ${now.toLocaleDateString('vi-VN')}`;
+
+    const newReview: PropertyReview = {
+      ...reviewData,
+      id: `rev-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      createdAt
+    };
+
+    setReviews((prev) => {
+      const updated = [newReview, ...prev];
+      try {
+        localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(updated));
+      } catch {}
+      recalculatePropertyRating(reviewData.propertyId, updated);
+      return updated;
+    });
+  };
+
+  const replyToReview = (reviewId: string, adminReply: string) => {
+    setReviews((prev) => {
+      const updated = prev.map((r) =>
+        r.id === reviewId ? { ...r, adminReply } : r
+      );
+      try {
+        localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ reviews: updated });
+      return updated;
+    });
+  };
+
+  const deleteReview = (reviewId: string) => {
+    setReviews((prev) => {
+      const target = prev.find((r) => r.id === reviewId);
+      const updated = prev.filter((r) => r.id !== reviewId);
+      try {
+        localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(updated));
+      } catch {}
+      if (target) {
+        recalculatePropertyRating(target.propertyId, updated);
+      } else {
+        syncToServer({ reviews: updated });
+      }
+      return updated;
+    });
+  };
+
   return (
     <PropertyContext.Provider
       value={{
         properties,
         bookings,
         messages,
+        reviews,
         currency,
         settings,
         setCurrency,
@@ -360,7 +450,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateSettings,
         sendChatMessage,
         markConversationRead,
-        deleteConversation
+        deleteConversation,
+        addReview,
+        replyToReview,
+        deleteReview
       }}
     >
       {children}

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useProperties } from '@/context/PropertyContext';
+import { useAuth } from '@/context/AuthContext';
 import { BookingModal } from '@/components/BookingModal';
 import {
   MapPin,
@@ -15,7 +16,10 @@ import {
   ArrowLeft,
   Share2,
   Lock,
-  Globe2
+  MessageSquare,
+  Send,
+  Trash2,
+  CornerDownRight
 } from 'lucide-react';
 
 interface PropertyDetailViewProps {
@@ -23,10 +27,22 @@ interface PropertyDetailViewProps {
 }
 
 export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ propertyId }) => {
-  const { properties, formatPrice, settings } = useProperties();
+  const { properties, formatPrice, settings, reviews, addReview, replyToReview, deleteReview } =
+    useProperties();
+  const { user } = useAuth();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+
+  // State cho chức năng Rating & Comment
+  const [ratingInput, setRatingInput] = useState<number>(5);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [reviewerName, setReviewerName] = useState<string>(user?.name || '');
+  const [reviewerCollege, setReviewerCollege] = useState<string>(user?.college || '');
+  const [commentText, setCommentText] = useState<string>('');
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState<string>('');
 
   const property = properties.find((p) => p.id === propertyId);
 
@@ -290,6 +306,335 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                 <span>Nhắn Zalo Hỗ Trợ Xem Phòng</span>
               </button>
             </div>
+
+            {/* Rating & Comments (Đánh giá & Bình luận của Sinh viên) */}
+            {(() => {
+              const propertyReviews = reviews.filter((r) => r.propertyId === property.id);
+              const ratingLabels: Record<number, string> = {
+                1: '1 Sao – Chưa tốt',
+                2: '2 Sao – Tạm ổn',
+                3: '3 Sao – Khá tốt',
+                4: '4 Sao – Hài lòng',
+                5: '5 Sao – Rất tuyệt vời'
+              };
+
+              const handleSubmitReview = (e: React.FormEvent) => {
+                e.preventDefault();
+                const finalName = (user?.name || reviewerName).trim();
+                if (!finalName || !commentText.trim()) return;
+
+                addReview({
+                  propertyId: property.id,
+                  propertyCode: property.code,
+                  propertyTitle: property.title,
+                  userName: finalName,
+                  userEmail: user?.email,
+                  userAvatar: user?.avatar,
+                  userCollege: (user?.college || reviewerCollege).trim() || property.nearbyUniversity,
+                  rating: ratingInput,
+                  comment: commentText.trim()
+                });
+
+                setCommentText('');
+                setReviewSubmitted(true);
+                setTimeout(() => setReviewSubmitted(false), 4000);
+              };
+
+              return (
+                <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-sm space-y-6">
+                  {/* Header thống kê đánh giá */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-indigo-600" />
+                        <span>Đánh Giá &amp; Bình Luận Thực Tế ({propertyReviews.length})</span>
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Nhận xét từ sinh viên đã đến xem phòng hoặc đang thuê tại khu trọ này
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-amber-50/80 border border-amber-200 px-4 py-2.5 rounded-2xl">
+                      <div className="text-2xl font-black text-amber-600">{property.rating}</div>
+                      <div>
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-3.5 h-3.5 ${
+                                star <= Math.round(property.rating)
+                                  ? 'fill-amber-400 text-amber-400'
+                                  : 'text-slate-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[11px] font-semibold text-slate-600">
+                          {propertyReviews.length > 0
+                            ? `${propertyReviews.length} nhận xét đã gửi`
+                            : 'Đánh giá tiêu chuẩn 5.0'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form viết đánh giá & bình luận */}
+                  <form
+                    onSubmit={handleSubmitReview}
+                    className="p-5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-4 text-xs"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <span className="font-bold text-slate-800">
+                        Viết nhận xét của bạn về phòng trọ này:
+                      </span>
+
+                      {/* Star Picker */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => {
+                            const active = star <= (hoverRating || ratingInput);
+                            return (
+                              <button
+                                key={star}
+                                type="button"
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                onClick={() => setRatingInput(star)}
+                                className="p-0.5 transition-transform hover:scale-110 cursor-pointer"
+                              >
+                                <Star
+                                  className={`w-5 h-5 ${
+                                    active
+                                      ? 'fill-amber-400 text-amber-400'
+                                      : 'text-slate-300 hover:text-amber-300'
+                                  }`}
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <span className="font-bold text-amber-700 bg-amber-100/80 px-2.5 py-0.5 rounded-full text-[11px]">
+                          {ratingLabels[hoverRating || ratingInput]}
+                        </span>
+                      </div>
+                    </div>
+
+                    {reviewSubmitted && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl font-bold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Cảm ơn bạn! Đánh giá và bình luận của bạn đã được hiển thị ngay bên dưới.</span>
+                      </div>
+                    )}
+
+                    {!user && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">
+                            Họ và tên của bạn *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={reviewerName}
+                            onChange={(e) => setReviewerName(e.target.value)}
+                            placeholder="Ví dụ: Lê Minh Khôi"
+                            className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">
+                            Sinh viên trường (Tùy chọn)
+                          </label>
+                          <input
+                            type="text"
+                            value={reviewerCollege}
+                            onChange={(e) => setReviewerCollege(e.target.value)}
+                            placeholder={`Ví dụ: ${property.nearbyUniversity}`}
+                            className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quick Comment Chips */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[11px] text-slate-400 mr-1">Gợi ý nhanh:</span>
+                      {[
+                        'Phòng sạch đẹp đúng như hình',
+                        'Hẻm cao ráo an ninh, không ngập nước',
+                        'Giờ giấc tự do, khóa vân tay rất tiện',
+                        'Gần trường đi học cực kỳ thuận tiện'
+                      ].map((chip) => (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() =>
+                            setCommentText((prev) =>
+                              prev ? `${prev}. ${chip}` : chip
+                            )
+                          }
+                          className="px-2.5 py-1 rounded-full bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border border-slate-200 text-[11px] font-medium transition-colors cursor-pointer"
+                        >
+                          + {chip}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div>
+                      <textarea
+                        rows={3}
+                        required
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="Chia sẻ trải nghiệm thực tế của bạn về phòng trọ, nội thất, an ninh, đường đi..."
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-600"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-slate-500">
+                        {user ? (
+                          <>
+                            Đang bình luận với tên <strong>{user.name}</strong>
+                          </>
+                        ) : (
+                          'Bình luận được hiển thị công khai theo thời gian thực'
+                        )}
+                      </span>
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Gửi Đánh Giá</span>
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Danh sách Bình luận */}
+                  <div className="space-y-4">
+                    {propertyReviews.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                        Chưa có bình luận nào cho phòng này. Hãy là người đầu tiên để lại đánh giá nhé!
+                      </div>
+                    ) : (
+                      propertyReviews.map((rev) => (
+                        <div
+                          key={rev.id}
+                          className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              {rev.userAvatar ? (
+                                <img
+                                  src={rev.userAvatar}
+                                  alt={rev.userName}
+                                  className="w-10 h-10 rounded-full object-cover border border-slate-200"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold text-sm flex items-center justify-center">
+                                  {rev.userName.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs font-bold text-slate-900">
+                                    {rev.userName}
+                                  </span>
+                                  {rev.userCollege && (
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                      🎓 {rev.userCollege}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <div className="flex items-center gap-0.5">
+                                    {[1, 2, 3, 4, 5].map((s) => (
+                                      <Star
+                                        key={s}
+                                        className={`w-3 h-3 ${
+                                          s <= rev.rating
+                                            ? 'fill-amber-400 text-amber-400'
+                                            : 'text-slate-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="text-[10px] text-slate-400">{rev.createdAt}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {user?.role === 'admin' && (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReplyingToId(replyingToId === rev.id ? null : rev.id);
+                                    setReplyText(rev.adminReply || '');
+                                  }}
+                                  className="px-2.5 py-1 text-[11px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg cursor-pointer"
+                                >
+                                  Phản hồi
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteReview(rev.id)}
+                                  title="Xóa bình luận này"
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          <p className="text-xs sm:text-sm text-slate-700 leading-relaxed pl-13">
+                            {rev.comment}
+                          </p>
+
+                          {/* Phản hồi của Admin */}
+                          {rev.adminReply && (
+                            <div className="ml-8 p-3 rounded-xl bg-indigo-50/70 border border-indigo-200/80 text-xs space-y-1">
+                              <div className="flex items-center gap-1.5 font-bold text-indigo-900">
+                                <CornerDownRight className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>Phản hồi từ Ban Quản Lý {settings.brandName}:</span>
+                              </div>
+                              <p className="text-slate-700 pl-5">{rev.adminReply}</p>
+                            </div>
+                          )}
+
+                          {/* Khung nhập phản hồi cho Admin */}
+                          {user?.role === 'admin' && replyingToId === rev.id && (
+                            <div className="ml-8 pt-1 flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                placeholder="Nhập phản hồi của Ban quản lý..."
+                                className="flex-1 px-3 py-1.5 text-xs bg-white border border-indigo-300 rounded-xl outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!replyText.trim()) return;
+                                  replyToReview(rev.id, replyText.trim());
+                                  setReplyingToId(null);
+                                  setReplyText('');
+                                }}
+                                className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-xl cursor-pointer"
+                              >
+                                Lưu phản hồi
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Right Column: Pricing & Booking Card (Sticky) */}
