@@ -40,7 +40,8 @@ import {
   ExternalLink,
   Clock,
   MessageCircle,
-  Send
+  Send,
+  Star
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -49,6 +50,7 @@ export default function AdminPage() {
     properties,
     bookings,
     messages,
+    reviews,
     currency,
     settings,
     formatPrice,
@@ -58,12 +60,16 @@ export default function AdminPage() {
     updateSettings,
     sendChatMessage,
     markConversationRead,
-    deleteConversation
+    deleteConversation,
+    replyToReview,
+    deleteReview
   } = useProperties();
 
-  const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'chat' | 'settings'>('listings');
+  const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'chat' | 'reviews' | 'settings'>('listings');
   const [selectedConvId, setSelectedConvId] = useState<string>('');
   const [adminReplyText, setAdminReplyText] = useState<string>('');
+  const [replyingReviewId, setReplyingReviewId] = useState<string | null>(null);
+  const [reviewReplyInput, setReviewReplyInput] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDetailProp, setSelectedDetailProp] = useState<Property | null>(null);
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
@@ -266,148 +272,249 @@ export default function AdminPage() {
     );
   }
 
+  const unreadChatCount = messages.filter(
+    (m) => m.senderRole === 'student' && !m.isReadByAdmin
+  ).length;
+  const pendingBookingsCount = bookings.filter((b) => b.status === 'pending').length;
+
+  const navItems: {
+    id: 'listings' | 'leads' | 'chat' | 'reviews' | 'settings';
+    label: string;
+    sublabel: string;
+    icon: React.ReactNode;
+    badge?: number | string;
+    badgeColor?: string;
+  }[] = [
+    {
+      id: 'listings',
+      label: 'Quản Lý Phòng Trọ',
+      sublabel: 'Kho phòng & giá thuê',
+      icon: <Layers className="w-4 h-4 shrink-0" />,
+      badge: properties.length,
+      badgeColor: 'bg-slate-800 text-slate-200 border border-slate-700'
+    },
+    {
+      id: 'leads',
+      label: 'Đơn Cọc & Lịch Hẹn',
+      sublabel: 'Duyệt Bill VietQR & hẹn xem',
+      icon: <Users className="w-4 h-4 shrink-0" />,
+      badge: pendingBookingsCount > 0 ? `${pendingBookingsCount} chờ` : bookings.length,
+      badgeColor:
+        pendingBookingsCount > 0
+          ? 'bg-amber-500 text-slate-950 font-black'
+          : 'bg-slate-800 text-slate-200 border border-slate-700'
+    },
+    {
+      id: 'chat',
+      label: 'Tin Nhắn Khách Hỏi',
+      sublabel: 'Hộp thư Live Chat 2 chiều',
+      icon: <MessageCircle className="w-4 h-4 shrink-0" />,
+      badge:
+        unreadChatCount > 0
+          ? `${unreadChatCount} mới`
+          : Array.from(new Set(messages.map((m) => m.conversationId))).length,
+      badgeColor:
+        unreadChatCount > 0
+          ? 'bg-red-600 text-white animate-pulse'
+          : 'bg-slate-800 text-slate-200 border border-slate-700'
+    },
+    {
+      id: 'reviews',
+      label: 'Đánh Giá & Bình Luận',
+      sublabel: 'Quản lý sao & phản hồi SV',
+      icon: <Star className="w-4 h-4 shrink-0" />,
+      badge: `${reviews.length} ⭐`,
+      badgeColor: 'bg-slate-800 text-amber-300 border border-slate-700'
+    },
+    {
+      id: 'settings',
+      label: 'Cấu Hình VietQR & Liên Hệ',
+      sublabel: 'Tài khoản NH & Zalo chủ trọ',
+      icon: <Settings className="w-4 h-4 shrink-0" />
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50/70 pb-20">
-      {/* Top Banner Header */}
-      <div className="bg-slate-900 text-white pt-8 pb-14 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-xs text-indigo-400 font-bold uppercase tracking-wider mb-1">
-                <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                <span>Bảng Điều Khiển Quản Trị • Admin Portal</span>
+    <div className="min-h-[calc(100vh-5rem)] bg-slate-100/80 flex flex-col md:flex-row">
+      {/* LEFT SIDEBAR NAVIGATION (Thanh đề mục cố định bên trái) */}
+      <aside className="w-full md:w-64 lg:w-72 shrink-0 bg-slate-900 text-white border-b md:border-b-0 md:border-r border-slate-800 flex flex-col justify-between md:sticky md:top-20 md:h-[calc(100vh-5rem)] overflow-y-auto">
+        <div className="p-4 lg:p-5 space-y-5">
+          {/* Admin Identity Card */}
+          <div className="p-3.5 rounded-2xl bg-slate-800/90 border border-slate-700/80 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-bold uppercase tracking-wider">
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span>Admin Portal</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+              <h1 className="text-sm font-black tracking-tight text-white truncate mt-0.5">
                 Xin chào, {user?.name.split(' ')[0]} 👋
               </h1>
-              <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                Quản lý kho phòng trọ, theo dõi sinh viên đặt cọc giữ chỗ, và cấu hình thông tin ngân hàng.
-              </p>
+              <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition-transform active:scale-95 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Thêm Phòng Mới</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('settings')}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition-transform active:scale-95 cursor-pointer"
-              >
-                <QrCode className="w-4 h-4" />
-                <span>Đổi TK Ngân Hàng VietQR</span>
-              </button>
-              <Link
-                href="/"
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition-colors"
-              >
-                Xem Website
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Stats Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Tổng số phòng trọ</span>
-            <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
-              {properties.length}
-            </div>
-            <span className="text-[11px] text-emerald-600 font-semibold">Đang hoạt động trực tuyến</span>
+            <Link
+              href="/"
+              title="Mở trang chủ User"
+              className="p-2 rounded-xl bg-slate-700/70 hover:bg-indigo-600 text-slate-200 hover:text-white transition-colors shrink-0"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </Link>
           </div>
 
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Khách đặt lịch &amp; Lead</span>
-            <div className="text-2xl sm:text-3xl font-black text-indigo-600 mt-1">
-              {bookings.length}
-            </div>
-            <span className="text-[11px] text-slate-400">Từ Web &amp; VietQR / Zalo</span>
-          </div>
-
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Tiền cọc giữ chỗ đã thu</span>
-            <div className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">
-              {formatPrice(totalRevenueUSD, 'VND')}
-            </div>
-            <span className="text-[11px] text-emerald-700 font-semibold">Thanh toán qua VietQR 24/7</span>
-          </div>
-
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Khu vực trọng điểm</span>
-            <div className="text-2xl sm:text-3xl font-black text-indigo-600 mt-1">
-              Cần Thơ
-            </div>
-            <span className="text-[11px] text-indigo-600 font-semibold">&amp; các tỉnh thành Việt Nam</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div className="flex border-b border-slate-200 gap-6 text-sm font-bold">
+          {/* Primary Add Property CTA */}
           <button
-            onClick={() => setActiveTab('listings')}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 ${
-              activeTab === 'listings'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
           >
-            <Layers className="w-4 h-4" />
-            <span>Quản Lý Phòng Trọ ({properties.length})</span>
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Thêm Phòng Trọ Mới</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('leads')}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'leads'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Khách Đặt Cọc &amp; Lịch Hẹn ({bookings.length})</span>
-          </button>
+          {/* Left Navigation Menu Items */}
+          <div className="space-y-1">
+            <span className="px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
+              Danh Mục Quản Trị Hệ Thống
+            </span>
+            <nav className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-visible pb-1 md:pb-0">
+              {navItems.map((item) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full text-left px-3.5 py-2.5 rounded-2xl transition-all flex items-center justify-between gap-2.5 cursor-pointer shrink-0 md:shrink ${
+                      isActive
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
+                        : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {item.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold block truncate">{item.label}</span>
+                        <span
+                          className={`text-[10px] hidden md:block truncate ${
+                            isActive ? 'text-indigo-100' : 'text-slate-400'
+                          }`}
+                        >
+                          {item.sublabel}
+                        </span>
+                      </div>
+                    </div>
 
-          <button
-            onClick={() => setActiveTab('chat')}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'chat'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span>Tin Nhắn Khách Hỏi</span>
-            {messages.filter((m) => m.senderRole === 'student' && !m.isReadByAdmin).length > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold">
-                {messages.filter((m) => m.senderRole === 'student' && !m.isReadByAdmin).length}
+                    {item.badge !== undefined && (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                          isActive
+                            ? 'bg-white text-indigo-700'
+                            : item.badgeColor || 'bg-slate-800 text-slate-300'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+
+        {/* Sidebar Footer Summary */}
+        <div className="hidden md:block p-4 border-t border-slate-800/90 bg-slate-950/50 space-y-3">
+          <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5 text-xs">
+            <div className="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>Tiền cọc đã thu:</span>
+              <span className="font-black text-emerald-400">
+                {formatPrice(totalRevenueUSD, 'VND')}
               </span>
-            )}
-          </button>
+            </div>
+            <div className="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>NH nhận cọc:</span>
+              <span className="font-bold text-indigo-300 truncate max-w-[120px]">
+                {settings.vietQrBankCode || 'VCB'} • {settings.vietQrAccountNumber}
+              </span>
+            </div>
+          </div>
 
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'settings'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+          <Link
+            href="/"
+            className="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-colors"
           >
-            <Settings className="w-4 h-4" />
-            <span>Cấu Hình VietQR &amp; Liên Hệ</span>
-          </button>
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Xem Giao Diện Khách Thuê</span>
+          </Link>
+        </div>
+      </aside>
+
+      {/* RIGHT MAIN WORKSPACE (Khung nội dung chính bên phải) */}
+      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6 pb-20">
+        {/* Compact Top Header + 4 Mini KPI Strip */}
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold uppercase tracking-wider">
+                Đang mở mục
+              </span>
+              <span className="text-xs text-slate-400 font-medium">
+                Đồng bộ Real-time đa trình duyệt
+              </span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 mt-1">
+              {navItems.find((n) => n.id === activeTab)?.label}
+            </h2>
+          </div>
+
+          {/* Compact 4 KPI Summary Pills */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div
+              onClick={() => setActiveTab('listings')}
+              className="px-3.5 py-2.5 rounded-2xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 cursor-pointer transition-colors"
+            >
+              <span className="text-[10px] font-semibold text-slate-500 block">Tổng phòng trọ</span>
+              <span className="text-base font-black text-slate-900">{properties.length} phòng</span>
+            </div>
+
+            <div
+              onClick={() => setActiveTab('leads')}
+              className="px-3.5 py-2.5 rounded-2xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 cursor-pointer transition-colors"
+            >
+              <span className="text-[10px] font-semibold text-slate-500 block">Khách đặt &amp; Hẹn</span>
+              <span className="text-base font-black text-indigo-600">{bookings.length} đơn</span>
+            </div>
+
+            <div
+              onClick={() => setActiveTab('leads')}
+              className="px-3.5 py-2.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 cursor-pointer"
+            >
+              <span className="text-[10px] font-semibold text-emerald-700 block">Tiền cọc đã thu</span>
+              <span className="text-base font-black text-emerald-700">
+                {formatPrice(totalRevenueUSD, 'VND')}
+              </span>
+            </div>
+
+            <div
+              onClick={() => setActiveTab('reviews')}
+              className="px-3.5 py-2.5 rounded-2xl bg-amber-50/70 border border-amber-200/70 cursor-pointer"
+            >
+              <span className="text-[10px] font-semibold text-amber-800 block">Đánh giá SV</span>
+              <span className="text-base font-black text-amber-700">{reviews.length} nhận xét ⭐</span>
+            </div>
+          </div>
         </div>
 
         {/* Tab 1: Listings */}
         {activeTab === 'listings' && (
-          <div className="mt-6 space-y-4">
+          <div className="space-y-4">
             {propertyCreatedToast && (
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-4 text-xs text-emerald-900 shadow-xs">
                 <div className="flex items-center gap-2 font-bold">
@@ -841,13 +948,20 @@ export default function AdminPage() {
 
         {/* Tab 4: Real-Time Customer Chat Inbox */}
         {activeTab === 'chat' && (
-          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-5 bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs min-h-[480px]">
+          <div className="grid grid-cols-1 md:grid-cols-3 bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs min-h-[540px]">
             {/* Danh sách cuộc hội thoại bên trái */}
-            <div className="border-r border-slate-200 flex flex-col">
-              <div className="p-4 border-b border-slate-100 bg-slate-50 font-bold text-xs text-slate-700">
-                Danh Sách Khách Đang Nhắn Tin ({Array.from(new Set(messages.map((m) => m.conversationId))).length})
+            <div className="border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
+              <div className="p-4 border-b border-slate-100 bg-slate-50 font-bold text-xs text-slate-700 flex items-center justify-between">
+                <span>
+                  Danh Sách Khách Nhắn Tin ({Array.from(new Set(messages.map((m) => m.conversationId))).length})
+                </span>
+                {unreadChatCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px]">
+                    {unreadChatCount} chưa đọc
+                  </span>
+                )}
               </div>
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 max-h-[220px] md:max-h-[480px]">
                 {Array.from(new Set(messages.map((m) => m.conversationId))).length === 0 ? (
                   <div className="p-8 text-center text-xs text-slate-400">
                     Chưa có tin nhắn nào từ khách hàng.
@@ -869,7 +983,9 @@ export default function AdminPage() {
                           markConversationRead(convId);
                         }}
                         className={`p-3.5 cursor-pointer transition-colors flex items-start justify-between gap-2 ${
-                          active ? 'bg-indigo-50/80' : 'hover:bg-slate-50'
+                          active
+                            ? 'bg-indigo-50/90 border-l-4 border-l-indigo-600'
+                            : 'hover:bg-slate-50'
                         }`}
                       >
                         <div className="min-w-0">
@@ -895,7 +1011,7 @@ export default function AdminPage() {
             </div>
 
             {/* Khung nội dung chat bên phải */}
-            <div className="lg:col-span-2 flex flex-col">
+            <div className="md:col-span-2 flex flex-col">
               {(() => {
                 const activeConvId = selectedConvId || messages[0]?.conversationId;
                 const convMsgs = messages.filter((m) => m.conversationId === activeConvId);
@@ -933,7 +1049,7 @@ export default function AdminPage() {
                       </button>
                     </div>
 
-                    <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30 max-h-[340px] text-xs">
+                    <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30 max-h-[380px] text-xs">
                       {convMsgs.map((m) => {
                         const isAdmin = m.senderRole === 'admin';
                         return (
@@ -997,7 +1113,158 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-      </div>
+
+        {/* Tab 5: Student Reviews & 5-Star Ratings Manager */}
+        {activeTab === 'reviews' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Quản Lý Đánh Giá Sao &amp; Bình Luận Sinh Viên ({reviews.length})
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Xem toàn bộ đánh giá thực tế trên các phòng trọ, phản hồi khách thuê hoặc xóa bình luận spam.
+                  </p>
+                </div>
+              </div>
+
+              {reviews.length === 0 ? (
+                <div className="p-12 text-center text-slate-500">
+                  <Star className="w-10 h-10 text-amber-300 mx-auto mb-2" />
+                  <p className="font-bold text-slate-700 text-sm">
+                    Chưa có đánh giá hoặc bình luận nào
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Khi sinh viên chấm sao và gửi nhận xét trên trang Chi tiết phòng, mọi đánh giá sẽ xuất hiện tại đây.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {reviews.map((rev) => {
+                    const matchedProp = properties.find((p) => p.code === rev.propertyCode);
+                    const isVerifiedTenant = bookings.some(
+                      (b) =>
+                        b.propertyCode === rev.propertyCode &&
+                        (b.status === 'token_paid' || b.status === 'confirmed') &&
+                        (b.studentName.toLowerCase() === rev.authorName.toLowerCase() ||
+                          (rev.authorEmail &&
+                            b.studentContact.replace(/[^0-9]/g, '') ===
+                              rev.authorEmail.replace(/[^0-9]/g, '')))
+                    );
+
+                    return (
+                      <div key={rev.id} className="p-5 hover:bg-slate-50/60 transition-colors space-y-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-bold text-slate-900">
+                                {rev.authorName}
+                              </span>
+                              {rev.college && (
+                                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                                  🎓 {rev.college}
+                                </span>
+                              )}
+                              {isVerifiedTenant && (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                  ✅ Khách đã đặt phòng xác thực
+                                </span>
+                              )}
+                              <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-mono text-[10px] font-bold">
+                                Phòng: {rev.propertyCode}
+                              </span>
+                              {matchedProp && (
+                                <Link
+                                  href={`/properties/${matchedProp.id}`}
+                                  className="text-[11px] text-indigo-600 hover:underline font-semibold"
+                                >
+                                  {matchedProp.title} ↗
+                                </Link>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`w-3.5 h-3.5 ${
+                                    s <= rev.rating
+                                      ? 'text-amber-400 fill-amber-400'
+                                      : 'text-slate-200 fill-slate-200'
+                                  }`}
+                                />
+                              ))}
+                              <span className="text-[11px] text-slate-400 ml-2">{rev.createdAt}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReplyingReviewId(replyingReviewId === rev.id ? null : rev.id);
+                                setReviewReplyInput(rev.adminReply || '');
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs cursor-pointer"
+                            >
+                              {rev.adminReply ? 'Sửa phản hồi' : 'Phản hồi'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteReview(rev.id)}
+                              className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs cursor-pointer"
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-200/70">
+                          {rev.comment}
+                        </p>
+
+                        {rev.adminReply && (
+                          <div className="ml-4 p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 text-xs">
+                            <span className="font-bold text-indigo-950 block mb-0.5">
+                              Phản hồi từ Quản lý UniStay:
+                            </span>
+                            <p className="text-indigo-900">{rev.adminReply}</p>
+                          </div>
+                        )}
+
+                        {replyingReviewId === rev.id && (
+                          <div className="ml-4 flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={reviewReplyInput}
+                              onChange={(e) => setReviewReplyInput(e.target.value)}
+                              placeholder="Nhập phản hồi chính thức của Quản lý..."
+                              className="flex-1 px-3.5 py-2 text-xs bg-white border border-indigo-300 rounded-xl outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!reviewReplyInput.trim()) return;
+                                replyToReview(rev.id, reviewReplyInput.trim());
+                                setReplyingReviewId(null);
+                                setReviewReplyInput('');
+                              }}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer"
+                            >
+                              Lưu phản hồi
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
 
       {/* Add Property Modal */}
       {showAddModal && (

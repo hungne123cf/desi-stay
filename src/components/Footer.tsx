@@ -2,11 +2,17 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Building2, ShieldCheck, HeartHandshake, Phone, Mail, MapPin } from 'lucide-react';
 import { useProperties } from '@/context/PropertyContext';
 
 export const Footer: React.FC = () => {
+  const pathname = usePathname();
   const { settings } = useProperties();
+
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <footer className="bg-slate-950 text-slate-400 pt-16 pb-12 border-t border-slate-800">

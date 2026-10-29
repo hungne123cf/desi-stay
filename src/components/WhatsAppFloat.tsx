@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageCircle, X, Send, Phone, ExternalLink } from 'lucide-react';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
 
 export const WhatsAppFloat: React.FC = () => {
+  const pathname = usePathname();
   const { settings, messages, sendChatMessage } = useProperties();
   const { user } = useAuth();
 
@@ -91,6 +93,10 @@ export const WhatsAppFloat: React.FC = () => {
     );
     window.open(`https://zalo.me/${phone}`, '_blank');
   };
+
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end">
