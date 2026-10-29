@@ -38,6 +38,7 @@ interface PropertyContextType {
     propertyCode: string,
     user?: { id?: string; email?: string; phone?: string | null; name?: string } | null
   ) => ReviewEligibility;
+  migrateConversationId: (oldConvId: string, newConvId: string) => void;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -78,6 +79,48 @@ function isRealUserBooking(b: Booking): boolean {
   return true;
 }
 
+function mergeMessages(prev: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  if (!incoming || incoming.length === 0) return prev;
+  const map = new Map<string, ChatMessage>();
+  prev.forEach((m) => {
+    if (m && m.id) map.set(m.id, m);
+  });
+  incoming.forEach((m) => {
+    if (m && m.id) {
+      const existing = map.get(m.id);
+      map.set(m.id, existing ? { ...existing, ...m } : m);
+    }
+  });
+  return Array.from(map.values());
+}
+
+function mergeBookings(prev: Booking[], incoming: Booking[]): Booking[] {
+  if (!incoming || incoming.length === 0) return prev;
+  const map = new Map<string, Booking>();
+  prev.forEach((b) => {
+    if (b && b.id) map.set(b.id, b);
+  });
+  incoming.forEach((b) => {
+    if (b && b.id) {
+      const existing = map.get(b.id);
+      map.set(b.id, existing ? { ...existing, ...b } : b);
+    }
+  });
+  return Array.from(map.values());
+}
+
+function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): PropertyReview[] {
+  if (!incoming || incoming.length === 0) return prev;
+  const map = new Map<string, PropertyReview>();
+  prev.forEach((r) => {
+    if (r && r.id) map.set(r.id, r);
+  });
+  incoming.forEach((r) => {
+    if (r && r.id) map.set(r.id, r);
+  });
+  return Array.from(map.values());
+}
+
 export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -93,6 +136,26 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (savedIds) {
         const parsed = JSON.parse(savedIds);
         if (Array.isArray(parsed)) setMyBookingIds(parsed);
+      }
+      const savedMessages = localStorage.getItem('unistay_real_messages_v4');
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        if (Array.isArray(parsed) && parsed.length > 0) setMessages(parsed);
+      }
+      const savedBookings = localStorage.getItem('unistay_real_bookings_v4');
+      if (savedBookings) {
+        const parsed = JSON.parse(savedBookings);
+        if (Array.isArray(parsed) && parsed.length > 0) setBookings(parsed);
+      }
+      const savedReviews = localStorage.getItem('unistay_real_reviews_v4');
+      if (savedReviews) {
+        const parsed = JSON.parse(savedReviews);
+        if (Array.isArray(parsed) && parsed.length > 0) setReviews(parsed);
+      }
+      const savedProps = localStorage.getItem('unistay_real_properties_v4');
+      if (savedProps) {
+        const parsed = JSON.parse(savedProps);
+        if (Array.isArray(parsed) && parsed.length > 0) setProperties(parsed);
       }
     } catch {}
   }, []);
@@ -192,9 +255,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           return { ...p, rating: avg, reviewsCount: pReviews.length };
         });
         setProperties(finalProps);
-        setBookings(serverBookings);
-        setMessages(serverMessages);
-        setReviews(serverReviews);
+        setBookings((prev) => mergeBookings(prev, serverBookings));
+        setMessages((prev) => mergeMessages(prev, serverMessages));
+        setReviews((prev) => mergeReviews(prev, serverReviews));
         if (serverState.settings) setSettings(serverState.settings);
 
         try {
@@ -221,9 +284,15 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (event.data?.type === 'SYNC_UPDATE' && event.data?.payload) {
           const p = event.data.payload;
           if (Array.isArray(p.properties) && p.properties.length > 0) setProperties(p.properties);
-          if (Array.isArray(p.bookings)) setBookings(p.bookings);
-          if (Array.isArray(p.messages)) setMessages(p.messages);
-          if (Array.isArray(p.reviews)) setReviews(p.reviews);
+          if (Array.isArray(p.bookings) && p.bookings.length > 0) {
+            setBookings((prev) => mergeBookings(prev, p.bookings));
+          }
+          if (Array.isArray(p.messages)) {
+            setMessages((prev) => mergeMessages(prev, p.messages));
+          }
+          if (Array.isArray(p.reviews)) {
+            setReviews((prev) => mergeReviews(prev, p.reviews));
+          }
           if (p.settings) setSettings(p.settings);
         }
       };
@@ -247,16 +316,31 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
             if (Array.isArray(data.bookings) && data.bookings.length > 0) {
               const cleanBookings = data.bookings.filter(isRealUserBooking);
-              setBookings(cleanBookings);
-              localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(cleanBookings));
+              setBookings((prev) => {
+                const merged = mergeBookings(prev, cleanBookings);
+                try {
+                  localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
             }
             if (Array.isArray(data.messages)) {
-              setMessages(data.messages);
-              localStorage.setItem('unistay_real_messages_v4', JSON.stringify(data.messages));
+              setMessages((prev) => {
+                const merged = mergeMessages(prev, data.messages);
+                try {
+                  localStorage.setItem('unistay_real_messages_v4', JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
             }
             if (Array.isArray(data.reviews)) {
-              setReviews(data.reviews);
-              localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(data.reviews));
+              setReviews((prev) => {
+                const merged = mergeReviews(prev, data.reviews);
+                try {
+                  localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
             }
             if (data.settings) {
               setSettings(data.settings);
@@ -269,17 +353,17 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             eventSource.close();
             eventSource = null;
           }
-          // Tự động kết nối lại sau 4 giây nếu bị ngắt kết nối
+          // Tự động kết nối lại sau 1.5 giây nếu bị ngắt kết nối
           setTimeout(() => {
             if (isMounted) setupEventSource();
-          }, 4000);
+          }, 1500);
         };
       } catch {}
     };
 
     setupEventSource();
 
-    // 3. Fallback polling dự phòng mỗi 8 giây để đảm bảo không bao giờ mất kết nối
+    // 3. Fallback polling dự phòng mỗi 2.5 giây để phản hồi siêu tốc giữa các thiết bị
     pollInterval = setInterval(() => {
       if (!isMounted) return;
       fetch('/api/store')
@@ -292,14 +376,18 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
           if (Array.isArray(data.bookings) && data.bookings.length > 0) {
             const cleanBookings = data.bookings.filter(isRealUserBooking);
-            setBookings(cleanBookings);
+            setBookings((prev) => mergeBookings(prev, cleanBookings));
           }
-          if (Array.isArray(data.messages)) setMessages(data.messages);
-          if (Array.isArray(data.reviews)) setReviews(data.reviews);
+          if (Array.isArray(data.messages)) {
+            setMessages((prev) => mergeMessages(prev, data.messages));
+          }
+          if (Array.isArray(data.reviews)) {
+            setReviews((prev) => mergeReviews(prev, data.reviews));
+          }
           if (data.settings) setSettings(data.settings);
         })
         .catch(() => {});
-    }, 8000);
+    }, 2500);
 
     return () => {
       isMounted = false;
@@ -457,6 +545,26 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const deleteConversation = (conversationId: string) => {
     setMessages((prev) => {
       const updated = prev.filter((m) => m.conversationId !== conversationId);
+      try {
+        localStorage.setItem('unistay_real_messages_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ messages: updated });
+      return updated;
+    });
+  };
+
+  const migrateConversationId = (oldConvId: string, newConvId: string) => {
+    if (!oldConvId || !newConvId || oldConvId === newConvId) return;
+    setMessages((prev) => {
+      let hasChanges = false;
+      const updated = prev.map((m) => {
+        if (m.conversationId === oldConvId) {
+          hasChanges = true;
+          return { ...m, conversationId: newConvId };
+        }
+        return m;
+      });
+      if (!hasChanges) return prev;
       try {
         localStorage.setItem('unistay_real_messages_v4', JSON.stringify(updated));
       } catch {}
@@ -640,7 +748,8 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addReview,
         replyToReview,
         deleteReview,
-        getReviewEligibility
+        getReviewEligibility,
+        migrateConversationId
       }}
     >
       {children}

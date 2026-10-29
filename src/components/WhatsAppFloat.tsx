@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export const WhatsAppFloat: React.FC = () => {
   const pathname = usePathname();
-  const { settings, messages, sendChatMessage } = useProperties();
+  const { settings, messages, sendChatMessage, migrateConversationId } = useProperties();
   const { user } = useAuth();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -23,6 +23,13 @@ export const WhatsAppFloat: React.FC = () => {
 
   useEffect(() => {
     if (user?.email) {
+      const oldGuestId = typeof window !== 'undefined' ? localStorage.getItem('unistay_chat_guest_id') : null;
+      if (oldGuestId && oldGuestId !== user.email) {
+        migrateConversationId(oldGuestId, user.email);
+        try {
+          localStorage.removeItem('unistay_chat_guest_id');
+        } catch {}
+      }
       setSessionConvId(user.email);
       setGuestName(user.name);
       setGuestPhone(user.phone || '');
@@ -39,15 +46,25 @@ export const WhatsAppFloat: React.FC = () => {
         setGuestPhone(parsed.phone);
         setIsProfileSaved(true);
       } else {
-        const newId = `guest-${Date.now().toString().slice(-6)}`;
-        setSessionConvId(newId);
+        let guestId = localStorage.getItem('unistay_chat_guest_id');
+        if (!guestId) {
+          guestId = `guest-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 6)}`;
+          localStorage.setItem('unistay_chat_guest_id', guestId);
+        }
+        setSessionConvId(guestId);
       }
     } catch {
       setSessionConvId(`guest-${Date.now().toString().slice(-6)}`);
     }
   }, [user]);
 
-  const myMessages = messages.filter((m) => m.conversationId === sessionConvId);
+  const cleanGuestPhone = guestPhone.replace(/[^0-9]/g, '');
+  const myMessages = messages.filter(
+    (m) =>
+      m.conversationId === sessionConvId ||
+      (user?.email && (m.studentEmail === user.email || m.conversationId === user.email)) ||
+      (cleanGuestPhone.length >= 8 && m.conversationId === `khach-${cleanGuestPhone}`)
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -58,7 +75,15 @@ export const WhatsAppFloat: React.FC = () => {
   const handleSaveGuestProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestName.trim() || !guestPhone.trim()) return;
-    const convId = user?.email || `khach-${guestPhone.replace(/[^0-9]/g, '')}`;
+    const cleanPhone = guestPhone.replace(/[^0-9]/g, '');
+    const convId = user?.email || `khach-${cleanPhone}`;
+    if (sessionConvId && sessionConvId !== convId) {
+      migrateConversationId(sessionConvId, convId);
+    }
+    const oldGuestId = localStorage.getItem('unistay_chat_guest_id');
+    if (oldGuestId && oldGuestId !== convId) {
+      migrateConversationId(oldGuestId, convId);
+    }
     setSessionConvId(convId);
     setIsProfileSaved(true);
     try {
