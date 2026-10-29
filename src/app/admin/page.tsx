@@ -52,7 +52,12 @@ import {
   ShieldAlert,
   Check,
   Crown,
-  Sparkles
+  Sparkles,
+  Wallet,
+  Landmark,
+  RotateCcw,
+  Receipt,
+  FileText
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -115,6 +120,7 @@ export default function AdminPage() {
   const [supportHotline, setSupportHotline] = useState(settings.supportHotline);
   const [stripeKey, setStripeKey] = useState(settings.stripePublishableKey);
   const [razorpayKey, setRazorpayKey] = useState(settings.razorpayKeyId);
+  const [testQrAmountVND, setTestQrAmountVND] = useState(500000);
 
   useEffect(() => {
     setBrandName(settings.brandName);
@@ -183,6 +189,10 @@ export default function AdminPage() {
 
   const totalRevenueUSD = bookings
     .filter((b) => b.status === 'token_paid' || b.status === 'confirmed')
+    .reduce((sum, b) => sum + b.tokenAmountUSD, 0);
+
+  const pendingRevenueUSD = bookings
+    .filter((b) => b.status === 'pending')
     .reduce((sum, b) => sum + b.tokenAmountUSD, 0);
 
   const handleCreateProperty = (e: React.FormEvent) => {
@@ -369,9 +379,11 @@ export default function AdminPage() {
     },
     {
       id: 'settings',
-      label: 'Cấu Hình VietQR & Liên Hệ',
-      sublabel: 'Tài khoản NH & Zalo chủ trọ',
-      icon: <Settings className="w-4 h-4 shrink-0" />
+      label: 'Quản Lý Thu Cọc & Ngân Hàng',
+      sublabel: 'Doanh thu cọc, VietQR & STK nhận tiền',
+      icon: <Wallet className="w-4 h-4 shrink-0" />,
+      badge: formatPrice(totalRevenueUSD, 'VND'),
+      badgeColor: 'bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-bold'
     }
   ];
 
@@ -538,22 +550,38 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Sidebar Footer Summary */}
+        {/* Sidebar Footer Summary - Clickable to open Finance & Bank Settings */}
         <div className="hidden md:block p-4 border-t border-slate-800/90 bg-slate-950/50 space-y-3">
-          <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between text-slate-400 text-[11px]">
-              <span>Tiền cọc đã thu:</span>
-              <span className="font-black text-emerald-400">
+          <button
+            type="button"
+            onClick={() => setActiveTab('settings')}
+            className={`w-full text-left p-3 rounded-2xl border transition-all cursor-pointer group ${
+              activeTab === 'settings'
+                ? 'bg-indigo-950/70 border-indigo-500 shadow-md ring-1 ring-indigo-500/30'
+                : 'bg-slate-900 hover:bg-slate-800/90 border-slate-800 hover:border-slate-700'
+            }`}
+            title="Bấm để vào mục Quản Lý Thu Cọc & Cấu Hình Ngân Hàng"
+          >
+            <div className="flex items-center justify-between text-slate-400 text-[11px] mb-1">
+              <span className="flex items-center gap-1 group-hover:text-slate-200 transition-colors">
+                <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Tiền cọc đã thu:</span>
+              </span>
+              <span className="font-black text-emerald-400 group-hover:underline">
                 {formatPrice(totalRevenueUSD, 'VND')}
               </span>
             </div>
             <div className="flex items-center justify-between text-slate-400 text-[11px]">
               <span>NH nhận cọc:</span>
-              <span className="font-bold text-indigo-300 truncate max-w-[120px]">
-                {settings.vietQrBankCode || 'VCB'} • {settings.vietQrAccountNumber}
+              <span className="font-bold text-indigo-300 truncate max-w-[125px]">
+                {vietQrBankCode || settings.vietQrBankCode || 'VCB'} • {vietQrAccountNumber || settings.vietQrAccountNumber}
               </span>
             </div>
-          </div>
+            <div className="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 group-hover:text-indigo-300 transition-colors">
+              <span>Chỉnh sửa STK &amp; Doanh thu</span>
+              <span className="font-bold">→ Mở</span>
+            </div>
+          </button>
 
           <div className="flex items-center gap-2">
             <Link
@@ -901,170 +929,423 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Tab 3: Settings */}
+        {/* ========================================================================= */}
+        {/* TAB 6: QUẢN LÝ THU CỌC, TÀI CHÍNH & CẤU HÌNH NGÂN HÀNG (VIETQR NAPAS 247) */}
+        {/* ========================================================================= */}
         {activeTab === 'settings' && (
-          <div className="mt-6 max-w-4xl bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">
-                Cấu Hình Ngân Hàng VietQR Napas 247 &amp; Liên Hệ Chủ Trọ
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Khi bàn giao web cho khách hàng (Chủ nhà trọ), khách chỉ cần chọn Ngân hàng và nhập Số tài khoản tại đây. Hệ thống sẽ tự động sinh mã QR Động theo đúng số tiền cọc của từng phòng.
-              </p>
+          <div className="space-y-6 max-w-5xl">
+            {/* Header section with primary action */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                    Quản Lý Thu Cọc &amp; Ngân Hàng Nhận Tiền
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    Bàn Giao Web Cho Chủ Trọ
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+                  Quản lý tổng tiền cọc đã thu thực tế, tùy chỉnh Số tài khoản ngân hàng thụ hưởng VietQR Napas 247 của chủ trọ. Tiền cọc từ khách thuê sẽ chuyển thẳng 100% về tài khoản này (0% phí môi giới, không qua trung gian).
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-2xl shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Lưu Cấu Hình Ngân Hàng</span>
+                </button>
+              </div>
             </div>
 
+            {/* Notification Toast if Saved */}
             {settingsSaved && (
-              <div className="p-3 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 font-bold">
-                <CheckCircle className="w-4 h-4 text-emerald-600" />
-                <span>Đã lưu cấu hình Ngân hàng VietQR &amp; Liên hệ thành công!</span>
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between shadow-xs animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Đã lưu thành công thông tin Ngân hàng VietQR và Cấu hình hệ thống! Toàn bộ mã QR cọc trên website đã được cập nhật.</span>
+                </div>
               </div>
             )}
 
-            <form onSubmit={handleSaveSettings} className="space-y-5 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Tên Hệ Thống / Thương Hiệu Nhà Trọ
-                </label>
-                <input
-                  type="text"
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
-                />
-              </div>
-
-              {/* VietQR Section + Live QR Preview */}
-              <div className="p-5 bg-indigo-50/50 rounded-2xl border border-indigo-200 space-y-4">
+            {/* 4 Financial & Bank KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Tiền cọc đã thu thực tế */}
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-700 text-white p-5 rounded-3xl shadow-sm space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-indigo-950 font-bold text-sm">
-                    <QrCode className="w-4 h-4 text-indigo-600" />
-                    <span>Tài Khoản Ngân Hàng Nhận Tiền Cọc (VietQR Động Napas 247)</span>
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                    0% Phí Giao Dịch • Tiền Vào Thẳng TK Chủ Trọ
+                  <span className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider flex items-center gap-1.5">
+                    <Wallet className="w-3.5 h-3.5" />
+                    <span>Tiền Cọc Đã Thu</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-white/20 text-white uppercase">
+                    Thực tế
                   </span>
                 </div>
+                <div className="text-2xl lg:text-3xl font-black tracking-tight">
+                  {formatPrice(totalRevenueUSD, 'VND')}
+                </div>
+                <p className="text-[11px] text-emerald-100 font-medium">
+                  Từ {bookings.filter((b) => b.status === 'confirmed' || b.status === 'token_paid').length} giao dịch cọc đã duyệt
+                </p>
+              </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-center">
-                  <div className="lg:col-span-2 space-y-3">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">
-                        1. Chọn Ngân Hàng Thụ Hưởng (Chuẩn Napas 247)
-                      </label>
-                      <select
-                        value={vietQrBankCode}
-                        onChange={(e) => {
-                          const code = e.target.value;
-                          setVietQrBankCode(code);
-                          const bankObj = VIETNAM_BANKS.find((b) => b.code === code);
-                          if (bankObj) {
-                            setVietQrBankName(`${bankObj.shortName} (${bankObj.code})`);
-                          }
-                        }}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 focus:border-indigo-600 outline-none"
-                      >
-                        {VIETNAM_BANKS.map((bank) => (
-                          <option key={bank.code} value={bank.code}>
-                            {bank.shortName} ({bank.code}) – {bank.fullName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+              {/* Card 2: Tiền cọc đang chờ duyệt */}
+              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Cọc Đang Chờ Duyệt</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-900 uppercase">
+                    Pending
+                  </span>
+                </div>
+                <div className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">
+                  {formatPrice(pendingRevenueUSD, 'VND')}
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  {pendingBookingsCount} khách đã nộp bill chờ xác minh
+                </p>
+              </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="font-bold text-slate-700 block mb-1">
-                          2. Số Tài Khoản Ngân Hàng
-                        </label>
-                        <input
-                          type="text"
-                          value={vietQrAccountNumber}
-                          onChange={(e) => setVietQrAccountNumber(e.target.value)}
-                          placeholder="Ví dụ: 1029384756"
-                          className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-mono font-bold text-indigo-700"
-                        />
-                      </div>
-                      <div>
-                        <label className="font-bold text-slate-700 block mb-1">
-                          3. Tên Chủ Tài Khoản (Không dấu)
-                        </label>
-                        <input
-                          type="text"
-                          value={vietQrAccountHolder}
-                          onChange={(e) => setVietQrAccountHolder(e.target.value.toUpperCase())}
-                          placeholder="TRUONG HUNG"
-                          className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl uppercase font-mono font-bold text-slate-900"
-                        />
-                      </div>
-                    </div>
+              {/* Card 3: Ngân hàng thụ hưởng đang nhận */}
+              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Landmark className="w-3.5 h-3.5" />
+                    <span>Ngân Hàng Nhận Cọc</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-50 text-indigo-700 uppercase">
+                    Napas 247
+                  </span>
+                </div>
+                <div className="text-base font-black text-slate-900 truncate">
+                  {vietQrBankName || 'Vietcombank'}
+                </div>
+                <div className="text-xs font-mono font-bold text-indigo-600 truncate">
+                  STK: {vietQrAccountNumber || 'Chưa thiết lập'}
+                </div>
+                <p className="text-[10px] text-slate-500 uppercase font-bold truncate">
+                  CTK: {vietQrAccountHolder || 'CHƯA ĐIỀN'}
+                </p>
+              </div>
 
-                    <div className="p-3 bg-white/90 rounded-xl border border-indigo-100 text-[11px] text-slate-600 leading-relaxed">
-                      💡 <strong>Tích hợp Tự động báo có (SePay / PayOS / Casso - Tùy chọn):</strong> Nếu khách hàng muốn tự động duyệt đơn ngay khi ngân hàng biến động số dư, chỉ cần gắn địa chỉ Webhook:{' '}
-                      <code className="px-1.5 py-0.5 bg-slate-100 rounded text-indigo-700 font-mono">
-                        /api/payment/webhook
-                      </code>
-                    </div>
+              {/* Card 4: Cơ chế nhận tiền trực tiếp */}
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50/70 p-5 rounded-3xl border border-indigo-200/80 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Cổng Thanh Toán</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800">
+                    Trực tiếp 100%
+                  </span>
+                </div>
+                <div className="text-sm font-black text-indigo-950">
+                  0% Phí Môi Giới Sàn
+                </div>
+                <p className="text-[11px] text-slate-600 leading-snug">
+                  Tiền chuyển khoản tự động vào thẳng tài khoản ngân hàng của chủ trọ, không bị giam vốn.
+                </p>
+              </div>
+            </div>
+
+            {/* Handover Instruction Box */}
+            <div className="p-5 rounded-3xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-indigo-200/80 space-y-2">
+              <div className="flex items-center gap-2 text-indigo-950 font-bold text-xs uppercase tracking-wide">
+                <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>HƯỚNG DẪN DÀNH CHO BẠN KHI BÀN GIAO WEBSITE NÀY CHO KHÁCH HÀNG:</span>
+              </div>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                Trang web này được thiết kế để bàn giao cho các chủ nhà trọ, chủ căn hộ sinh viên. Khi bàn giao cho khách hàng mới, khách hàng chỉ cần <strong>chọn Ngân hàng</strong> và <strong>nhập Số tài khoản &amp; Tên chủ tài khoản</strong> bên dưới rồi bấm <em>Lưu Cấu Hình</em>. Hệ thống sẽ tự động đổi toàn bộ mã QR Động, số tài khoản nhận cọc và thông tin liên hệ trên toàn bộ trang web sang của chủ trọ mới ngay lập tức!
+              </p>
+            </div>
+
+            {/* Main Bank Configuration Form & Live QR Preview */}
+            <form onSubmit={handleSaveSettings} className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left 2 Cols: Form Fields */}
+                <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4 text-xs">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100 font-bold text-slate-900 text-sm">
+                    <QrCode className="w-4 h-4 text-indigo-600" />
+                    <span>Thông Tin Tài Khoản Ngân Hàng Nhận Tiền Cọc</span>
                   </div>
 
-                  {/* Live VietQR Test Preview */}
-                  <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs text-center space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block">
-                      Bản Xem Trước Mã VietQR Thật
-                    </span>
-                    <div className="w-36 h-36 mx-auto bg-slate-50 rounded-xl p-1.5 border border-slate-100 flex items-center justify-center">
-                      <img
-                        src={buildVietQrUrl({
-                          bankCodeOrName: vietQrBankCode,
-                          accountNumber: vietQrAccountNumber,
-                          accountHolder: vietQrAccountHolder,
-                          amountVND: 500000,
-                          transferContent: 'COC CT101 TEST'
-                        })}
-                        alt="VietQR Preview"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <p className="text-[10px] text-slate-500">
-                      Quét thử bằng App Ngân hàng để kiểm tra tên &amp; STK
+                  {/* 1. Ngân hàng */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      1. Chọn Ngân Hàng Thụ Hưởng (Chuẩn Napas 247) <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={vietQrBankCode}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        setVietQrBankCode(code);
+                        const bankObj = VIETNAM_BANKS.find((b) => b.code === code);
+                        if (bankObj) {
+                          setVietQrBankName(`${bankObj.shortName} (${bankObj.code})`);
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                    >
+                      {VIETNAM_BANKS.map((bank) => (
+                        <option key={bank.code} value={bank.code}>
+                          {bank.shortName} ({bank.code}) – {bank.fullName}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Hỗ trợ chuyển khoản tức thì 24/7 từ bất kỳ ứng dụng ngân hàng nào tại Việt Nam.
                     </p>
                   </div>
+
+                  {/* 2 & 3: STK & Chủ TK */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        2. Số Tài Khoản Ngân Hàng <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={vietQrAccountNumber}
+                        onChange={(e) => setVietQrAccountNumber(e.target.value.replace(/\s+/g, ''))}
+                        placeholder="Ví dụ: 19074816556011"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-indigo-700 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        3. Tên Chủ Tài Khoản (In hoa không dấu) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={vietQrAccountHolder}
+                        onChange={(e) => setVietQrAccountHolder(e.target.value.toUpperCase())}
+                        placeholder="TRUONG VAN TUAN"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl uppercase font-mono font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tên hệ thống / Brand Name */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <label className="font-bold text-slate-700 block mb-1">
+                      4. Tên Hệ Thống / Thương Hiệu Nhà Trọ
+                    </label>
+                    <input
+                      type="text"
+                      value={brandName}
+                      onChange={(e) => setBrandName(e.target.value)}
+                      placeholder="UniStay - Phòng Trọ & Căn Hộ Sinh Viên"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Tên này sẽ hiển thị trên Header, hóa đơn xác nhận và biên nhận đặt cọc của sinh viên.
+                    </p>
+                  </div>
+
+                  {/* Hotline & Zalo */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        5. Số Điện Thoại Hotline Chủ Trọ
+                      </label>
+                      <input
+                        type="text"
+                        value={supportHotline}
+                        onChange={(e) => setSupportHotline(e.target.value)}
+                        placeholder="0901234567"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        6. Số Zalo Nhận Tin Nhắn Đặt Cọc
+                      </label>
+                      <input
+                        type="text"
+                        value={supportWhatsApp}
+                        onChange={(e) => setSupportWhatsApp(e.target.value)}
+                        placeholder="0901234567"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:bg-white focus:border-indigo-600 outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Webhook Hint */}
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
+                    💡 <strong>Tự động nhận diện thanh toán (Tùy chọn nâng cao):</strong> Hệ thống đã sẵn sàng hỗ trợ Webhook tự động biến động số dư qua <code className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-indigo-700 font-mono font-bold">/api/payment/webhook</code>. Nếu kết nối với dịch vụ mở rộng (SePay / PayOS), hệ thống sẽ tự động duyệt cọc ngay trong 3 giây khi khách vừa chuyển khoản xong!
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Lưu Toàn Bộ Cấu Hình Ngân Hàng &amp; Bàn Giao Web</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right 1 Col: Live VietQR Interactive Preview */}
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between text-center space-y-4">
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold mb-2">
+                      <QrCode className="w-3.5 h-3.5" />
+                      <span>Bản Xem Trước Mã VietQR Thật</span>
+                    </div>
+                    <h4 className="text-sm font-black text-slate-900">
+                      Mã QR Động Napas 247
+                    </h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Được sinh theo thời gian thực từ Ngân hàng &amp; STK bạn đang nhập.
+                    </p>
+                  </div>
+
+                  {/* QR Image Box */}
+                  <div className="w-48 h-48 mx-auto bg-slate-50 rounded-2xl p-2.5 border-2 border-indigo-100 shadow-inner flex items-center justify-center">
+                    <img
+                      src={buildVietQrUrl({
+                        bankCodeOrName: vietQrBankCode,
+                        accountNumber: vietQrAccountNumber,
+                        accountHolder: vietQrAccountHolder,
+                        amountVND: testQrAmountVND,
+                        transferContent: 'COC PHONG TEST'
+                      })}
+                      alt="VietQR Live Preview"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+
+                  {/* Test Amount Selector */}
+                  <div className="space-y-1.5 text-left bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+                    <label className="text-[11px] font-bold text-slate-600 block">
+                      Số tiền thử nghiệm trên mã QR:
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[50000, 200000, 500000].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setTestQrAmountVND(amt)}
+                          className={`py-1 px-2 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                            testQrAmountVND === amt
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {amt >= 1000000 ? `${amt / 1000000} tr` : `${amt / 1000}k`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 leading-normal">
+                    📱 <strong>Mẹo kiểm tra:</strong> Hãy mở App Ngân Hàng bất kỳ trên điện thoại của bạn quét thử mã này ngay trên màn hình để kiểm tra xem Tên chủ tài khoản và STK đã hiển thị đúng 100% chưa!
+                  </p>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Số Điện Thoại Hotline Chủ Trọ
-                  </label>
-                  <input
-                    type="text"
-                    value={supportHotline}
-                    onChange={(e) => setSupportHotline(e.target.value)}
-                    placeholder="0901 234 567"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Số Zalo Nhận Tin Nhắn Của Khách
-                  </label>
-                  <input
-                    type="text"
-                    value={supportWhatsApp}
-                    onChange={(e) => setSupportWhatsApp(e.target.value)}
-                    placeholder="0901 234 567"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all cursor-pointer"
-              >
-                Lưu Toàn Bộ Cấu Hình Ngân Hàng &amp; Liên Hệ
-              </button>
             </form>
+
+            {/* Deposit Transaction Ledger (Lịch sử các khoản cọc) */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-slate-600" />
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Lịch Sử Các Khoản Tiền Cọc Đã Giao Dịch ({bookings.length})
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Danh sách tất cả các khoản tiền cọc mà sinh viên / khách thuê đã thanh toán qua tài khoản ngân hàng của bạn
+                  </p>
+                </div>
+
+                <div className="text-xs font-bold text-slate-600">
+                  Tổng thu: <span className="text-emerald-600 font-black">{formatPrice(totalRevenueUSD, 'VND')}</span>
+                </div>
+              </div>
+
+              {bookings.length === 0 ? (
+                <div className="p-12 text-center space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <Receipt className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-700">Chưa có giao dịch đặt cọc nào</p>
+                  <p className="text-xs text-slate-400">
+                    Khi khách thuê chọn phòng và chuyển khoản tiền cọc giữ phòng, số tiền và thông tin giao dịch sẽ hiển thị chi tiết tại đây.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50/80 text-[11px] text-slate-400 uppercase font-bold border-b border-slate-100">
+                      <tr>
+                        <th className="p-3.5 pl-5">Mã Giao Dịch</th>
+                        <th className="p-3.5">Khách Thuê</th>
+                        <th className="p-3.5">Phòng Đặt Cọc</th>
+                        <th className="p-3.5">Số Tiền Cọc</th>
+                        <th className="p-3.5">Trạng Thái</th>
+                        <th className="p-3.5">Thời Gian</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {bookings.map((b) => (
+                        <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="p-3.5 pl-5 font-mono font-bold text-slate-900">
+                            {b.reference || b.id}
+                          </td>
+                          <td className="p-3.5">
+                            <span className="font-bold text-slate-900 block">{b.studentName}</span>
+                            <span className="text-slate-400 text-[11px]">{b.studentContact}</span>
+                          </td>
+                          <td className="p-3.5">
+                            <span className="font-bold text-slate-800 block truncate max-w-[200px]">
+                              {b.propertyTitle}
+                            </span>
+                            <span className="text-slate-400 text-[10px]">Mã: {b.propertyCode}</span>
+                          </td>
+                          <td className="p-3.5 font-bold text-emerald-600 font-mono text-sm">
+                            {b.tokenAmountLocal || `${formatPrice(b.tokenAmountUSD, 'VND')}`}
+                          </td>
+                          <td className="p-3.5">
+                            {b.status === 'confirmed' || b.status === 'token_paid' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                <CheckCircle className="w-3 h-3 text-emerald-600" />
+                                <span>Đã Nhận Cọc</span>
+                              </span>
+                            ) : b.status === 'pending' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                <span>Chờ Duyệt Bill</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                {b.status}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3.5 text-slate-400 text-[11px]">
+                            {b.createdAt}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
