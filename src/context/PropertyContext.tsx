@@ -36,7 +36,7 @@ interface PropertyContextType {
   getReviewEligibility: (
     propertyId: string,
     propertyCode: string,
-    user?: { id?: string; email?: string; phone?: string; name?: string } | null
+    user?: { id?: string; email?: string; phone?: string | null; name?: string } | null
   ) => ReviewEligibility;
 }
 
@@ -465,7 +465,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const getReviewEligibility = (
     propertyId: string,
     propertyCode: string,
-    user?: { id?: string; email?: string; phone?: string; name?: string } | null
+    user?: { id?: string; email?: string; phone?: string | null; name?: string } | null
   ): ReviewEligibility => {
     const cleanUserPhone = user?.phone ? user.phone.replace(/[^0-9]/g, '') : '';
 

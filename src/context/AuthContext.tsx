@@ -11,7 +11,7 @@ async function syncAccountToSupabase(account: {
   name: string;
   password?: string;
   avatar?: string;
-  phone?: string;
+  phone?: string | null;
   role: 'student' | 'admin';
   provider: 'google' | 'email';
 }) {

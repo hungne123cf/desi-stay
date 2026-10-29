@@ -25,7 +25,7 @@ export const Footer: React.FC = () => {
                 <Building2 className="w-5 h-5" />
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-2xl font-black tracking-tight text-white">
+                <span suppressHydrationWarning className="text-2xl font-black tracking-tight text-white">
                   {settings.brandName || 'UniStay'}
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase">
@@ -117,6 +117,7 @@ export const Footer: React.FC = () => {
                 <div>
                   <p className="text-xs text-slate-500 font-medium">Hotline / Zalo hỗ trợ</p>
                   <a
+                    suppressHydrationWarning
                     href={`tel:${settings.supportHotline || '0901234567'}`}
                     className="text-white font-semibold hover:text-indigo-400"
                   >

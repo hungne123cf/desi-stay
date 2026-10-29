@@ -14,8 +14,6 @@ import {
   GraduationCap,
   DoorOpen,
   ArrowUpDown,
-  Search,
-  SlidersHorizontal,
   X
 } from 'lucide-react';
 
@@ -168,179 +166,49 @@ export default function HomePage() {
 
       {/* Main Content Listings */}
       <main id="listings" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header + Inline Search, Sort & Soft Filter Toolbar */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Danh Sách Phòng Trọ Chính Chủ Đã Xác Thực
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+        {/* Header & Quick Sort Toolbar */}
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Danh Sách Phòng Trọ Chính Chủ Đã Xác Thực
+            </h2>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500">
                 Đang hiển thị{' '}
                 <span className="font-bold text-indigo-600">{filteredProperties.length}</span> /{' '}
                 {properties.length} phòng trọ tại Việt Nam
               </p>
-            </div>
-
-            {/* Inline Quick Search + Price Filter + Sort Dropdown */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Quick Search Input */}
-              <div className="relative min-w-[220px] flex-1 sm:flex-initial">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={filters.searchQuery}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, searchQuery: e.target.value }))}
-                  placeholder="Tìm nhanh tên phòng, đường, quận..."
-                  className="w-full pl-9 pr-8 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-indigo-600 text-slate-800"
-                />
-                {filters.searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setFilters((prev) => ({ ...prev, searchQuery: '' }))}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Price Range Select */}
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <select
-                  value={filters.priceRange}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      priceRange: e.target.value as PriceRangeOption
-                    }))
-                  }
-                  className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-0.5 rounded-full transition-colors cursor-pointer flex items-center gap-1"
+                  title="Đặt lại tất cả bộ lọc"
                 >
-                  <option value="all">Mọi mức giá</option>
-                  <option value="under_2.5m">Dưới 2,5 triệu/tháng</option>
-                  <option value="2.5m_to_3.5m">Từ 2,5 – 3,5 triệu/tháng</option>
-                  <option value="above_3.5m">Trên 3,5 triệu/tháng</option>
-                </select>
-              </div>
-
-              {/* Sort Dropdown (Soft Filter) */}
-              <div className="flex items-center gap-1.5 bg-indigo-50/70 border border-indigo-200 rounded-xl px-3 py-2">
-                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="text-[11px] font-semibold text-slate-500">Sắp xếp:</span>
-                <select
-                  value={filters.sortBy}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, sortBy: e.target.value as SortOption }))
-                  }
-                  className="bg-transparent text-xs font-bold text-indigo-900 focus:outline-none cursor-pointer"
-                >
-                  <option value="newest">Mới đăng nhất</option>
-                  <option value="price_asc">Giá: Thấp đến Cao</option>
-                  <option value="price_desc">Giá: Cao xuống Thấp</option>
-                  <option value="rating_desc">Đánh giá cao nhất</option>
-                </select>
-              </div>
+                  <X className="w-3 h-3" />
+                  <span>Xóa lọc</span>
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Quick Soft Filter Chips Row */}
-          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    city: prev.city === 'Cần Thơ' ? '' : 'Cần Thơ',
-                    area: '',
-                    university: ''
-                  }))
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <div className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2 transition-colors">
+              <ArrowUpDown className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span className="text-xs font-semibold text-slate-500">Sắp xếp:</span>
+              <select
+                value={filters.sortBy}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, sortBy: e.target.value as SortOption }))
                 }
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                  filters.city === 'Cần Thơ'
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-indigo-300'
-                }`}
+                className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
               >
-                📍 Trọ Cần Thơ
-              </button>
-
-              <button
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    city: 'Cần Thơ',
-                    area: prev.area === 'Quận Ninh Kiều' ? '' : 'Quận Ninh Kiều'
-                  }))
-                }
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                  filters.area === 'Quận Ninh Kiều'
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-indigo-300'
-                }`}
-              >
-                🏙️ Quận Ninh Kiều
-              </button>
-
-              <button
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    roomType: prev.roomType === 'studio' ? '' : 'studio'
-                  }))
-                }
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                  filters.roomType === 'studio'
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-indigo-300'
-                }`}
-              >
-                🏢 Căn hộ Studio
-              </button>
-
-              <button
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    roomType: prev.roomType === 'double' ? '' : 'double'
-                  }))
-                }
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                  filters.roomType === 'double'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-300'
-                }`}
-              >
-                🏠 Phòng gác lửng / Ở ghép
-              </button>
-
-              <button
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    roomType: prev.roomType === 'single' ? '' : 'single'
-                  }))
-                }
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                  filters.roomType === 'single'
-                    ? 'bg-emerald-600 text-white border-emerald-600'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-emerald-300'
-                }`}
-              >
-                🛏️ Phòng đơn riêng tư
-              </button>
+                <option value="newest">Mới đăng nhất</option>
+                <option value="price_asc">Giá: Thấp đến Cao</option>
+                <option value="price_desc">Giá: Cao xuống Thấp</option>
+                <option value="rating_desc">Đánh giá sao cao nhất ⭐</option>
+              </select>
             </div>
-
-            {hasActiveFilters && (
-              <button
-                onClick={resetFilters}
-                className="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Xóa tất cả bộ lọc</span>
-              </button>
-            )}
           </div>
         </div>
 

@@ -94,7 +94,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
       userName: finalName,
       userEmail: user?.email || currentBooking?.studentEmail,
       userAvatar: user?.avatar,
-      userCollege: (user?.college || reviewerCollege || currentBooking?.college).trim() || property.nearbyUniversity,
+      userCollege: (user?.college || reviewerCollege || currentBooking?.college || property.nearbyUniversity || '').trim(),
       rating,
       comment: commentText.trim()
     });
