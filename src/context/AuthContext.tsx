@@ -57,6 +57,7 @@ interface AuthContextType {
   loginWithEmail: (email: string, pass: string) => Promise<User>;
   register: (name: string, email: string, pass: string) => Promise<User>;
   resetPassword: (email: string, newPass: string) => Promise<void>;
+  updateProfile: (updates: Partial<Pick<User, 'name' | 'phone' | 'college' | 'avatar'>>) => Promise<User>;
   logout: () => void;
 }
 
@@ -469,6 +470,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   };
 
+  const updateProfile = async (
+    updates: Partial<Pick<User, 'name' | 'phone' | 'college' | 'avatar'>>
+  ): Promise<User> => {
+    if (!user) throw new Error('Bạn chưa đăng nhập');
+
+    const updatedUser: User = {
+      ...user,
+      ...updates
+    };
+
+    setUser(updatedUser);
+    try {
+      localStorage.setItem('unistay_auth_user', JSON.stringify(updatedUser));
+    } catch {}
+
+    saveKnownAccount({
+      name: updatedUser.name,
+      email: updatedUser.email,
+      avatar: updatedUser.avatar,
+      role: updatedUser.role
+    });
+
+    // Cập nhật Supabase nếu có cấu hình
+    try {
+      const supabase = createClient();
+      await supabase
+        .from('accounts')
+        .update({
+          full_name: updatedUser.name,
+          phone: updatedUser.phone,
+          ...(updatedUser.avatar ? { avatar_url: updatedUser.avatar } : {})
+        })
+        .eq('email', updatedUser.email);
+    } catch {}
+
+    return updatedUser;
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('unistay_auth_user');
@@ -488,6 +527,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithEmail,
         register,
         resetPassword,
+        updateProfile,
         logout
       }}
     >
