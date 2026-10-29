@@ -93,8 +93,57 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     try {
-      const savedProps = localStorage.getItem('unistay_vn_properties_v3');
-      if (savedProps) setProperties(JSON.parse(savedProps));
+      // Khôi phục cả các phòng do Admin tự tạo ở các phiên bản localStorage trước đó
+      const v3Raw = localStorage.getItem('unistay_vn_properties_v3');
+      const v2Raw = localStorage.getItem('unistay_vn_properties_v2');
+      const v1Raw = localStorage.getItem('unistay_properties');
+
+      const customMap = new Map<string, Property>();
+
+      const normalizeProp = (p: Property): Property => {
+        const cityTrim = (p.city || '').trim();
+        const normalizedCity =
+          cityTrim.toLowerCase() === 'cần thơ' || cityTrim.toLowerCase() === 'can tho'
+            ? 'Cần Thơ'
+            : cityTrim || 'Cần Thơ';
+        return {
+          ...p,
+          city: normalizedCity,
+          country: 'Việt Nam',
+          isPublished: true
+        };
+      };
+
+      [v1Raw, v2Raw, v3Raw].forEach((raw) => {
+        if (!raw) return;
+        try {
+          const parsed: Property[] = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item) => {
+              // Giữ lại mọi phòng do Admin tạo (id bắt đầu bằng prop-17...)
+              if (item && item.id && /^prop-\d+$/.test(item.id)) {
+                customMap.set(item.id, normalizeProp(item));
+              }
+            });
+          }
+        } catch {}
+      });
+
+      if (v3Raw) {
+        const parsedV3: Property[] = JSON.parse(v3Raw);
+        const existingIds = new Set(parsedV3.map((p) => p.id));
+        const recoveredCustoms = Array.from(customMap.values()).filter(
+          (c) => !existingIds.has(c.id)
+        );
+        const merged = [...recoveredCustoms, ...parsedV3.map(normalizeProp)];
+        setProperties(merged);
+        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(merged));
+      } else {
+        const recoveredCustoms = Array.from(customMap.values());
+        const merged = [...recoveredCustoms, ...INITIAL_PROPERTIES];
+        setProperties(merged);
+        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(merged));
+      }
 
       const savedBookings = localStorage.getItem('unistay_vn_bookings_v3');
       if (savedBookings) setBookings(JSON.parse(savedBookings));
@@ -106,12 +155,56 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch {
       // fallback
     }
+
+    // Đồng bộ tức thời giữa tab Admin và tab User
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'unistay_vn_properties_v3' && e.newValue) {
+        try {
+          setProperties(JSON.parse(e.newValue));
+        } catch {}
+      }
+      if (e.key === 'unistay_vn_bookings_v3' && e.newValue) {
+        try {
+          setBookings(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      bc = new BroadcastChannel('unistay_properties_sync');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'PROPERTIES_UPDATED' && Array.isArray(event.data.payload)) {
+          setProperties(event.data.payload);
+        }
+        if (event.data?.type === 'BOOKINGS_UPDATED' && Array.isArray(event.data.payload)) {
+          setBookings(event.data.payload);
+        }
+      };
+    }
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      if (bc) bc.close();
+    };
   }, []);
+
+  const broadcastUpdate = (type: 'PROPERTIES_UPDATED' | 'BOOKINGS_UPDATED', payload: unknown) => {
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('unistay_properties_sync');
+        bc.postMessage({ type, payload });
+        bc.close();
+      }
+    } catch {}
+  };
 
   const saveProperties = (data: Property[]) => {
     setProperties(data);
     try {
       localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(data));
+      broadcastUpdate('PROPERTIES_UPDATED', data);
     } catch {}
   };
 
@@ -119,6 +212,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setBookings(data);
     try {
       localStorage.setItem('unistay_vn_bookings_v3', JSON.stringify(data));
+      broadcastUpdate('BOOKINGS_UPDATED', data);
     } catch {}
   };
 
@@ -161,26 +255,48 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const addProperty = (newProp: Omit<Property, 'id' | 'code' | 'rating' | 'reviewsCount' | 'createdAt'>) => {
-    const nextCodeNumber = properties.length + 101;
-    const prefix = newProp.country === 'Vietnam' ? 'VN' : newProp.country === 'India' ? 'IN' : 'GL';
-    const created: Property = {
-      ...newProp,
-      id: `prop-${Date.now()}`,
-      code: `${prefix}-${nextCodeNumber}`,
-      rating: 5.0,
-      reviewsCount: 1,
-      createdAt: new Date().toISOString().slice(0, 10)
-    };
-    saveProperties([created, ...properties]);
+    setProperties((prev) => {
+      const nextCodeNumber = prev.length + 101;
+      const prefix = newProp.city === 'Cần Thơ' ? 'CT' : 'VN';
+      const created: Property = {
+        ...newProp,
+        country: 'Việt Nam',
+        isPublished: true,
+        id: `prop-${Date.now()}`,
+        code: `${prefix}-${nextCodeNumber}`,
+        rating: 5.0,
+        reviewsCount: 1,
+        createdAt: new Date().toISOString().slice(0, 10)
+      };
+      const updated = [created, ...prev];
+      try {
+        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(updated));
+        broadcastUpdate('PROPERTIES_UPDATED', updated);
+      } catch {}
+      return updated;
+    });
   };
 
   const updateProperty = (id: string, updatedFields: Partial<Property>) => {
-    const updated = properties.map((p) => (p.id === id ? { ...p, ...updatedFields } : p));
-    saveProperties(updated);
+    setProperties((prev) => {
+      const updated = prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p));
+      try {
+        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(updated));
+        broadcastUpdate('PROPERTIES_UPDATED', updated);
+      } catch {}
+      return updated;
+    });
   };
 
   const deleteProperty = (id: string) => {
-    saveProperties(properties.filter((p) => p.id !== id));
+    setProperties((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      try {
+        localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(updated));
+        broadcastUpdate('PROPERTIES_UPDATED', updated);
+      } catch {}
+      return updated;
+    });
   };
 
   const addBooking = (bookingData: Omit<Booking, 'id' | 'reference' | 'createdAt'>): string => {

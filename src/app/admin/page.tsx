@@ -49,6 +49,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'settings'>('listings');
   const [showAddModal, setShowAddModal] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [propertyCreatedToast, setPropertyCreatedToast] = useState(false);
 
   // Settings form state
   const [brandName, setBrandName] = useState(settings.brandName);
@@ -103,7 +104,24 @@ export default function AdminPage() {
     const reader = new FileReader();
     reader.onloadend = () => {
       if (typeof reader.result === 'string') {
-        setNewImageUrl(reader.result);
+        // Nén ảnh qua Canvas để không bị tràn bộ nhớ localStorage khi lưu phòng mới
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1000;
+          const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.78);
+            setNewImageUrl(compressedDataUrl);
+          } else {
+            setNewImageUrl(reader.result as string);
+          }
+        };
+        img.src = reader.result;
       }
     };
     reader.readAsDataURL(file);
@@ -135,7 +153,7 @@ export default function AdminPage() {
       slug: `${newTitle.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now().toString().slice(-4)}`,
       address: fullAddress,
       city: newCity,
-      country: 'Vietnam',
+      country: 'Việt Nam',
       area: finalArea,
       nearbyUniversity: finalUniversity,
       distanceToCampus: newDistance,
@@ -171,6 +189,8 @@ export default function AdminPage() {
     setShowAddModal(false);
     setNewTitle('');
     setNewAddress('');
+    setPropertyCreatedToast(true);
+    setTimeout(() => setPropertyCreatedToast(false), 6000);
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -338,6 +358,21 @@ export default function AdminPage() {
         {/* Tab 1: Listings */}
         {activeTab === 'listings' && (
           <div className="mt-6 space-y-4">
+            {propertyCreatedToast && (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-4 text-xs text-emerald-900 shadow-xs">
+                <div className="flex items-center gap-2 font-bold">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Đã đăng phòng trọ mới lên hệ thống thành công! Phòng đã hiển thị ở vị trí đầu tiên trên trang User.</span>
+                </div>
+                <Link
+                  href="/"
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shrink-0 transition-colors"
+                >
+                  Xem trên trang User ↗
+                </Link>
+              </div>
+            )}
+
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
