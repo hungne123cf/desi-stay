@@ -4,13 +4,18 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
-import { Property, RoomType, GenderPreference, FoodPreference, CurrencyCode } from '@/types';
+import { Property, RoomType, GenderPreference, FoodPreference, CurrencyCode, Booking } from '@/types';
 import {
   VIETNAM_LOCATIONS,
   DISTANCE_PRESETS,
   CURFEW_PRESETS,
   SAMPLE_ROOM_IMAGES
 } from '@/data/locations';
+import {
+  VIETNAM_BANKS,
+  buildVietQrUrl,
+  resolveVietQrBankCode
+} from '@/data/vietnamBanks';
 import { uploadOrCompressImage } from '@/lib/supabase/storage';
 import {
   ShieldCheck,
@@ -54,12 +59,16 @@ export default function AdminPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDetailProp, setSelectedDetailProp] = useState<Property | null>(null);
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+  const [selectedReceiptLead, setSelectedReceiptLead] = useState<Booking | null>(null);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [propertyCreatedToast, setPropertyCreatedToast] = useState(false);
 
   // Settings form state
   const [brandName, setBrandName] = useState(settings.brandName);
   const [defaultCurrency, setDefaultCurrency] = useState<CurrencyCode>(settings.defaultCurrency);
+  const [vietQrBankCode, setVietQrBankCode] = useState(
+    settings.vietQrBankCode || resolveVietQrBankCode(settings.vietQrBankName)
+  );
   const [vietQrBankName, setVietQrBankName] = useState(settings.vietQrBankName);
   const [vietQrAccountNumber, setVietQrAccountNumber] = useState(settings.vietQrAccountNumber);
   const [vietQrAccountHolder, setVietQrAccountHolder] = useState(settings.vietQrAccountHolder);
@@ -191,6 +200,7 @@ export default function AdminPage() {
     updateSettings({
       brandName,
       defaultCurrency,
+      vietQrBankCode,
       vietQrBankName,
       vietQrAccountNumber,
       vietQrAccountHolder,
@@ -481,64 +491,133 @@ export default function AdminPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                     <tr>
-                      <th className="p-4">Khách thuê</th>
-                      <th className="p-4">Trường Đại học</th>
+                      <th className="p-4">Khách thuê &amp; SĐT</th>
                       <th className="p-4">Mã phòng</th>
-                      <th className="p-4">Ngày nhận phòng</th>
-                      <th className="p-4">Cọc giữ chỗ</th>
-                      <th className="p-4">Phương thức</th>
-                      <th className="p-4">Trạng thái</th>
-                      <th className="p-4 text-right">Liên hệ</th>
+                      <th className="p-4">Ngày nhận / Hẹn xem</th>
+                      <th className="p-4">Hình thức &amp; Tiền cọc</th>
+                      <th className="p-4">Chứng từ / Ảnh Bill</th>
+                      <th className="p-4">Trạng thái duyệt</th>
+                      <th className="p-4 text-right">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {bookings.map((lead) => (
-                      <tr key={lead.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="p-4">
-                          <span className="font-bold text-slate-900 block">{lead.studentName}</span>
-                          <span className="text-[10px] text-slate-400">{lead.studentContact}</span>
-                        </td>
-                        <td className="p-4 text-slate-700 font-medium">{lead.college}</td>
-                        <td className="p-4">
-                          <span className="font-bold text-indigo-700 font-mono">{lead.propertyCode}</span>
-                        </td>
-                        <td className="p-4 text-slate-600 font-medium">{lead.moveInDate}</td>
-                        <td className="p-4 font-bold text-emerald-700">
-                          {lead.tokenAmountLocal || formatPrice(lead.tokenAmountUSD, 'VND')}
-                        </td>
-                        <td className="p-4 text-slate-600 font-medium">
-                          {lead.paymentMethod === 'vietqr' ? 'Chuyển khoản VietQR' : 'Hẹn xem trực tiếp'}
-                        </td>
-                        <td className="p-4">
-                          <select
-                            value={lead.status}
-                            onChange={(e) =>
-                              updateBookingStatus(
-                                lead.id,
-                                e.target.value as 'pending' | 'token_paid' | 'confirmed' | 'cancelled'
-                              )
-                            }
-                            className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
-                          >
-                            <option value="token_paid">Đã cọc giữ chỗ</option>
-                            <option value="confirmed">Đã chốt phòng</option>
-                            <option value="pending">Chờ thanh toán</option>
-                            <option value="cancelled">Đã hủy</option>
-                          </select>
-                        </td>
-                        <td className="p-4 text-right">
-                          <a
-                            href={`https://zalo.me/${lead.studentContact.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200 hover:bg-emerald-100"
-                          >
-                            <Phone className="w-3 h-3 text-emerald-600" />
-                            <span>Chat Zalo</span>
-                          </a>
+                    {bookings.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-12 text-center text-slate-500">
+                          <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                          <p className="font-bold text-slate-700 text-sm">Chưa có đơn đặt cọc hoặc lịch hẹn xem phòng nào</p>
+                          <p className="text-xs text-slate-400 mt-1">
+                            Khi sinh viên quét mã VietQR đặt cọc hoặc đặt lịch hẹn xem phòng trên trang User, đơn sẽ tự động xuất hiện tại đây theo thời gian thực.
+                          </p>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      bookings.map((lead) => (
+                        <tr key={lead.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="p-4">
+                            <span className="font-bold text-slate-900 block">{lead.studentName}</span>
+                            <span className="text-[11px] text-indigo-600 font-semibold block">
+                              {lead.studentContact}
+                            </span>
+                            <span className="text-[10px] text-slate-400">{lead.college}</span>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-bold text-indigo-700 font-mono bg-indigo-50 px-2 py-1 rounded-lg">
+                              {lead.propertyCode}
+                            </span>
+                            <span className="text-[10px] text-slate-500 block truncate max-w-[160px] mt-1">
+                              {lead.propertyTitle}
+                            </span>
+                          </td>
+                          <td className="p-4 text-slate-700 font-medium">
+                            <span className="font-bold block">{lead.moveInDate}</span>
+                            {lead.visitTimeSlot && (
+                              <span className="text-[10px] text-emerald-700 font-semibold">
+                                ⏰ {lead.visitTimeSlot}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            <span className="font-bold text-emerald-700 block">
+                              {lead.tokenAmountLocal || formatPrice(lead.tokenAmountUSD, 'VND')}
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              {lead.paymentMethod === 'vietqr_bank'
+                                ? `💳 VietQR (${lead.transferContent || 'Napas 247'})`
+                                : '📅 Hẹn xem trực tiếp'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            {lead.receiptImageUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedReceiptLead(lead)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-[11px] border border-indigo-200 cursor-pointer"
+                              >
+                                <img
+                                  src={lead.receiptImageUrl}
+                                  alt="Bill"
+                                  className="w-5 h-5 rounded object-cover"
+                                />
+                                <span>Xem Ảnh Bill</span>
+                              </button>
+                            ) : lead.paymentMethod === 'vietqr_bank' ? (
+                              <span className="text-[11px] text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 font-medium">
+                                Không đính kèm ảnh
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-slate-400">Hẹn xem phòng</span>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            <select
+                              value={lead.status}
+                              onChange={(e) =>
+                                updateBookingStatus(
+                                  lead.id,
+                                  e.target.value as 'pending' | 'token_paid' | 'confirmed' | 'cancelled'
+                                )
+                              }
+                              className={`px-2.5 py-1.5 border rounded-xl text-xs font-bold focus:outline-none cursor-pointer ${
+                                lead.status === 'confirmed' || lead.status === 'token_paid'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : lead.status === 'cancelled'
+                                    ? 'bg-red-50 text-red-700 border-red-200'
+                                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                              }`}
+                            >
+                              <option value="pending">⏳ Chờ xác nhận</option>
+                              <option value="token_paid">✅ Đã nhận cọc VietQR</option>
+                              <option value="confirmed">🏠 Đã chốt giữ phòng</option>
+                              <option value="cancelled">❌ Đã hủy</option>
+                            </select>
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="inline-flex items-center gap-1.5">
+                              {lead.status === 'pending' && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateBookingStatus(lead.id, 'confirmed')}
+                                  className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-[11px] cursor-pointer"
+                                  title="Duyệt nhanh đơn này"
+                                >
+                                  Duyệt ngay
+                                </button>
+                              )}
+                              <a
+                                href={`https://zalo.me/${lead.studentContact.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200 hover:bg-emerald-100"
+                              >
+                                <Phone className="w-3 h-3 text-emerald-600" />
+                                <span>Zalo</span>
+                              </a>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -548,98 +627,166 @@ export default function AdminPage() {
 
         {/* Tab 3: Settings */}
         {activeTab === 'settings' && (
-          <div className="mt-6 max-w-3xl bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+          <div className="mt-6 max-w-4xl bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Cấu Hình Ngân Hàng VietQR &amp; Thông Tin Liên Hệ</h3>
+              <h3 className="text-lg font-bold text-slate-900">
+                Cấu Hình Ngân Hàng VietQR Napas 247 &amp; Liên Hệ Chủ Trọ
+              </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Thiết lập thông tin tài khoản ngân hàng tại Việt Nam để tự động tạo mã VietQR cho sinh viên đặt cọc giữ phòng.
+                Khi bàn giao web cho khách hàng (Chủ nhà trọ), khách chỉ cần chọn Ngân hàng và nhập Số tài khoản tại đây. Hệ thống sẽ tự động sinh mã QR Động theo đúng số tiền cọc của từng phòng.
               </p>
             </div>
 
             {settingsSaved && (
-              <div className="p-3 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2">
+              <div className="p-3 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 font-bold">
                 <CheckCircle className="w-4 h-4 text-emerald-600" />
-                <span>Đã lưu toàn bộ cấu hình thành công!</span>
+                <span>Đã lưu cấu hình Ngân hàng VietQR &amp; Liên hệ thành công!</span>
               </div>
             )}
 
-            <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveSettings} className="space-y-5 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Tên Hệ Thống / Thương Hiệu Nhà Trọ</label>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Tên Hệ Thống / Thương Hiệu Nhà Trọ
+                </label>
                 <input
                   type="text"
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
                 />
               </div>
 
-              {/* VietQR Section */}
-              <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-200 space-y-3">
-                <div className="flex items-center gap-2 text-indigo-900 font-bold text-sm">
-                  <QrCode className="w-4 h-4 text-indigo-600" />
-                  <span>Cấu hình Chuyển khoản VietQR (Napas 24/7)</span>
+              {/* VietQR Section + Live QR Preview */}
+              <div className="p-5 bg-indigo-50/50 rounded-2xl border border-indigo-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-indigo-950 font-bold text-sm">
+                    <QrCode className="w-4 h-4 text-indigo-600" />
+                    <span>Tài Khoản Ngân Hàng Nhận Tiền Cọc (VietQR Động Napas 247)</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                    0% Phí Giao Dịch • Tiền Vào Thẳng TK Chủ Trọ
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Tên Ngân Hàng</label>
-                    <input
-                      type="text"
-                      value={vietQrBankName}
-                      onChange={(e) => setVietQrBankName(e.target.value)}
-                      placeholder="Vietcombank, MB Bank,..."
-                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl"
-                    />
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-center">
+                  <div className="lg:col-span-2 space-y-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        1. Chọn Ngân Hàng Thụ Hưởng (Chuẩn Napas 247)
+                      </label>
+                      <select
+                        value={vietQrBankCode}
+                        onChange={(e) => {
+                          const code = e.target.value;
+                          setVietQrBankCode(code);
+                          const bankObj = VIETNAM_BANKS.find((b) => b.code === code);
+                          if (bankObj) {
+                            setVietQrBankName(`${bankObj.shortName} (${bankObj.code})`);
+                          }
+                        }}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 focus:border-indigo-600 outline-none"
+                      >
+                        {VIETNAM_BANKS.map((bank) => (
+                          <option key={bank.code} value={bank.code}>
+                            {bank.shortName} ({bank.code}) – {bank.fullName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">
+                          2. Số Tài Khoản Ngân Hàng
+                        </label>
+                        <input
+                          type="text"
+                          value={vietQrAccountNumber}
+                          onChange={(e) => setVietQrAccountNumber(e.target.value)}
+                          placeholder="Ví dụ: 1029384756"
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-mono font-bold text-indigo-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">
+                          3. Tên Chủ Tài Khoản (Không dấu)
+                        </label>
+                        <input
+                          type="text"
+                          value={vietQrAccountHolder}
+                          onChange={(e) => setVietQrAccountHolder(e.target.value.toUpperCase())}
+                          placeholder="TRUONG HUNG"
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl uppercase font-mono font-bold text-slate-900"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-white/90 rounded-xl border border-indigo-100 text-[11px] text-slate-600 leading-relaxed">
+                      💡 <strong>Tích hợp Tự động báo có (SePay / PayOS / Casso - Tùy chọn):</strong> Nếu khách hàng muốn tự động duyệt đơn ngay khi ngân hàng biến động số dư, chỉ cần gắn địa chỉ Webhook:{' '}
+                      <code className="px-1.5 py-0.5 bg-slate-100 rounded text-indigo-700 font-mono">
+                        /api/payment/webhook
+                      </code>
+                    </div>
                   </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Số Tài Khoản</label>
-                    <input
-                      type="text"
-                      value={vietQrAccountNumber}
-                      onChange={(e) => setVietQrAccountNumber(e.target.value)}
-                      placeholder="1029384756"
-                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Tên Chủ Tài Khoản</label>
-                    <input
-                      type="text"
-                      value={vietQrAccountHolder}
-                      onChange={(e) => setVietQrAccountHolder(e.target.value)}
-                      placeholder="NGUYEN VAN A"
-                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl uppercase font-mono"
-                    />
+
+                  {/* Live VietQR Test Preview */}
+                  <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs text-center space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block">
+                      Bản Xem Trước Mã VietQR Thật
+                    </span>
+                    <div className="w-36 h-36 mx-auto bg-slate-50 rounded-xl p-1.5 border border-slate-100 flex items-center justify-center">
+                      <img
+                        src={buildVietQrUrl({
+                          bankCodeOrName: vietQrBankCode,
+                          accountNumber: vietQrAccountNumber,
+                          accountHolder: vietQrAccountHolder,
+                          amountVND: 500000,
+                          transferContent: 'COC CT101 TEST'
+                        })}
+                        alt="VietQR Preview"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      Quét thử bằng App Ngân hàng để kiểm tra tên &amp; STK
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Hotline Hỗ Trợ Sinh Viên</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Số Điện Thoại Hotline Chủ Trọ
+                  </label>
                   <input
                     type="text"
                     value={supportHotline}
                     onChange={(e) => setSupportHotline(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    placeholder="0901 234 567"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Số Zalo Chủ Trọ</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Số Zalo Nhận Tin Nhắn Của Khách
+                  </label>
                   <input
                     type="text"
                     value={supportWhatsApp}
                     onChange={(e) => setSupportWhatsApp(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    placeholder="0901 234 567"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition-all"
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all cursor-pointer"
               >
-                Lưu Toàn Bộ Cấu Hình
+                Lưu Toàn Bộ Cấu Hình Ngân Hàng &amp; Liên Hệ
               </button>
             </form>
           </div>
@@ -1232,6 +1379,86 @@ export default function AdminPage() {
                 <Trash2 className="w-4 h-4" />
                 <span>Xác nhận xóa vĩnh viễn</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt / Bill Inspection Modal */}
+      {selectedReceiptLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-emerald-400 block">
+                  Mã đơn: {selectedReceiptLead.reference} • Phòng {selectedReceiptLead.propertyCode}
+                </span>
+                <h3 className="text-sm font-bold">
+                  Biên Lai Chuyển Khoản – {selectedReceiptLead.studentName}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedReceiptLead(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              {selectedReceiptLead.receiptImageUrl && (
+                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-950 flex items-center justify-center max-h-[420px]">
+                  <img
+                    src={selectedReceiptLead.receiptImageUrl}
+                    alt="Ảnh chụp màn hình chuyển khoản"
+                    className="max-h-[420px] w-auto object-contain"
+                  />
+                </div>
+              )}
+
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Người chuyển:</span>
+                  <span className="font-bold text-slate-900">
+                    {selectedReceiptLead.studentName} ({selectedReceiptLead.studentContact})
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Số tiền báo chuyển:</span>
+                  <span className="font-black text-emerald-700">
+                    {selectedReceiptLead.tokenAmountLocal}
+                  </span>
+                </div>
+                {selectedReceiptLead.transferContent && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Nội dung CK:</span>
+                    <span className="font-mono font-bold text-indigo-700">
+                      {selectedReceiptLead.transferContent}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setSelectedReceiptLead(null)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateBookingStatus(selectedReceiptLead.id, 'confirmed');
+                    setSelectedReceiptLead(null);
+                  }}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Xác Nhận Hợp Lệ &amp; Chốt Phòng</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

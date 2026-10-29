@@ -61,6 +61,9 @@ export interface Booking {
   status: BookingStatus;
   paymentMethod: PaymentMethod;
   transactionReference?: string;
+  receiptImageUrl?: string;
+  transferContent?: string;
+  visitTimeSlot?: string;
   adminNotes: string;
   createdAt: string;
 }
@@ -85,9 +88,11 @@ export interface SiteSettings {
   supportWhatsApp: string;
   supportEmail: string;
   supportHotline: string;
+  vietQrBankCode?: string;
   vietQrBankName: string;
   vietQrAccountNumber: string;
   vietQrAccountHolder: string;
+  webhookSecret?: string;
   razorpayKeyId: string;
   stripePublishableKey: string;
   defaultTokenUSD: number;
@@ -98,3 +103,15 @@ export interface SiteSettings {
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T; message?: string }
   | { ok: false; error: string; fieldErrors?: Record<string, string[] | undefined> };
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  studentName: string;
+  studentEmail?: string;
+  senderRole: 'student' | 'admin';
+  senderName: string;
+  text: string;
+  createdAt: string;
+  isReadByAdmin?: boolean;
+}

@@ -1,11 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import { Property, Booking, SiteSettings } from '@/types';
+import { Property, Booking, SiteSettings, ChatMessage } from '@/types';
 import { siteConfig } from '@/config/site';
 
 export interface RealtimeState {
   properties: Property[];
   bookings: Booking[];
+  messages: ChatMessage[];
   settings: SiteSettings;
   updatedAt: number;
 }
@@ -16,7 +17,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   defaultCurrency: 'VND',
   supportWhatsApp: '0901234567',
   supportEmail: 'contact@unistay.vn',
-  supportHotline: '1900 6868',
+  supportHotline: '0901234567',
   vietQrBankName: 'Vietcombank (VCB)',
   vietQrAccountNumber: '1029384756',
   vietQrAccountHolder: 'CONG TY CP UNISTAY VIET NAM',
@@ -43,7 +44,6 @@ function getListeners(): Set<Listener> {
   return globalThis.__unistayListeners;
 }
 
-// Lọc bỏ các ID mẫu cũ nếu còn sót lại
 function isSamplePropertyId(id: string): boolean {
   return (
     id.startsWith('prop-vn-') ||
@@ -72,6 +72,7 @@ export function getRealtimeState(): RealtimeState {
         bookings: Array.isArray(parsed.bookings)
           ? parsed.bookings.filter((b) => b && b.id && !isSampleBookingId(b.id))
           : [],
+        messages: Array.isArray(parsed.messages) ? parsed.messages : [],
         settings: parsed.settings || DEFAULT_SETTINGS,
         updatedAt: parsed.updatedAt || Date.now()
       };
@@ -85,6 +86,7 @@ export function getRealtimeState(): RealtimeState {
   const initial: RealtimeState = {
     properties: [],
     bookings: [],
+    messages: [],
     settings: DEFAULT_SETTINGS,
     updatedAt: Date.now()
   };
@@ -103,6 +105,7 @@ export function updateRealtimeState(partial: Partial<Omit<RealtimeState, 'update
       partial.bookings !== undefined
         ? partial.bookings.filter((b) => b && b.id && !isSampleBookingId(b.id))
         : current.bookings,
+    messages: partial.messages !== undefined ? partial.messages : current.messages,
     settings: partial.settings !== undefined ? { ...current.settings, ...partial.settings } : current.settings,
     updatedAt: Date.now()
   };
@@ -118,7 +121,6 @@ export function updateRealtimeState(partial: Partial<Omit<RealtimeState, 'update
     // ignore write error on read-only serverless fs
   }
 
-  // Phát tín hiệu Real-time (tương tự SignalR Hub Broadcast) tới mọi trình duyệt đang mở
   const listeners = getListeners();
   listeners.forEach((listener) => {
     try {
@@ -136,4 +138,3 @@ export function subscribeRealtime(listener: Listener): () => void {
     listeners.delete(listener);
   };
 }
-

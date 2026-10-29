@@ -1,12 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Property, Booking, CurrencyCode, SiteSettings } from '@/types';
+import { Property, Booking, CurrencyCode, SiteSettings, ChatMessage } from '@/types';
 import { siteConfig } from '@/config/site';
 
 interface PropertyContextType {
   properties: Property[];
   bookings: Booking[];
+  messages: ChatMessage[];
   currency: CurrencyCode;
   settings: SiteSettings;
   setCurrency: (c: CurrencyCode) => void;
@@ -17,6 +18,9 @@ interface PropertyContextType {
   addBooking: (booking: Omit<Booking, 'id' | 'reference' | 'createdAt'>) => string;
   updateBookingStatus: (id: string, status: Booking['status']) => void;
   updateSettings: (newSettings: Partial<SiteSettings>) => void;
+  sendChatMessage: (msg: Omit<ChatMessage, 'id' | 'createdAt'>) => void;
+  markConversationRead: (conversationId: string) => void;
+  deleteConversation: (conversationId: string) => void;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -27,7 +31,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   defaultCurrency: 'VND',
   supportWhatsApp: '0901234567',
   supportEmail: 'contact@unistay.vn',
-  supportHotline: '1900 6868',
+  supportHotline: '0901234567',
   vietQrBankName: 'Vietcombank (VCB)',
   vietQrAccountNumber: '1029384756',
   vietQrAccountHolder: 'CONG TY CP UNISTAY VIET NAM',
@@ -37,7 +41,6 @@ const DEFAULT_SETTINGS: SiteSettings = {
   holdHours: 48
 };
 
-// Kiểm tra xem có phải dữ liệu mẫu cũ không (chỉ giữ lại dữ liệu thật do Admin/User tạo)
 function isRealAdminProperty(p: Property): boolean {
   if (!p || !p.id) return false;
   if (
@@ -61,13 +64,14 @@ function isRealUserBooking(b: Booking): boolean {
 export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currency, setCurrencyState] = useState<CurrencyCode>('VND');
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
 
-  // Gửi dữ liệu mới lên Server Real-time Hub để phát sóng sang mọi trình duyệt (Chrome <-> Edge <-> Mobile)
   const syncToServer = async (payload: {
     properties?: Property[];
     bookings?: Booking[];
+    messages?: ChatMessage[];
     settings?: SiteSettings;
   }) => {
     try {
@@ -84,7 +88,6 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Lấy các phòng thật do Admin từng tạo trên trình duyệt này (nếu có) và loại bỏ hoàn toàn phòng mẫu
     const localRealProps = new Map<string, Property>();
     try {
       ['unistay_properties', 'unistay_vn_properties_v2', 'unistay_vn_properties_v3', 'unistay_real_properties_v4'].forEach(
@@ -105,14 +108,12 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
       );
-      // Xóa các khóa chứa dữ liệu mẫu cũ
       localStorage.removeItem('unistay_properties');
       localStorage.removeItem('unistay_vn_properties_v2');
       localStorage.removeItem('unistay_vn_properties_v3');
       localStorage.removeItem('unistay_vn_bookings_v3');
     } catch {}
 
-    // 2. Tải trạng thái từ Server Real-time Store và đồng bộ
     fetch('/api/store')
       .then((res) => res.json())
       .then((serverState) => {
@@ -123,8 +124,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const serverBookings: Booking[] = Array.isArray(serverState.bookings)
           ? serverState.bookings.filter(isRealUserBooking)
           : [];
+        const serverMessages: ChatMessage[] = Array.isArray(serverState.messages)
+          ? serverState.messages
+          : [];
 
-        // Nếu trình duyệt Admin đang có phòng thật vừa tạo mà Server chưa có thì đẩy lên Server
         const mergedMap = new Map<string, Property>();
         serverProps.forEach((p) => mergedMap.set(p.id, p));
         let hasNewLocalToPush = false;
@@ -138,11 +141,13 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const finalProps = Array.from(mergedMap.values());
         setProperties(finalProps);
         setBookings(serverBookings);
+        setMessages(serverMessages);
         if (serverState.settings) setSettings(serverState.settings);
 
         try {
           localStorage.setItem('unistay_real_properties_v4', JSON.stringify(finalProps));
           localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(serverBookings));
+          localStorage.setItem('unistay_real_messages_v4', JSON.stringify(serverMessages));
         } catch {}
 
         if (hasNewLocalToPush) {
@@ -150,12 +155,11 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       })
       .catch(() => {
-        // Nếu offline, dùng bản lưu thực tế ở localStorage
         const fallbackProps = Array.from(localRealProps.values());
         setProperties(fallbackProps);
       });
 
-    // 3. Kết nối Real-Time Stream (SSE - hoạt động giống SignalR Hub giữa Chrome, Edge, Điện thoại)
+    // Kết nối Real-Time Stream (SSE)
     let eventSource: EventSource | null = null;
     if (typeof window !== 'undefined' && 'EventSource' in window) {
       eventSource = new EventSource('/api/stream');
@@ -171,6 +175,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const cleanBookings = data.bookings.filter(isRealUserBooking);
             setBookings(cleanBookings);
             localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(cleanBookings));
+          }
+          if (Array.isArray(data.messages)) {
+            setMessages(data.messages);
+            localStorage.setItem('unistay_real_messages_v4', JSON.stringify(data.messages));
           }
           if (data.settings) {
             setSettings(data.settings);
@@ -200,10 +208,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const formatPrice = (priceUSD: number, customCurrency?: CurrencyCode): string => {
     const cur = customCurrency || currency;
     switch (cur) {
-      case 'VND': {
-        const vnd = Math.round(priceUSD * siteConfig.currencyRates.VND);
-        return `${vnd.toLocaleString('vi-VN')} ₫`;
-      }
+      case 'VND':
       default: {
         const vnd = Math.round(priceUSD * siteConfig.currencyRates.VND);
         return `${vnd.toLocaleString('vi-VN')} ₫`;
@@ -286,11 +291,63 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
+  const sendChatMessage = (msgData: Omit<ChatMessage, 'id' | 'createdAt'>) => {
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')} • ${now.toLocaleDateString('vi-VN')}`;
+
+    const newMsg: ChatMessage = {
+      ...msgData,
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: timeStr
+    };
+
+    setMessages((prev) => {
+      const updated = [...prev, newMsg];
+      try {
+        localStorage.setItem('unistay_real_messages_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ messages: updated });
+      return updated;
+    });
+  };
+
+  const markConversationRead = (conversationId: string) => {
+    setMessages((prev) => {
+      const hasUnread = prev.some(
+        (m) => m.conversationId === conversationId && !m.isReadByAdmin
+      );
+      if (!hasUnread) return prev;
+      const updated = prev.map((m) =>
+        m.conversationId === conversationId ? { ...m, isReadByAdmin: true } : m
+      );
+      try {
+        localStorage.setItem('unistay_real_messages_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ messages: updated });
+      return updated;
+    });
+  };
+
+  const deleteConversation = (conversationId: string) => {
+    setMessages((prev) => {
+      const updated = prev.filter((m) => m.conversationId !== conversationId);
+      try {
+        localStorage.setItem('unistay_real_messages_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ messages: updated });
+      return updated;
+    });
+  };
+
   return (
     <PropertyContext.Provider
       value={{
         properties,
         bookings,
+        messages,
         currency,
         settings,
         setCurrency,
@@ -300,7 +357,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteProperty,
         addBooking,
         updateBookingStatus,
-        updateSettings
+        updateSettings,
+        sendChatMessage,
+        markConversationRead,
+        deleteConversation
       }}
     >
       {children}

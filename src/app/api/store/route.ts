@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getRealtimeState, updateRealtimeState } from '@/lib/realtimeStore';
 
 export async function GET(request: Request) {
-  // Đọc request.url để Next.js 16 xử lý động theo từng request
   void request.url;
   const state = getRealtimeState();
   return NextResponse.json(state);
@@ -14,6 +13,7 @@ export async function POST(request: Request) {
     const updated = updateRealtimeState({
       properties: body.properties,
       bookings: body.bookings,
+      messages: body.messages,
       settings: body.settings
     });
     return NextResponse.json(updated);

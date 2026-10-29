@@ -76,3 +76,4 @@ export async function uploadOrCompressImage(file: File): Promise<{
     storageType: 'database-embedded'
   };
 }
+
