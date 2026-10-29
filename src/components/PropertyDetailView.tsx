@@ -57,10 +57,14 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
 
   const handleContactLandlord = () => {
     const contact = property.landlordContact.replace(/[^0-9]/g, '');
-    const message = encodeURIComponent(
-      `Chào bạn, tôi đang xem phòng "${property.title}" (Mã: ${property.code}) trên website. Cho tôi hỏi phòng còn trống và lịch hẹn xem phòng nhé!`
-    );
-    window.open(`https://wa.me/${contact}?text=${message}`, '_blank');
+    window.open(`https://zalo.me/${contact}`, '_blank');
+  };
+
+  const roomTypeLabels: Record<string, string> = {
+    studio: 'Căn hộ Studio',
+    '1bhk': 'Căn hộ 1 Phòng Ngủ',
+    single: 'Phòng đơn riêng tư',
+    shared: 'Ký túc xá / Ở ghép'
   };
 
   return (
@@ -135,11 +139,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                 <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-mono">
                   Mã: {property.code}
                 </span>
-                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-800 uppercase">
-                  {property.roomType}
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-800">
+                  {roomTypeLabels[property.roomType] || property.roomType}
                 </span>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800">
-                  {property.country}
+                  {property.city}
                 </span>
               </div>
 
@@ -289,7 +293,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                 <span className="text-xs text-slate-400 font-semibold block">Giá thuê niêm yết</span>
                 <div className="flex items-baseline gap-1 mt-0.5">
                   <span className="text-3xl font-black text-slate-900">
-                    {formatPrice(property.pricePerMonthUSD)}
+                    {formatPrice(property.pricePerMonthUSD, 'VND')}
                   </span>
                   <span className="text-xs text-slate-500 font-normal">/ tháng</span>
                 </div>
@@ -302,15 +306,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>Tiền cọc đảm bảo hợp đồng</span>
-                  <span className="font-bold text-slate-800">{formatPrice(property.securityDepositUSD)}</span>
+                  <span className="font-bold text-slate-800">{formatPrice(property.securityDepositUSD, 'VND')}</span>
                 </div>
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
                   <div>
-                    <span className="font-bold text-slate-900 block">Tiền cọc giữ chỗ (Token)</span>
+                    <span className="font-bold text-slate-900 block">Tiền cọc giữ chỗ</span>
                     <span className="text-[10px] text-slate-400">Khóa phòng trong 48 giờ</span>
                   </div>
                   <span className="text-base font-black text-indigo-600">
-                    {formatPrice(property.tokenDepositUSD)}
+                    {formatPrice(property.tokenDepositUSD, 'VND')}
                   </span>
                 </div>
               </div>
@@ -321,7 +325,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                   className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2"
                 >
                   <Lock className="w-4 h-4" />
-                  <span>Đặt Cọc Giữ Chỗ ({formatPrice(property.tokenDepositUSD)})</span>
+                  <span>Đặt Cọc Giữ Chỗ ({formatPrice(property.tokenDepositUSD, 'VND')})</span>
                 </button>
 
                 <button

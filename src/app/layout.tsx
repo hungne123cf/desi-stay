@@ -8,25 +8,22 @@ import { Footer } from '@/components/Footer';
 import { WhatsAppFloat } from '@/components/WhatsAppFloat';
 
 const inter = Inter({
-  subsets: ['latin'],
+  subsets: ['latin', 'vietnamese'],
   display: 'swap',
   variable: '--font-inter'
 });
 
 export const metadata: Metadata = {
-  title: 'YuvaStays | Verified Student Housing & PGs for Indian Students',
+  title: 'UniStay Việt Nam | Hệ Thống Phòng Trọ & Căn Hộ Sinh Viên Cần Thơ & Toàn Quốc',
   description:
-    'Find safe, verified student PGs and hostels near top universities in India and abroad. Pure Veg mess, zero brokerage, biometric security, and 24/7 student support.',
+    'Tìm phòng trọ, căn hộ Studio, phòng gác lửng đã xác thực gần ĐH Cần Thơ, ĐH FPT Cần Thơ, ĐH Y Dược, ĐH Nam Cần Thơ và các trường đại học lớn tại Việt Nam. 0% phí môi giới, giờ giấc tự do.',
   keywords: [
-    'student accommodation',
-    'indian student housing',
-    'pure veg PG',
-    'girls hostel',
-    'boys PG',
-    'zero brokerage student flats',
-    'Christ University PG',
-    'DU North Campus PG',
-    'MBBS Vietnam housing'
+    'phòng trọ sinh viên cần thơ',
+    'nhà trọ ninh kiều cần thơ',
+    'phòng trọ gần đại học cần thơ',
+    'phòng trọ đại học fpt cần thơ',
+    'căn hộ mini sinh viên',
+    'unistay việt nam'
   ]
 };
 
@@ -36,8 +33,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans bg-white text-slate-900 selection:bg-orange-500 selection:text-white">
+    <html lang="vi" className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col font-sans bg-white text-slate-900 selection:bg-indigo-600 selection:text-white">
         <AuthProvider>
           <PropertyProvider>
             <Navbar />

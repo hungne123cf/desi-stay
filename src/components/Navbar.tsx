@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
-import { CurrencyCode } from '@/types';
 import { GoogleAccountChooserModal } from '@/components/GoogleAccountChooserModal';
 import {
   Building2,
@@ -14,19 +13,20 @@ import {
   LogOut,
   Menu,
   X,
-  Globe2,
   ChevronDown,
-  RefreshCw
+  RefreshCw,
+  MapPin
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
   const { user, logout, loginWithGoogle } = useAuth();
-  const { currency, setCurrency, settings } = useProperties();
+  const { settings } = useProperties();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
+
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSwitchGoogleAccount = async () => {
     setUserDropdownOpen(false);
@@ -39,28 +39,15 @@ export const Navbar: React.FC = () => {
     }
   };
 
-  const userDropdownRef = useRef<HTMLDivElement>(null);
-  const currencyDropdownRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
         setUserDropdownOpen(false);
       }
-      if (currencyDropdownRef.current && !currencyDropdownRef.current.contains(e.target as Node)) {
-        setCurrencyDropdownOpen(false);
-      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const currencies: { code: CurrencyCode; label: string; symbol: string }[] = [
-    { code: 'VND', label: 'Việt Nam Đồng', symbol: '₫' },
-    { code: 'USD', label: 'US Dollar', symbol: '$' },
-    { code: 'INR', label: 'Indian Rupee', symbol: '₹' },
-    { code: 'EUR', label: 'Euro', symbol: '€' }
-  ];
 
   return (
     <>
@@ -78,11 +65,11 @@ export const Navbar: React.FC = () => {
                     {settings.brandName || 'UniStay'}
                   </span>
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase">
-                    Global
+                    Việt Nam
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium -mt-0.5 truncate max-w-[180px]">
-                  {settings.tagline || 'Student Housing & Co-Living'}
+                <p className="text-[11px] text-slate-500 font-medium -mt-0.5 truncate max-w-[190px]">
+                  Phòng Trọ &amp; Căn Hộ Sinh Viên
                 </p>
               </div>
             </Link>
@@ -92,8 +79,9 @@ export const Navbar: React.FC = () => {
               <Link href="/" className="hover:text-indigo-600 transition-colors">
                 Khám phá phòng trọ
               </Link>
-              <a href="#cities" className="hover:text-indigo-600 transition-colors">
-                Khu vực trường ĐH
+              <a href="#cities" className="hover:text-indigo-600 transition-colors flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Trọ Cần Thơ &amp; Đại học</span>
               </a>
               <a href="#benefits" className="hover:text-indigo-600 transition-colors">
                 Tiện ích &amp; An ninh
@@ -104,59 +92,20 @@ export const Navbar: React.FC = () => {
                   className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-full border border-indigo-200 transition-colors"
                 >
                   <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                  <span>Admin Portal</span>
+                  <span>Quản Trị Phòng</span>
                 </Link>
               )}
             </nav>
 
             {/* Right Action buttons */}
             <div className="hidden md:flex items-center gap-3">
-              {/* Multi-Currency Dropdown */}
-              <div className="relative" ref={currencyDropdownRef}>
-                <button
-                  onClick={() => setCurrencyDropdownOpen(!currencyDropdownOpen)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-all cursor-pointer"
-                >
-                  <Globe2 className="w-3.5 h-3.5 text-indigo-600" />
-                  <span className="text-indigo-600 font-black">{currency}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                {currencyDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 text-xs">
-                    <p className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Chọn loại tiền tệ / Currency
-                    </p>
-                    {currencies.map((c) => (
-                      <button
-                        key={c.code}
-                        onClick={() => {
-                          setCurrency(c.code);
-                          setCurrencyDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                          currency === c.code
-                            ? 'bg-indigo-50 text-indigo-700 font-bold'
-                            : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        <span>
-                          {c.code} ({c.symbol})
-                        </span>
-                        <span className="text-[10px] text-slate-400">{c.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* User Profile Dropdown or Login Button */}
               {user ? (
-                <div className="relative pl-2 border-l border-slate-200" ref={userDropdownRef}>
+                <div className="relative" ref={userDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="flex items-center gap-2.5 p-1.5 pr-3 rounded-2xl hover:bg-slate-100/80 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
+                    className="flex items-center gap-2.5 p-1.5 pr-3 rounded-2xl hover:bg-slate-100/80 border border-slate-200/80 transition-all cursor-pointer"
                   >
                     {user.avatar ? (
                       <img
@@ -238,16 +187,6 @@ export const Navbar: React.FC = () => {
             {/* Mobile hamburger */}
             <div className="flex md:hidden items-center gap-2">
               <button
-                onClick={() => {
-                  const next: CurrencyCode =
-                    currency === 'VND' ? 'USD' : currency === 'USD' ? 'INR' : 'VND';
-                  setCurrency(next);
-                }}
-                className="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-200 bg-slate-50 text-indigo-600"
-              >
-                {currency}
-              </button>
-              <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 rounded-lg text-slate-600 hover:bg-slate-100"
               >
@@ -272,7 +211,7 @@ export const Navbar: React.FC = () => {
               onClick={() => setMobileMenuOpen(false)}
               className="block py-2 text-sm font-medium text-slate-700 border-b border-slate-100"
             >
-              Khu vực trường ĐH
+              Trọ Cần Thơ &amp; Đại học
             </a>
             <a
               href="#benefits"
@@ -287,7 +226,7 @@ export const Navbar: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className="block py-2 text-sm font-bold text-indigo-700 border-b border-slate-100"
               >
-                Trang Quản Trị (Admin Portal)
+                Trang Quản Trị (Admin)
               </Link>
             )}
             {user ? (

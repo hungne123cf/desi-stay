@@ -1,44 +1,44 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Phone, MessageCircle, X } from 'lucide-react';
+import { MessageCircle, X } from 'lucide-react';
+import { useProperties } from '@/context/PropertyContext';
 
 export const WhatsAppFloat: React.FC = () => {
+  const { settings } = useProperties();
   const [showTooltip, setShowTooltip] = useState(true);
 
-  const handleOpenWhatsApp = () => {
-    const text = encodeURIComponent(
-      'Hi YuvaStays team! I am looking for student accommodation near my university. Can you help me find verified PGs with food?'
-    );
-    window.open(`https://wa.me/919876543210?text=${text}`, '_blank');
+  const handleOpenContact = () => {
+    const phone = (settings.supportHotline || '0901234567').replace(/[^0-9]/g, '');
+    window.open(`https://zalo.me/${phone}`, '_blank');
   };
 
   return (
     <div className="fixed bottom-6 right-6 z-40 flex items-end gap-3">
       {/* Tooltip bubble */}
       {showTooltip && (
-        <div className="hidden sm:flex items-center gap-2 bg-white text-slate-800 px-4 py-2.5 rounded-2xl shadow-xl border border-slate-200 text-xs font-semibold animate-bounce">
-          <span>Need help finding a PG? Chat with us!</span>
+        <div className="hidden sm:flex items-center gap-2 bg-white text-slate-800 px-4 py-2.5 rounded-2xl shadow-xl border border-slate-200 text-xs font-semibold">
+          <span>Cần tìm phòng trọ tại Cần Thơ? Nhắn Zalo ngay!</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               setShowTooltip(false);
             }}
-            className="text-slate-400 hover:text-slate-600"
+            className="text-slate-400 hover:text-slate-600 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* Main WhatsApp Floating Button */}
+      {/* Main Zalo / Support Floating Button */}
       <button
-        onClick={handleOpenWhatsApp}
-        className="relative w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 hover:scale-110 transition-all duration-300 group"
-        title="Chat with Student Support on WhatsApp"
+        onClick={handleOpenContact}
+        className="relative w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 hover:scale-105 transition-all duration-300 cursor-pointer"
+        title="Nhắn tin Zalo hỗ trợ tìm phòng trọ"
       >
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border-2 border-white animate-pulse" />
-        <MessageCircle className="w-7 h-7 fill-white text-emerald-500" />
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+        <MessageCircle className="w-7 h-7 fill-white text-indigo-600" />
       </button>
     </div>
   );

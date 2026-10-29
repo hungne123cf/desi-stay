@@ -2,9 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Building, ShieldCheck, HeartHandshake, Phone, Mail, MapPin } from 'lucide-react';
+import { Building2, ShieldCheck, HeartHandshake, Phone, Mail, MapPin } from 'lucide-react';
+import { useProperties } from '@/context/PropertyContext';
 
 export const Footer: React.FC = () => {
+  const { settings } = useProperties();
+
   return (
     <footer className="bg-slate-950 text-slate-400 pt-16 pb-12 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -12,118 +15,123 @@ export const Footer: React.FC = () => {
           {/* Brand Info */}
           <div className="lg:col-span-2 space-y-4">
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white font-black text-xl shadow-md">
-                <Building className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-blue-600 to-emerald-500 flex items-center justify-center text-white font-black text-xl shadow-md">
+                <Building2 className="w-5 h-5" />
               </div>
-              <span className="text-2xl font-black tracking-tight text-white">
-                Yuva<span className="text-orange-500">Stays</span>
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-2xl font-black tracking-tight text-white">
+                  {settings.brandName || 'UniStay'}
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase">
+                  Việt Nam
+                </span>
+              </div>
             </Link>
             <p className="text-sm text-slate-400 max-w-sm leading-relaxed">
-              India&apos;s trusted student housing and co-living discovery platform. Finding you safe, verified PGs and hostels near top colleges with Pure Veg food options, zero brokerage, and 24/7 student support.
+              Nền tảng tìm kiếm phòng trọ, căn hộ Studio và phòng gác lửng đã xác thực dành riêng cho sinh viên tại Cần Thơ và các thành phố đại học trên toàn quốc. Làm việc trực tiếp chính chủ, 0% phí môi giới.
             </p>
-            <div className="flex items-center gap-4 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-800/80">
                 <ShieldCheck className="w-4 h-4" />
-                100% Verified Landlords
+                100% Trọ Chính Chủ Đã Xác Thực
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-orange-400 bg-orange-950/60 px-3 py-1 rounded-full border border-orange-800/80">
+              <div className="flex items-center gap-1.5 text-xs text-indigo-300 bg-indigo-950/60 px-3 py-1 rounded-full border border-indigo-800/80">
                 <HeartHandshake className="w-4 h-4" />
-                Zero Brokerage
+                0đ Phí Môi Giới
               </div>
             </div>
           </div>
 
-          {/* Top Campus Hubs */}
+          {/* Khu vực trường Đại học tại Cần Thơ */}
           <div>
             <h4 className="text-white text-sm font-bold uppercase tracking-wider mb-4">
-              Student Hubs
+              Khu Vực Cần Thơ
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <a href="#search" className="hover:text-orange-400 transition-colors">
-                  Bengaluru (Christ / Jain / PES)
+                <a href="#listings" className="hover:text-indigo-400 transition-colors">
+                  ĐH Cần Thơ (Khu II - Đường 3/2)
                 </a>
               </li>
               <li>
-                <a href="#search" className="hover:text-orange-400 transition-colors">
-                  Pune (Symbiosis / Fergusson / MIT)
+                <a href="#listings" className="hover:text-indigo-400 transition-colors">
+                  ĐH FPT Cần Thơ &amp; KDC Hồng Phát
                 </a>
               </li>
               <li>
-                <a href="#search" className="hover:text-orange-400 transition-colors">
-                  Delhi NCR (DU North & South Campus)
+                <a href="#listings" className="hover:text-indigo-400 transition-colors">
+                  ĐH Y Dược Cần Thơ (Nguyễn Văn Cừ)
                 </a>
               </li>
               <li>
-                <a href="#search" className="hover:text-orange-400 transition-colors">
-                  Kota (NEET & JEE Hub)
+                <a href="#listings" className="hover:text-indigo-400 transition-colors">
+                  ĐH Nam Cần Thơ (DNC) &amp; KDC 91B
                 </a>
               </li>
               <li>
-                <a href="#search" className="hover:text-orange-400 transition-colors">
-                  Vietnam (Can Tho / Hue MBBS Hub)
+                <a href="#listings" className="hover:text-indigo-400 transition-colors">
+                  ĐH Kỹ thuật - Công nghệ &amp; ĐH Tây Đô
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* Student Services */}
+          {/* Loại hình phòng trọ */}
           <div>
             <h4 className="text-white text-sm font-bold uppercase tracking-wider mb-4">
-              Preferences
+              Loại Hình Phòng Trọ
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <span className="text-slate-300">Pure Veg & Jain Mess PGs</span>
+                <span className="text-slate-300">Căn hộ Studio ban công khép kín</span>
               </li>
               <li>
-                <span className="text-slate-300">Girls Only Verified Hostels</span>
+                <span className="text-slate-300">Phòng trọ gác lửng mới xây</span>
               </li>
               <li>
-                <span className="text-slate-300">Boys Executive Co-Living</span>
+                <span className="text-slate-300">Phòng đơn / Ký túc xá Sleepbox</span>
               </li>
               <li>
-                <span className="text-slate-300">Independent 1BHK Studios</span>
+                <span className="text-slate-300">Nhà trọ giờ giấc tự do 24/7</span>
               </li>
               <li>
-                <span className="text-slate-300">Walking Distance to Campus</span>
+                <span className="text-slate-300">Phòng ở ghép tiết kiệm gần trường</span>
               </li>
             </ul>
           </div>
 
-          {/* Direct Support */}
+          {/* Liên hệ hỗ trợ */}
           <div>
             <h4 className="text-white text-sm font-bold uppercase tracking-wider mb-4">
-              Help & Booking
+              Liên Hệ &amp; Hỗ Trợ
             </h4>
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-2.5">
-                <Phone className="w-4 h-4 text-orange-400 mt-1 shrink-0" />
+                <Phone className="w-4 h-4 text-indigo-400 mt-1 shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-500 font-medium">WhatsApp Helpline</p>
+                  <p className="text-xs text-slate-500 font-medium">Hotline / Zalo hỗ trợ</p>
                   <a
-                    href="https://wa.me/919876543210"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-white font-semibold hover:text-orange-400"
+                    href={`tel:${settings.supportHotline || '0901234567'}`}
+                    className="text-white font-semibold hover:text-indigo-400"
                   >
-                    +91 98765 43210
+                    {settings.supportHotline || '0901 234 567'}
                   </a>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
-                <Mail className="w-4 h-4 text-orange-400 mt-1 shrink-0" />
+                <Mail className="w-4 h-4 text-indigo-400 mt-1 shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-500 font-medium">Email Support</p>
-                  <p className="text-white font-semibold">care@desistays.in</p>
+                  <p className="text-xs text-slate-500 font-medium">Email liên hệ</p>
+                  <p className="text-white font-semibold">hotro@unistay.vn</p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-orange-400 mt-1 shrink-0" />
+                <MapPin className="w-4 h-4 text-indigo-400 mt-1 shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-500 font-medium">Headquarters</p>
-                  <p className="text-slate-300 text-xs">Indiranagar, Bengaluru, KA - 560038</p>
+                  <p className="text-xs text-slate-500 font-medium">Văn phòng đại diện</p>
+                  <p className="text-slate-300 text-xs">
+                    Đường Nguyễn Văn Cừ nối dài, Q. Ninh Kiều, TP. Cần Thơ
+                  </p>
                 </div>
               </div>
             </div>
@@ -132,14 +140,14 @@ export const Footer: React.FC = () => {
 
         {/* Bottom bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <p>© 2026 YuvaStays Technologies Pvt Ltd. All rights reserved.</p>
+          <p>© 2026 UniStay Việt Nam – Hệ thống Phòng trọ Sinh viên Cần Thơ &amp; Toàn Quốc.</p>
           <div className="flex items-center gap-6">
             <Link href="/admin" className="hover:text-indigo-400 transition-colors font-medium">
-              Property Owner & Admin Portal
+              Trang Quản Trị Chủ Trọ (Admin)
             </Link>
-            <span className="hover:text-slate-400">Terms of Stay</span>
-            <span className="hover:text-slate-400">Privacy Policy</span>
-            <span className="hover:text-slate-400">Refund Guarantee</span>
+            <span className="hover:text-slate-400">Quy định đặt cọc</span>
+            <span className="hover:text-slate-400">Chính sách bảo mật</span>
+            <span className="hover:text-slate-400">Cam kết hoàn tiền 100%</span>
           </div>
         </div>
       </div>

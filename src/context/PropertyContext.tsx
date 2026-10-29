@@ -93,14 +93,13 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     try {
-      const savedProps = localStorage.getItem('unistay_vn_properties_v2');
+      const savedProps = localStorage.getItem('unistay_vn_properties_v3');
       if (savedProps) setProperties(JSON.parse(savedProps));
 
-      const savedBookings = localStorage.getItem('unistay_vn_bookings_v2');
+      const savedBookings = localStorage.getItem('unistay_vn_bookings_v3');
       if (savedBookings) setBookings(JSON.parse(savedBookings));
 
-      const savedCurrency = localStorage.getItem('unistay_currency') as CurrencyCode;
-      if (savedCurrency) setCurrencyState(savedCurrency);
+      setCurrencyState('VND');
 
       const savedSettings = localStorage.getItem('unistay_settings');
       if (savedSettings) setSettings(JSON.parse(savedSettings));
@@ -112,14 +111,14 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const saveProperties = (data: Property[]) => {
     setProperties(data);
     try {
-      localStorage.setItem('unistay_vn_properties_v2', JSON.stringify(data));
+      localStorage.setItem('unistay_vn_properties_v3', JSON.stringify(data));
     } catch {}
   };
 
   const saveBookings = (data: Booking[]) => {
     setBookings(data);
     try {
-      localStorage.setItem('unistay_vn_bookings_v2', JSON.stringify(data));
+      localStorage.setItem('unistay_vn_bookings_v3', JSON.stringify(data));
     } catch {}
   };
 

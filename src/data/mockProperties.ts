@@ -3,12 +3,12 @@ import { Property } from '@/types';
 export const INITIAL_PROPERTIES: Property[] = [
   {
     id: 'prop-vn-ct-1',
-    code: 'VN-101',
-    title: 'Mekong Green Studio – Căn hộ ban công gần ĐH Cần Thơ & ĐH Y Dược',
+    code: 'CT-101',
+    title: 'Mekong Green Studio – Căn hộ ban công gần ĐH Cần Thơ (Khu II Đường 3/2)',
     slug: 'mekong-green-studio-can-tho',
     address: 'Hẻm 51 Đường 3/2, Phường Xuân Khánh',
     city: 'Cần Thơ',
-    country: 'Vietnam',
+    country: 'Việt Nam',
     area: 'Quận Ninh Kiều',
     nearbyUniversity: 'ĐH Cần Thơ (CTU - Khu II Đường 3/2)',
     distanceToCampus: '300m (4 phút đi bộ)',
@@ -24,11 +24,11 @@ export const INITIAL_PROPERTIES: Property[] = [
       'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80'
     ],
     description:
-      'Phòng trọ Studio mới xây ngay trung tâm Ninh Kiều, trang bị sẵn máy lạnh Inverter, tủ lạnh, kệ bếp nấu ăn riêng, nhà vệ sinh khép kín có máy nước nóng. Khu vực cao ráo không ngập nước, giờ giấc tự do 24/7 bằng khóa vân tay.',
+      'Phòng trọ Studio mới xây ngay trung tâm Ninh Kiều, trang bị sẵn máy lạnh Inverter, tủ lạnh, kệ bếp nấu ăn riêng, nhà vệ sinh khép kín có máy nước nóng. Hẻm 51 nâng cấp cao ráo không ngập nước, giờ giấc tự do 24/7 bằng khóa vân tay.',
     highlights: [
       'Giờ giấc tự do 24/7 (Khóa vân tay)',
       '4 phút đi bộ tới Cổng B ĐH Cần Thơ',
-      'Khu dân cư an ninh, không ngập nước',
+      'Hẻm cao ráo không ngập nước, an ninh',
       '0% Phí môi giới - Làm việc trực tiếp chủ nhà'
     ],
     amenities: [
@@ -44,7 +44,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     isVerified: true,
     isZeroBrokerage: true,
     isPublished: true,
-    landlordName: 'Chú Bảy / Anh Hùng (Chủ nhà)',
+    landlordName: 'Chú Bảy / Anh Hùng (Chủ nhà Ninh Kiều)',
     landlordContact: '0901234567',
     rating: 4.95,
     reviewsCount: 46,
@@ -52,12 +52,12 @@ export const INITIAL_PROPERTIES: Property[] = [
   },
   {
     id: 'prop-vn-ct-2',
-    code: 'VN-102',
+    code: 'CT-102',
     title: 'FPT Smart Duplex – Phòng gác lửng KDC Hồng Phát gần ĐH FPT Cần Thơ',
     slug: 'fpt-smart-duplex-kdc-hong-phat-can-tho',
     address: 'Đường số 6, KDC Hồng Phát, Phường An Bình',
     city: 'Cần Thơ',
-    country: 'Vietnam',
+    country: 'Việt Nam',
     area: 'KDC Hồng Phát (P. An Bình)',
     nearbyUniversity: 'ĐH FPT Cần Thơ (Cầu Rau Răm - Nguyễn Văn Cừ)',
     distanceToCampus: '500m (2 phút đi xe máy)',
@@ -72,7 +72,7 @@ export const INITIAL_PROPERTIES: Property[] = [
       'https://images.unsplash.com/photo-1540518614846-7ede433c4ef0?auto=format&fit=crop&w=1200&q=80'
     ],
     description:
-      'Phòng Duplex gác lửng trần cao thoáng mát nằm trong KDC Hồng Phát yên tĩnh, đường nhựa rộng 12m, cực kỳ thuận tiện cho sinh viên ĐH FPT Cần Thơ và ĐH Nam Cần Thơ. Ở được 2-3 bạn thoải mái.',
+      'Phòng Duplex gác lửng trần cao thoáng mát nằm trong KDC Hồng Phát yên tĩnh, đường nhựa rộng 12m có vỉa hè cây xanh, cực kỳ thuận tiện cho sinh viên ĐH FPT Cần Thơ và ĐH Nam Cần Thơ. Ở được 2-3 bạn thoải mái.',
     highlights: [
       'Cách ĐH FPT Cần Thơ & ĐH Nam Cần Thơ chỉ 500m',
       'Thiết kế gác lửng rộng rãi, ở được 2-3 sinh viên',
@@ -94,18 +94,113 @@ export const INITIAL_PROPERTIES: Property[] = [
     isPublished: true,
     landlordName: 'Chị Lan (Chủ nhà KDC Hồng Phát)',
     landlordContact: '0901234567',
-    rating: 4.9,
+    rating: 4.92,
     reviewsCount: 39,
     createdAt: '2026-10-26'
   },
   {
+    id: 'prop-vn-ct-3',
+    code: 'CT-103',
+    title: 'An Khánh Residence – Phòng đơn yên tĩnh gần ĐH Y Dược Cần Thơ (CTUMP)',
+    slug: 'an-khanh-residence-dh-y-duoc-can-tho',
+    address: 'KDC 91B, Đường Nguyễn Văn Cừ, Phường An Khánh',
+    city: 'Cần Thơ',
+    country: 'Việt Nam',
+    area: 'KDC 91B (P. An Khánh)',
+    nearbyUniversity: 'ĐH Y Dược Cần Thơ (CTUMP)',
+    distanceToCampus: '350m (4 phút đi bộ)',
+    roomType: 'single',
+    gender: 'all',
+    foodPreference: 'self_cook',
+    pricePerMonthUSD: 100, // ~2.500.000 VNĐ
+    securityDepositUSD: 100,
+    tokenDepositUSD: 20,
+    images: [
+      'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'
+    ],
+    description:
+      'Khu nhà trọ yên tĩnh chuyên dành cho sinh viên Y khoa và Dược học tại KDC 91B, sát cạnh trường ĐH Y Dược Cần Thơ và Bệnh viện Đa khoa TW Cần Thơ. Phòng có sẵn bàn học lớn, kệ sách, máy lạnh và cửa sổ thoáng mát.',
+    highlights: [
+      'Đi bộ 4 phút tới cổng ĐH Y Dược Cần Thơ',
+      'Môi trường 100% sinh viên Y Dược yên tĩnh ôn thi',
+      'Sát chợ An Khánh, Bách Hóa Xanh & Bệnh viện TW',
+      'Giờ giấc tự do phù hợp lịch trực bệnh viện'
+    ],
+    amenities: [
+      'Wifi cáp quang riêng',
+      'Máy lạnh Inverter',
+      'Bàn học lớn & Kệ sách',
+      'WC khép kín trong phòng',
+      'Khu phơi đồ nắng thoáng',
+      'Camera an ninh 24/7'
+    ],
+    curfewTime: 'Giờ giấc tự do 24/7 (Khóa vân tay)',
+    availableBeds: 2,
+    isVerified: true,
+    isZeroBrokerage: true,
+    isPublished: true,
+    landlordName: 'Bác Sĩ Tuấn (Chủ nhà KDC 91B)',
+    landlordContact: '0901234567',
+    rating: 4.94,
+    reviewsCount: 51,
+    createdAt: '2026-10-26'
+  },
+  {
+    id: 'prop-vn-ct-4',
+    code: 'CT-104',
+    title: 'DNC Cozy House – Nhà trọ mới xây có gác gần ĐH Nam Cần Thơ & Tây Đô',
+    slug: 'dnc-cozy-house-nam-can-tho',
+    address: 'Đường Nguyễn Văn Cừ nối dài, Phường An Bình',
+    city: 'Cần Thơ',
+    country: 'Việt Nam',
+    area: 'Đường Nguyễn Văn Cừ nối dài',
+    nearbyUniversity: 'ĐH Nam Cần Thơ (DNC)',
+    distanceToCampus: '200m (3 phút đi bộ)',
+    roomType: 'double',
+    gender: 'all',
+    foodPreference: 'self_cook',
+    pricePerMonthUSD: 75, // ~1.900.000 VNĐ
+    securityDepositUSD: 75,
+    tokenDepositUSD: 16, // ~400.000 VNĐ
+    images: [
+      'https://images.unsplash.com/photo-1540518614846-7ede433c4ef0?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1200&q=80'
+    ],
+    description:
+      'Dãy phòng trọ sinh viên mới xây sạch đẹp, giá cực kỳ tiết kiệm ngay gần cổng trường ĐH Nam Cần Thơ (DNC). Phòng có gác cao 1m8, kệ bếp lát gạch men sạch sẽ, lối đi rộng để xe trước cửa phòng.',
+    highlights: [
+      'Cách cổng ĐH Nam Cần Thơ chỉ 200m đi bộ',
+      'Giá sinh viên chỉ 1.9 triệu/tháng (ở được 2-3 bạn)',
+      'Lối đi rộng 3m, để xe ngay trước phòng an toàn',
+      'Điện nước tính giá ưu đãi sinh viên'
+    ],
+    amenities: [
+      'Wifi miễn phí tốc độ cao',
+      'Gác lửng cao ráo',
+      'Kệ bếp & Bồn rửa riêng',
+      'Vệ sinh khép kín',
+      'Camera an ninh cổng chính'
+    ],
+    curfewTime: 'Giờ giấc tự do 24/7 (Khóa vân tay)',
+    availableBeds: 4,
+    isVerified: true,
+    isZeroBrokerage: true,
+    isPublished: true,
+    landlordName: 'Cô Út (Chủ trọ An Bình)',
+    landlordContact: '0901234567',
+    rating: 4.86,
+    reviewsCount: 28,
+    createdAt: '2026-10-27'
+  },
+  {
     id: 'prop-vn-hcm-1',
-    code: 'VN-103',
-    title: 'The Green Studio – Căn hộ dịch vụ cao cấp gần ĐH Bách Khoa & Y Dược',
+    code: 'SG-105',
+    title: 'The Green Studio – Căn hộ dịch vụ cao cấp gần ĐH Bách Khoa TP.HCM',
     slug: 'green-studio-bach-khoa-y-duoc-q10',
     address: 'Đường Lý Thường Kiệt, Phường 14, Quận 10',
     city: 'TP. Hồ Chí Minh',
-    country: 'Vietnam',
+    country: 'Việt Nam',
     area: 'Quận 10',
     nearbyUniversity: 'ĐH Bách Khoa TP.HCM & ĐH Y Dược',
     distanceToCampus: '350m (4 phút đi bộ)',
@@ -116,8 +211,8 @@ export const INITIAL_PROPERTIES: Property[] = [
     securityDepositUSD: 175,
     tokenDepositUSD: 20,
     images: [
-      'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'
+      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1502005229762-ee1b40280b89?auto=format&fit=crop&w=1200&q=80'
     ],
     description:
       'Phòng studio full nội thất cao cấp: máy lạnh Inverter, máy nước nóng, tủ lạnh, bếp từ riêng biệt, ban công thoáng mát đón nắng. Giờ giấc tự do 24/7, thang máy thẻ từ, không chung chủ.',
@@ -130,7 +225,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     amenities: [
       'Wifi cáp quang tốc độ cao',
       'Máy lạnh & Tủ lạnh 150L',
-      'Vệ sinh khép kín nước nóng năng lượng mặt trời',
+      'Vệ sinh khép kín nước nóng',
       'Bếp riêng & Hút mùi',
       'Thang máy thẻ từ',
       'Hầm xe bảo vệ 24/7'
@@ -140,67 +235,20 @@ export const INITIAL_PROPERTIES: Property[] = [
     isVerified: true,
     isZeroBrokerage: true,
     isPublished: true,
-    landlordName: 'Anh Minh (Chủ tòa nhà)',
+    landlordName: 'Anh Minh (Chủ tòa nhà Q.10)',
     landlordContact: '0901234567',
     rating: 4.88,
     reviewsCount: 64,
-    createdAt: '2026-10-26'
-  },
-  {
-    id: 'prop-vn-hcm-2',
-    code: 'VN-104',
-    title: 'UniVillage Thủ Đức – Phòng trọ sinh viên Làng Đại Học Quốc Gia',
-    slug: 'univillage-lang-dai-hoc-thu-duc',
-    address: 'Đường Tân Lập, Đông Hòa (Sát trục chính Làng ĐH)',
-    city: 'TP. Hồ Chí Minh',
-    country: 'Vietnam',
-    area: 'TP. Thủ Đức (Làng Đại Học)',
-    nearbyUniversity: 'Làng Đại Học Quốc Gia TP.HCM (Thủ Đức)',
-    distanceToCampus: '400m (5 phút đi bộ)',
-    roomType: 'double',
-    gender: 'all',
-    foodPreference: 'self_cook',
-    pricePerMonthUSD: 95, // ~2.400.000 VNĐ
-    securityDepositUSD: 95,
-    tokenDepositUSD: 16,
-    images: [
-      'https://images.unsplash.com/photo-1540518614846-7ede433c4ef0?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1200&q=80'
-    ],
-    description:
-      'Khu nhà trọ sinh viên văn minh chuẩn Làng Đại Học Thủ Đức, ngay gần ĐH Bách Khoa CS2, ĐH Khoa Học Tự Nhiên, ĐH CNTT và ĐH Quốc Tế. Có sân để xe rộng, phòng đọc sách chung và khu phơi đồ thoáng mát.',
-    highlights: [
-      'Ngay trục đường chính Làng ĐH Quốc Gia',
-      'Đi bộ ra trạm xe buýt & Metro số 1',
-      'Điện nước tính theo giá Nhà nước',
-      'Môi trường 100% sinh viên yên tĩnh học tập'
-    ],
-    amenities: [
-      'Wifi tốc độ cao',
-      'Máy lạnh',
-      'WC khép kín trong phòng',
-      'Khu giặt sấy tự động',
-      'Camera an ninh toàn khu'
-    ],
-    curfewTime: 'Giờ giấc tự do 24/7 (Khóa vân tay)',
-    availableBeds: 4,
-    isVerified: true,
-    isZeroBrokerage: true,
-    isPublished: true,
-    landlordName: 'Cô Tư (Quản lý khu trọ)',
-    landlordContact: '0901234567',
-    rating: 4.85,
-    reviewsCount: 41,
     createdAt: '2026-10-27'
   },
   {
     id: 'prop-vn-hn-1',
-    code: 'VN-105',
+    code: 'HN-106',
     title: 'Sunrise Scholar Box – Ký túc xá Sleepbox tiện nghi Cầu Giấy',
     slug: 'sunrise-scholar-dorm-cau-giay',
     address: 'Ngõ 20 Hồ Tùng Mậu, Phường Mai Dịch',
     city: 'Hà Nội',
-    country: 'Vietnam',
+    country: 'Việt Nam',
     area: 'Quận Cầu Giấy',
     nearbyUniversity: 'ĐH Quốc Gia Hà Nội & ĐH Sư Phạm (Cầu Giấy)',
     distanceToCampus: '350m (4 phút đi bộ)',
@@ -238,53 +286,6 @@ export const INITIAL_PROPERTIES: Property[] = [
     landlordContact: '0988776655',
     rating: 4.82,
     reviewsCount: 53,
-    createdAt: '2026-10-27'
-  },
-  {
-    id: 'prop-vn-dn-1',
-    code: 'VN-106',
-    title: 'Ocean Breeze Studio – Căn hộ sinh viên gần ĐH Kinh Tế & ĐH FPT Đà Nẵng',
-    slug: 'ocean-breeze-studio-ngu-hanh-son-da-nang',
-    address: 'Đường Châu Thị Vĩnh Tế, Phường Mỹ An',
-    city: 'Đà Nẵng',
-    country: 'Vietnam',
-    area: 'Quận Ngũ Hành Sơn (FPT City)',
-    nearbyUniversity: 'ĐH Kinh Tế - ĐH Đà Nẵng (Ngũ Hành Sơn)',
-    distanceToCampus: '250m (3 phút đi bộ)',
-    roomType: 'studio',
-    gender: 'all',
-    foodPreference: 'self_cook',
-    pricePerMonthUSD: 130, // ~3.300.000 VNĐ
-    securityDepositUSD: 130,
-    tokenDepositUSD: 20,
-    images: [
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1502005229762-ee1b40280b89?auto=format&fit=crop&w=1200&q=80'
-    ],
-    description:
-      'Căn hộ Studio đầy đủ tiện nghi nằm ngay khu phố sinh viên sầm uất Châu Thị Vĩnh Tế, đi bộ 3 phút tới ĐH Kinh Tế Đà Nẵng, 10 phút ra biển Mỹ Khê. Phòng có cửa sổ lớn đón gió biển mát mẻ quanh năm.',
-    highlights: [
-      'Sát cổng sau ĐH Kinh Tế Đà Nẵng (Phố sinh viên Mỹ An)',
-      'Đầy đủ nội thất: Giường nệm, tủ lạnh, máy giặt riêng',
-      'Cửa sổ lớn thoáng mát, thang máy hiện đại',
-      '0% Phí môi giới'
-    ],
-    amenities: [
-      'Wifi tốc độ cao',
-      'Máy lạnh & Tủ lạnh riêng',
-      'Máy giặt riêng tại phòng',
-      'Bếp từ & Hút mùi',
-      'Thang máy & Khóa vân tay'
-    ],
-    curfewTime: 'Giờ giấc tự do 24/7 (Khóa vân tay)',
-    availableBeds: 2,
-    isVerified: true,
-    isZeroBrokerage: true,
-    isPublished: true,
-    landlordName: 'Anh Hoàng (Chủ nhà Đà Nẵng)',
-    landlordContact: '0905123456',
-    rating: 4.91,
-    reviewsCount: 34,
     createdAt: '2026-10-28'
   }
 ];

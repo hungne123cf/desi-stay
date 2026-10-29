@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Star,
   CheckCircle2,
-  Clock,
   ArrowRight,
   Phone
 } from 'lucide-react';
@@ -27,11 +26,24 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
   const getGenderBadge = () => {
     switch (property.gender) {
       case 'boys':
-        return { label: '👦 Nam / Boys Only', bg: 'bg-blue-50 text-blue-700 border-blue-200' };
+        return { label: '👦 Phòng Nam', bg: 'bg-blue-50 text-blue-700 border-blue-200' };
       case 'girls':
-        return { label: '👧 Nữ / Girls Only', bg: 'bg-pink-50 text-pink-700 border-pink-200' };
+        return { label: '👧 Phòng Nữ', bg: 'bg-pink-50 text-pink-700 border-pink-200' };
       default:
-        return { label: '🏢 Nam/Nữ (Co-Ed)', bg: 'bg-purple-50 text-purple-700 border-purple-200' };
+        return { label: '🏢 Nam & Nữ', bg: 'bg-purple-50 text-purple-700 border-purple-200' };
+    }
+  };
+
+  const getRoomTypeLabel = () => {
+    switch (property.roomType) {
+      case 'studio':
+        return 'Căn hộ Studio';
+      case 'double':
+        return 'Phòng gác lửng / Đôi';
+      case 'single':
+        return 'Phòng đơn';
+      default:
+        return 'Phòng ở ghép';
     }
   };
 
@@ -40,10 +52,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
   const handleContactLandlord = (e: React.MouseEvent) => {
     e.stopPropagation();
     const phone = property.landlordContact.replace(/[^0-9]/g, '');
-    const message = encodeURIComponent(
-      `Xin chào, tôi quan tâm phòng "${property.title}" (Mã: ${property.code}) trên website. Phòng hiện tại còn trống không ạ?`
-    );
-    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    window.open(`https://zalo.me/${phone}`, '_blank');
   };
 
   return (
@@ -66,7 +75,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
           {property.isVerified && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Đã Xác Thực
+              Trọ Đã Xác Thực
             </span>
           )}
         </div>
@@ -105,14 +114,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${genderBadge.bg}`}>
             {genderBadge.label}
           </span>
-          <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 uppercase tracking-wider">
-            {property.roomType}
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+            {getRoomTypeLabel()}
           </span>
-          {property.country && (
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
-              {property.country}
-            </span>
-          )}
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+            📍 {property.city}
+          </span>
         </div>
 
         {/* Title & Code */}
@@ -123,7 +130,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
           >
             {property.title}
           </Link>
-          <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+          <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded shrink-0">
             {property.code}
           </span>
         </div>
@@ -131,13 +138,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
         {/* Distance to Campus */}
         <div className="flex items-center gap-1.5 text-xs text-indigo-700 font-semibold mb-2 bg-indigo-50/70 px-2.5 py-1 rounded-xl">
           <GraduationCap className="w-4 h-4 text-indigo-600 shrink-0" />
-          <span className="truncate">{property.distanceToCampus} đến {property.nearbyUniversity}</span>
+          <span className="truncate">
+            {property.distanceToCampus} tới {property.nearbyUniversity}
+          </span>
         </div>
 
         {/* Area & City */}
         <div className="flex items-center gap-1 text-xs text-slate-500 mb-3">
           <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <span className="truncate">{property.area}, {property.city}</span>
+          <span className="truncate">
+            {property.address}, {property.area}, {property.city}
+          </span>
         </div>
 
         {/* Highlights */}
@@ -155,14 +166,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
           <div className="flex items-baseline justify-between mb-3">
             <div>
               <span className="text-xl font-black text-slate-900">
-                {formatPrice(property.pricePerMonthUSD)}
+                {formatPrice(property.pricePerMonthUSD, 'VND')}
               </span>
               <span className="text-xs text-slate-500 font-normal"> / tháng</span>
             </div>
             <div className="text-right">
               <span className="text-[10px] text-slate-400 block">Cọc giữ phòng:</span>
               <span className="text-xs font-bold text-indigo-600">
-                {formatPrice(property.tokenDepositUSD)}
+                {formatPrice(property.tokenDepositUSD, 'VND')}
               </span>
             </div>
           </div>
@@ -170,15 +181,15 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleContactLandlord}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors"
+              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors cursor-pointer"
             >
               <Phone className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Liên Hệ</span>
+              <span>Nhắn Zalo</span>
             </button>
 
             <button
               onClick={() => onBookNow(property)}
-              className="flex items-center justify-center gap-1 py-2 px-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all"
+              className="flex items-center justify-center gap-1 py-2 px-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all cursor-pointer"
             >
               <span>Giữ Chỗ</span>
               <ArrowRight className="w-3.5 h-3.5" />

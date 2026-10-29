@@ -278,19 +278,19 @@ export default function AdminPage() {
           </div>
 
           <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Tiền cọc Token đã thu</span>
+            <span className="text-xs font-semibold text-slate-500 block">Tiền cọc giữ chỗ đã thu</span>
             <div className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">
-              {formatPrice(totalRevenueUSD)}
+              {formatPrice(totalRevenueUSD, 'VND')}
             </div>
-            <span className="text-[11px] text-emerald-700 font-semibold">Tự động quy đổi theo {currency}</span>
+            <span className="text-[11px] text-emerald-700 font-semibold">Thanh toán qua VietQR 24/7</span>
           </div>
 
           <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">Tiền tệ mặc định</span>
+            <span className="text-xs font-semibold text-slate-500 block">Khu vực trọng điểm</span>
             <div className="text-2xl sm:text-3xl font-black text-indigo-600 mt-1">
-              {currency}
+              Cần Thơ
             </div>
-            <span className="text-[11px] text-indigo-600 font-semibold">Đổi được trong Settings</span>
+            <span className="text-[11px] text-indigo-600 font-semibold">&amp; các tỉnh thành Việt Nam</span>
           </div>
         </div>
       </div>
@@ -331,7 +331,7 @@ export default function AdminPage() {
             }`}
           >
             <Settings className="w-4 h-4" />
-            <span>Cấu Hình VietQR &amp; Cổng Thanh Toán</span>
+            <span>Cấu Hình VietQR &amp; Liên Hệ</span>
           </button>
         </div>
 
@@ -344,7 +344,7 @@ export default function AdminPage() {
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                     <tr>
                       <th className="p-4">Phòng trọ</th>
-                      <th className="p-4">Quốc gia / Thành phố</th>
+                      <th className="p-4">Khu vực / Tỉnh thành</th>
                       <th className="p-4">Trường ĐH gần nhất</th>
                       <th className="p-4">Loại phòng</th>
                       <th className="p-4">Giá thuê / tháng</th>
@@ -371,17 +371,17 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="p-4 text-slate-600 font-medium">
-                          {prop.city}, <span className="font-semibold text-slate-800">{prop.country}</span>
+                          {prop.area}, <span className="font-semibold text-slate-800">{prop.city}</span>
                         </td>
                         <td className="p-4 text-indigo-700 font-medium truncate max-w-[180px]">
                           {prop.nearbyUniversity}
                         </td>
                         <td className="p-4 uppercase font-semibold text-slate-700">{prop.roomType}</td>
                         <td className="p-4 font-bold text-slate-900">
-                          {formatPrice(prop.pricePerMonthUSD)}
+                          {formatPrice(prop.pricePerMonthUSD, 'VND')}
                         </td>
                         <td className="p-4 font-bold text-indigo-600">
-                          {formatPrice(prop.tokenDepositUSD)}
+                          {formatPrice(prop.tokenDepositUSD, 'VND')}
                         </td>
                         <td className="p-4 text-right">
                           <button
@@ -410,7 +410,7 @@ export default function AdminPage() {
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                     <tr>
                       <th className="p-4">Khách thuê</th>
-                      <th className="p-4">Trường học / Công ty</th>
+                      <th className="p-4">Trường Đại học</th>
                       <th className="p-4">Mã phòng</th>
                       <th className="p-4">Ngày nhận phòng</th>
                       <th className="p-4">Cọc giữ chỗ</th>
@@ -432,10 +432,10 @@ export default function AdminPage() {
                         </td>
                         <td className="p-4 text-slate-600 font-medium">{lead.moveInDate}</td>
                         <td className="p-4 font-bold text-emerald-700">
-                          {lead.tokenAmountLocal || formatPrice(lead.tokenAmountUSD)}
+                          {lead.tokenAmountLocal || formatPrice(lead.tokenAmountUSD, 'VND')}
                         </td>
-                        <td className="p-4 capitalize text-slate-600 font-medium">
-                          {lead.paymentMethod.replace('_', ' ')}
+                        <td className="p-4 text-slate-600 font-medium">
+                          {lead.paymentMethod === 'vietqr' ? 'Chuyển khoản VietQR' : 'Hẹn xem trực tiếp'}
                         </td>
                         <td className="p-4">
                           <select
@@ -448,7 +448,7 @@ export default function AdminPage() {
                             }
                             className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
                           >
-                            <option value="token_paid">Đã cọc Token</option>
+                            <option value="token_paid">Đã cọc giữ chỗ</option>
                             <option value="confirmed">Đã chốt phòng</option>
                             <option value="pending">Chờ thanh toán</option>
                             <option value="cancelled">Đã hủy</option>
@@ -456,15 +456,13 @@ export default function AdminPage() {
                         </td>
                         <td className="p-4 text-right">
                           <a
-                            href={`https://wa.me/${lead.studentContact.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                              `Chào ${lead.studentName}, tôi liên hệ từ ban quản trị phòng ${lead.propertyCode} để xác nhận lịch hẹn nhận phòng của bạn.`
-                            )}`}
+                            href={`https://zalo.me/${lead.studentContact.replace(/[^0-9]/g, '')}`}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-xl border border-emerald-200 hover:bg-emerald-100"
                           >
                             <Phone className="w-3 h-3 text-emerald-600" />
-                            <span>Nhắn tin</span>
+                            <span>Chat Zalo</span>
                           </a>
                         </td>
                       </tr>
@@ -480,9 +478,9 @@ export default function AdminPage() {
         {activeTab === 'settings' && (
           <div className="mt-6 max-w-3xl bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Cấu Hình Ngân Hàng VietQR &amp; Thanh Toán Toàn Cầu</h3>
+              <h3 className="text-lg font-bold text-slate-900">Cấu Hình Ngân Hàng VietQR &amp; Thông Tin Liên Hệ</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Thiết lập thông tin tài khoản ngân hàng để tự động tạo mã VietQR cho khách thuê tại Việt Nam, hoặc cổng thanh toán quốc tế.
+                Thiết lập thông tin tài khoản ngân hàng tại Việt Nam để tự động tạo mã VietQR cho sinh viên đặt cọc giữ phòng.
               </p>
             </div>
 
@@ -494,29 +492,14 @@ export default function AdminPage() {
             )}
 
             <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Tên Thương Hiệu (Brand Name)</label>
-                  <input
-                    type="text"
-                    value={brandName}
-                    onChange={(e) => setBrandName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Tiền tệ hiển thị mặc định</label>
-                  <select
-                    value={defaultCurrency}
-                    onChange={(e) => setDefaultCurrency(e.target.value as CurrencyCode)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                  >
-                    <option value="VND">VND (₫) – Việt Nam</option>
-                    <option value="USD">USD ($) – Quốc Tế</option>
-                    <option value="INR">INR (₹) – Ấn Độ</option>
-                    <option value="EUR">EUR (€) – Châu Âu</option>
-                  </select>
-                </div>
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Tên Hệ Thống / Thương Hiệu Nhà Trọ</label>
+                <input
+                  type="text"
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                />
               </div>
 
               {/* VietQR Section */}
@@ -559,33 +542,9 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* International Gateways */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Stripe Publishable Key (Thẻ quốc tế)</label>
-                  <input
-                    type="text"
-                    value={stripeKey}
-                    onChange={(e) => setStripeKey(e.target.value)}
-                    placeholder="pk_live_..."
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Razorpay Key ID (Thị trường Ấn Độ)</label>
-                  <input
-                    type="text"
-                    value={razorpayKey}
-                    onChange={(e) => setRazorpayKey(e.target.value)}
-                    placeholder="rzp_live_..."
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Hotline / Zalo liên hệ</label>
+                  <label className="font-bold text-slate-700 block mb-1">Hotline Hỗ Trợ Sinh Viên</label>
                   <input
                     type="text"
                     value={supportHotline}
@@ -594,7 +553,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">WhatsApp Chủ Trọ</label>
+                  <label className="font-bold text-slate-700 block mb-1">Số Zalo Chủ Trọ</label>
                   <input
                     type="text"
                     value={supportWhatsApp}

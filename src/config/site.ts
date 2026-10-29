@@ -2,18 +2,17 @@ import { CurrencyCode } from '@/types';
 
 export const siteConfig = {
   name: 'UniStay',
-  nameAccent: 'Global',
-  tagline: 'Student Housing & Co-Living Platform',
+  nameAccent: 'Việt Nam',
+  tagline: 'Phòng Trọ & Căn Hộ Sinh Viên',
   description:
-    'Discover verified student apartments, dorms, and private rooms near top universities worldwide. Zero brokerage, instant token reservation, and 24/7 verified support.',
+    'Hệ thống tìm kiếm phòng trọ, căn hộ Studio và nhà trọ gác lửng uy tín dành cho sinh viên tại Cần Thơ và các thành phố đại học lớn tại Việt Nam. 0% phí môi giới, đặt cọc giữ chỗ trực tuyến qua VietQR.',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
-  legalName: 'UniStay Global Technologies Inc.',
-  supportEmail: 'contact@unistay.app',
-  supportWhatsApp: '+84901234567',
-  supportHotline: '1900 6868',
+  legalName: 'Công ty Cổ phần UniStay Việt Nam',
+  supportEmail: 'hotro@unistay.vn',
+  supportWhatsApp: '0901234567',
+  supportHotline: '0901 234 567',
   defaultCurrency: 'VND' as CurrencyCode,
 
-  // Conversion rates based on USD (Base = 1 USD)
   currencyRates: {
     USD: 1,
     VND: 25400,
@@ -21,12 +20,12 @@ export const siteConfig = {
     EUR: 0.92,
   },
 
-  // Popular campus hubs across regions
   regions: [
-    { country: 'Vietnam', cities: ['Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Cần Thơ'] },
-    { country: 'India', cities: ['Bengaluru', 'Pune', 'Delhi NCR', 'Kota', 'Mumbai'] },
-    { country: 'Australia / UK / Global', cities: ['Melbourne', 'Sydney', 'London', 'Manchester'] },
-  ],
+    {
+      country: 'Việt Nam',
+      cities: ['Cần Thơ', 'TP. Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Vĩnh Long', 'An Giang']
+    }
+  ]
 };
 
 export type SiteConfig = typeof siteConfig;
