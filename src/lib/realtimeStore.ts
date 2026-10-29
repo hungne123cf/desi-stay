@@ -28,8 +28,10 @@ const DEFAULT_SETTINGS: SiteSettings = {
   holdHours: 48
 };
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const IS_VERCEL = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const DATA_DIR = IS_VERCEL ? '/tmp/unistay-data' : path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'realtime-db.json');
+const SEED_FILE = path.join(process.cwd(), 'src', 'data', 'seed-store.json');
 
 type Listener = (state: RealtimeState) => void;
 
@@ -63,8 +65,14 @@ export function getRealtimeState(): RealtimeState {
   }
 
   try {
-    if (fs.existsSync(DB_FILE)) {
-      const raw = fs.readFileSync(DB_FILE, 'utf-8');
+    const fileToRead = fs.existsSync(DB_FILE)
+      ? DB_FILE
+      : fs.existsSync(SEED_FILE)
+      ? SEED_FILE
+      : null;
+
+    if (fileToRead) {
+      const raw = fs.readFileSync(fileToRead, 'utf-8');
       const parsed = JSON.parse(raw) as RealtimeState;
       const cleaned: RealtimeState = {
         properties: Array.isArray(parsed.properties)

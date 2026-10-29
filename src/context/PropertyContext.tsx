@@ -104,6 +104,14 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     reviews?: PropertyReview[];
     settings?: SiteSettings;
   }) => {
+    // 1. Đồng bộ Real-Time tức thì đa tab/cửa sổ qua BroadcastChannel
+    try {
+      const channel = new BroadcastChannel('unistay_realtime_sync');
+      channel.postMessage({ type: 'SYNC_UPDATE', payload });
+      channel.close();
+    } catch {}
+
+    // 2. Lưu trữ lên Server API
     try {
       await fetch('/api/store', {
         method: 'POST',
@@ -205,41 +213,99 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setProperties(fallbackProps);
       });
 
-    // Kết nối Real-Time Stream (SSE)
+    // 1. Kênh BroadcastChannel đồng bộ tức thì giữa các tab/cửa sổ (SignalR-style browser mesh)
+    let syncChannel: BroadcastChannel | null = null;
+    try {
+      syncChannel = new BroadcastChannel('unistay_realtime_sync');
+      syncChannel.onmessage = (event) => {
+        if (event.data?.type === 'SYNC_UPDATE' && event.data?.payload) {
+          const p = event.data.payload;
+          if (Array.isArray(p.properties) && p.properties.length > 0) setProperties(p.properties);
+          if (Array.isArray(p.bookings)) setBookings(p.bookings);
+          if (Array.isArray(p.messages)) setMessages(p.messages);
+          if (Array.isArray(p.reviews)) setReviews(p.reviews);
+          if (p.settings) setSettings(p.settings);
+        }
+      };
+    } catch {}
+
+    // 2. Kết nối Real-Time Stream (SSE / SignalR-style push) với cơ chế tự phục hồi
     let eventSource: EventSource | null = null;
-    if (typeof window !== 'undefined' && 'EventSource' in window) {
-      eventSource = new EventSource('/api/stream');
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (Array.isArray(data.properties)) {
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const setupEventSource = () => {
+      if (typeof window === 'undefined' || !('EventSource' in window)) return;
+      try {
+        eventSource = new EventSource('/api/stream');
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (Array.isArray(data.properties) && data.properties.length > 0) {
+              const cleanProps = data.properties.filter(isRealAdminProperty);
+              setProperties(cleanProps);
+              localStorage.setItem('unistay_real_properties_v4', JSON.stringify(cleanProps));
+            }
+            if (Array.isArray(data.bookings) && data.bookings.length > 0) {
+              const cleanBookings = data.bookings.filter(isRealUserBooking);
+              setBookings(cleanBookings);
+              localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(cleanBookings));
+            }
+            if (Array.isArray(data.messages)) {
+              setMessages(data.messages);
+              localStorage.setItem('unistay_real_messages_v4', JSON.stringify(data.messages));
+            }
+            if (Array.isArray(data.reviews)) {
+              setReviews(data.reviews);
+              localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(data.reviews));
+            }
+            if (data.settings) {
+              setSettings(data.settings);
+            }
+          } catch {}
+        };
+
+        eventSource.onerror = () => {
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          // Tự động kết nối lại sau 4 giây nếu bị ngắt kết nối
+          setTimeout(() => {
+            if (isMounted) setupEventSource();
+          }, 4000);
+        };
+      } catch {}
+    };
+
+    setupEventSource();
+
+    // 3. Fallback polling dự phòng mỗi 8 giây để đảm bảo không bao giờ mất kết nối
+    pollInterval = setInterval(() => {
+      if (!isMounted) return;
+      fetch('/api/store')
+        .then((res) => res.json())
+        .then((data) => {
+          if (!isMounted || !data) return;
+          if (Array.isArray(data.properties) && data.properties.length > 0) {
             const cleanProps = data.properties.filter(isRealAdminProperty);
             setProperties(cleanProps);
-            localStorage.setItem('unistay_real_properties_v4', JSON.stringify(cleanProps));
           }
-          if (Array.isArray(data.bookings)) {
+          if (Array.isArray(data.bookings) && data.bookings.length > 0) {
             const cleanBookings = data.bookings.filter(isRealUserBooking);
             setBookings(cleanBookings);
-            localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(cleanBookings));
           }
-          if (Array.isArray(data.messages)) {
-            setMessages(data.messages);
-            localStorage.setItem('unistay_real_messages_v4', JSON.stringify(data.messages));
-          }
-          if (Array.isArray(data.reviews)) {
-            setReviews(data.reviews);
-            localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(data.reviews));
-          }
-          if (data.settings) {
-            setSettings(data.settings);
-          }
-        } catch {}
-      };
-    }
+          if (Array.isArray(data.messages)) setMessages(data.messages);
+          if (Array.isArray(data.reviews)) setReviews(data.reviews);
+          if (data.settings) setSettings(data.settings);
+        })
+        .catch(() => {});
+    }, 8000);
 
     return () => {
       isMounted = false;
+      if (syncChannel) syncChannel.close();
       if (eventSource) eventSource.close();
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, []);
 
