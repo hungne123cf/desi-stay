@@ -15,17 +15,32 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'UniStay Việt Nam | Hệ Thống Phòng Trọ & Căn Hộ Sinh Viên Cần Thơ & Toàn Quốc',
+  metadataBase: new URL('https://desi-stay.vercel.app'),
+  title: 'UniStay Việt Nam (desi-stay) | Hệ Thống Phòng Trọ & Căn Hộ Sinh Viên',
   description:
-    'Tìm phòng trọ, căn hộ Studio, phòng gác lửng đã xác thực gần ĐH Cần Thơ, ĐH FPT Cần Thơ, ĐH Y Dược, ĐH Nam Cần Thơ và các trường đại học lớn tại Việt Nam. 0% phí môi giới, giờ giấc tự do.',
+    'Nền tảng desi-stay - UniStay Việt Nam: Tìm phòng trọ, căn hộ Studio, phòng gác lửng đã xác thực gần ĐH Cần Thơ, FPT, Y Dược và các trường đại học toàn quốc. 0% phí môi giới, cọc giữ chỗ VietQR an toàn.',
   keywords: [
+    'desi-stay',
+    'desi stay',
+    'desi-stay vercel',
+    'unistay',
     'phòng trọ sinh viên cần thơ',
     'nhà trọ ninh kiều cần thơ',
     'phòng trọ gần đại học cần thơ',
     'phòng trọ đại học fpt cần thơ',
     'căn hộ mini sinh viên',
     'unistay việt nam'
-  ]
+  ],
+  authors: [{ name: 'UniStay Vietnam (desi-stay)' }],
+  openGraph: {
+    title: 'UniStay Việt Nam (desi-stay) | Phòng Trọ & Căn Hộ Sinh Viên',
+    description:
+      'Nền tảng desi-stay - Tìm phòng trọ, căn hộ Studio chính chủ đã xác thực 0% phí môi giới.',
+    url: 'https://desi-stay.vercel.app',
+    siteName: 'UniStay (desi-stay)',
+    locale: 'vi_VN',
+    type: 'website'
+  }
 };
 
 export default function RootLayout({
