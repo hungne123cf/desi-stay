@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     }
   },
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || 'Kn4tclD9lFmGIV9PkLQ83s8efFUUV-kdNZ8BgOxkSKs'
   },
   openGraph: {
     title: 'UniStay Việt Nam (desi-stay) | Phòng Trọ & Căn Hộ Sinh Viên',
