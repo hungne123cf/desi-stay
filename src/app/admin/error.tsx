@@ -32,14 +32,13 @@ export default function AdminError({
 
         <div>
           <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400 bg-indigo-950/60 border border-indigo-800/60 px-2.5 py-1 rounded-full">
-            Bảng Quản Trị Hệ Thống
+            Admin
           </span>
           <h2 className="text-xl font-black text-white mt-3">
-            Làm Mới Phiên Làm Việc Admin
+            Làm Mới Phiên Admin
           </h2>
           <p className="text-xs text-slate-400 mt-2 leading-relaxed">
             Hệ thống vừa cập nhật dữ liệu mới hoặc phiên đăng nhập cần đồng bộ lại.
-            Dữ liệu phòng trọ và đơn cọc của bạn vẫn an toàn tuyệt đối.
           </p>
         </div>
 
@@ -50,7 +49,7 @@ export default function AdminError({
             className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Tải Lại Admin</span>
+            <span>Tải Lại</span>
           </button>
           <Link
             href="/"

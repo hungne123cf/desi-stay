@@ -280,7 +280,7 @@ function LoginFormContent() {
                   }}
                   className="w-full py-2 px-3 text-[11px] font-semibold text-slate-600 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <span>🔑 Bấm để tự điền tài khoản Admin (truongvantuan43344)</span>
+                  <span>🔑 Tự điền tài khoản Admin</span>
                 </button>
 
                 <p>

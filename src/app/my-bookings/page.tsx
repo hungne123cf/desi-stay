@@ -125,13 +125,13 @@ export default function MyBookingsPage() {
             <div>
               <div className="flex items-center gap-2 text-xs text-indigo-400 font-bold uppercase tracking-wider mb-1">
                 <Receipt className="w-4 h-4 text-indigo-400" />
-                <span>Ví &amp; Lịch Sử Giao Dịch Khách Thuê</span>
+                <span>Lịch Sử Đặt Cọc</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                Lịch Sử Đặt Cọc &amp; Giao Dịch Của Tôi
+                Lịch Sử Đặt Cọc
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                Theo dõi tiến độ cọc VietQR Napas 247, lịch hẹn xem phòng và viết đánh giá xác thực 1 lượt / 1 lần mua.
+                Theo dõi tiến độ cọc VietQR 24/7 và lịch hẹn xem phòng của bạn.
               </p>
             </div>
 

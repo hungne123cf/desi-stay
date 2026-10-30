@@ -317,10 +317,9 @@ export default function AdminPage() {
             <Lock className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Yêu cầu quyền Quản Trị hoặc Staff</h3>
+            <h3 className="text-xl font-bold text-slate-900">Yêu cầu quyền Admin</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Khu vực này dành riêng cho Quản trị viên (Admin) và Nhân viên (Staff).
-              Vui lòng đăng nhập bằng tài khoản được chỉ định quyền để truy cập Bảng điều khiển quản lý.
+              Khu vực này dành riêng cho Quản trị viên và Nhân viên hệ thống.
             </p>
           </div>
           <Link
@@ -368,7 +367,7 @@ export default function AdminPage() {
   }[] = [
     {
       id: 'listings',
-      label: 'Quản Lý Phòng Trọ',
+      label: 'Phòng Trọ',
       sublabel: 'Kho phòng & giá thuê',
       icon: <Layers className="w-4 h-4 shrink-0" />,
       badge: activeProperties.length,
@@ -376,7 +375,7 @@ export default function AdminPage() {
     },
     {
       id: 'leads',
-      label: 'Đơn Cọc & Lịch Hẹn',
+      label: 'Đơn Cọc & Hẹn',
       sublabel: 'Duyệt Bill VietQR & hẹn xem',
       icon: <Users className="w-4 h-4 shrink-0" />,
       badge: pendingBookingsCount > 0 ? `${pendingBookingsCount} chờ` : activeBookings.length,
@@ -387,7 +386,7 @@ export default function AdminPage() {
     },
     {
       id: 'chat',
-      label: 'Tin Nhắn Khách Hỏi',
+      label: 'Tin Nhắn',
       sublabel: 'Hộp thư Live Chat 2 chiều',
       icon: <MessageCircle className="w-4 h-4 shrink-0" />,
       badge:
@@ -401,7 +400,7 @@ export default function AdminPage() {
     },
     {
       id: 'reviews',
-      label: 'Đánh Giá & Bình Luận',
+      label: 'Đánh Giá',
       sublabel: 'Quản lý sao & phản hồi SV',
       icon: <Star className="w-4 h-4 shrink-0" />,
       badge: `${activeReviews.length} ⭐`,
@@ -409,7 +408,7 @@ export default function AdminPage() {
     },
     {
       id: 'accounts',
-      label: 'Quản Lý Tài Khoản',
+      label: 'Tài Khoản',
       sublabel: 'Chỉ định Staff & Phân quyền',
       icon: <UserCheck className="w-4 h-4 shrink-0" />,
       badge: `${activeAccounts.length}`,
@@ -417,15 +416,15 @@ export default function AdminPage() {
     },
     {
       id: 'settings',
-      label: 'Quản Lý Thu Cọc & Ngân Hàng',
-      sublabel: 'Doanh thu cọc, VietQR & STK nhận tiền',
+      label: 'Thu Cọc & Ngân Hàng',
+      sublabel: 'Doanh thu cọc, VietQR & STK',
       icon: <Wallet className="w-4 h-4 shrink-0" />,
       badge: formatPrice(totalRevenueUSD, 'VND'),
       badgeColor: 'bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-bold'
     },
     {
       id: 'trash',
-      label: 'Thùng Rác & Khôi Phục',
+      label: 'Thùng Rác',
       sublabel: 'Khôi phục phòng, cọc & tài khoản',
       icon: <Trash2 className="w-4 h-4 shrink-0" />,
       badge: totalTrashCount > 0 ? `${totalTrashCount} mục` : undefined,
@@ -505,7 +504,7 @@ export default function AdminPage() {
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 font-medium -mt-0.5">
-                Bảng Điều Khiển Quản Trị
+                Bảng Điều Khiển
               </p>
             </div>
           </div>
@@ -515,10 +514,10 @@ export default function AdminPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-bold uppercase tracking-wider">
                 <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <span>{user?.role === 'admin' ? 'Admin Portal (Quản Trị)' : 'Staff Portal (Nhân Viên)'}</span>
+                <span>{user?.role === 'admin' ? 'Admin' : 'Staff'}</span>
               </div>
               <h1 className="text-sm font-black tracking-tight text-white truncate mt-0.5">
-                Xin chào, {user?.name ? user.name.split(' ')[0] : 'Quản Trị'} 👋
+                Xin chào, {user?.name ? user.name.split(' ')[0] : 'Admin'} 👋
               </h1>
               <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
             </div>
@@ -544,7 +543,7 @@ export default function AdminPage() {
           {/* Left Navigation Menu Items */}
           <div className="space-y-1">
             <span className="px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-              Danh Mục Quản Trị Hệ Thống
+              Danh Mục Quản Trị
             </span>
             <nav className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-none">
               {navItems.map((item) => {
@@ -610,7 +609,7 @@ export default function AdminPage() {
                 ? 'bg-indigo-950/70 border-indigo-500 shadow-md ring-1 ring-indigo-500/30'
                 : 'bg-slate-900 hover:bg-slate-800/90 border-slate-800 hover:border-slate-700'
             }`}
-            title="Bấm để vào mục Quản Lý Thu Cọc & Cấu Hình Ngân Hàng"
+            title="Mục Thu Cọc & Ngân Hàng"
           >
             <div className="flex items-center justify-between text-slate-400 text-[11px] mb-1">
               <span className="flex items-center gap-1 group-hover:text-slate-200 transition-colors">
@@ -639,7 +638,7 @@ export default function AdminPage() {
               className="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Giao Diện Khách</span>
+              <span>Trang Khách</span>
             </Link>
             <button
               type="button"
@@ -662,7 +661,7 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold uppercase tracking-wider">
-                Đang mở mục
+                Đang mở
               </span>
               <span className="text-xs text-slate-400 font-medium">
                 Đồng bộ Real-time đa trình duyệt
@@ -680,7 +679,7 @@ export default function AdminPage() {
               className="px-3.5 py-2.5 rounded-2xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 cursor-pointer transition-colors"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold text-slate-500 block">Phòng trọ đang bán</span>
+                <span className="text-[10px] font-semibold text-slate-500 block">Phòng mở thuê</span>
                 {deletedProperties.length > 0 && (
                   <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.2 rounded">
                     +{deletedProperties.length} rác
@@ -694,7 +693,7 @@ export default function AdminPage() {
               onClick={() => setActiveTab('leads')}
               className="px-3.5 py-2.5 rounded-2xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 cursor-pointer transition-colors"
             >
-              <span className="text-[10px] font-semibold text-slate-500 block">Khách đặt &amp; Hẹn</span>
+              <span className="text-[10px] font-semibold text-slate-500 block">Đơn cọc &amp; Hẹn</span>
               <span className="text-base font-black text-indigo-600">{activeBookings.length} đơn</span>
             </div>
 
@@ -702,7 +701,7 @@ export default function AdminPage() {
               onClick={() => setActiveTab('settings')}
               className="px-3.5 py-2.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 cursor-pointer"
             >
-              <span className="text-[10px] font-semibold text-emerald-700 block">Tiền cọc đã thu</span>
+              <span className="text-[10px] font-semibold text-emerald-700 block">Cọc đã thu</span>
               <span className="text-base font-black text-emerald-700">
                 {formatPrice(totalRevenueUSD, 'VND')}
               </span>
@@ -712,7 +711,7 @@ export default function AdminPage() {
               onClick={() => setActiveTab('reviews')}
               className="px-3.5 py-2.5 rounded-2xl bg-amber-50/70 border border-amber-200/70 cursor-pointer"
             >
-              <span className="text-[10px] font-semibold text-amber-800 block">Đánh giá SV</span>
+              <span className="text-[10px] font-semibold text-amber-800 block">Đánh giá</span>
               <span className="text-base font-black text-amber-700">{activeReviews.length} nhận xét ⭐</span>
             </div>
           </div>
@@ -738,7 +737,7 @@ export default function AdminPage() {
                   className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors cursor-pointer text-xs shrink-0 flex items-center gap-1.5"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Mở Thùng Rác để Khôi Phục →</span>
+                  <span>Mở Thùng Rác →</span>
                 </button>
               </div>
             )}
@@ -747,7 +746,7 @@ export default function AdminPage() {
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-4 text-xs text-emerald-900 shadow-xs">
                 <div className="flex items-center gap-2 font-bold">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Đã đăng phòng trọ mới lên hệ thống thành công! Phòng đã hiển thị ở vị trí đầu tiên trên trang User.</span>
+                  <span>Đã đăng phòng trọ mới thành công!</span>
                 </div>
                 <Link
                   href="/"
@@ -1378,11 +1377,11 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-slate-600" />
                     <h3 className="text-sm font-bold text-slate-900">
-                      Lịch Sử Các Khoản Tiền Cọc Đã Giao Dịch ({bookings.length})
+                      Lịch Sử Tiền Cọc ({bookings.length})
                     </h3>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Danh sách tất cả các khoản tiền cọc mà sinh viên / khách thuê đã thanh toán qua tài khoản ngân hàng của bạn
+                    Danh sách các khoản tiền cọc đã thanh toán qua VietQR
                   </p>
                 </div>
 
@@ -1470,7 +1469,7 @@ export default function AdminPage() {
             <div className="border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
               <div className="p-4 border-b border-slate-100 bg-slate-50 font-bold text-xs text-slate-700 flex items-center justify-between">
                 <span>
-                  Danh Sách Khách Nhắn Tin ({Array.from(new Set((messages || []).map((m) => m?.conversationId).filter(Boolean))).length})
+                  Hộp Thư Tin Nhắn ({Array.from(new Set((messages || []).map((m) => m?.conversationId).filter(Boolean))).length})
                 </span>
                 {unreadChatCount > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px]">
@@ -1806,7 +1805,7 @@ export default function AdminPage() {
                   </h2>
                 </div>
                 <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-                  Quản lý danh sách thành viên, chỉ định tài khoản sinh viên/khách thành Nhân viên vận hành (Staff), hoặc phân quyền Quản trị viên (Admin).
+                  Quản lý danh sách thành viên, chỉ định Staff hoặc phân quyền Admin.
                 </p>
               </div>
 
@@ -1842,7 +1841,7 @@ export default function AdminPage() {
               <div className="bg-gradient-to-br from-indigo-50 to-blue-50/50 p-4 rounded-2xl border border-indigo-200/80 shadow-xs">
                 <span className="text-[11px] font-bold text-indigo-700 uppercase flex items-center gap-1">
                   <UserCheck className="w-3.5 h-3.5" />
-                  <span>Nhân Viên (Staff)</span>
+                  <span>Staff</span>
                 </span>
                 <div className="flex items-baseline justify-between mt-1">
                   <span className="text-2xl font-black text-indigo-950">
@@ -1855,7 +1854,7 @@ export default function AdminPage() {
               <div className="bg-gradient-to-br from-purple-50 to-pink-50/50 p-4 rounded-2xl border border-purple-200/80 shadow-xs">
                 <span className="text-[11px] font-bold text-purple-700 uppercase flex items-center gap-1">
                   <Crown className="w-3.5 h-3.5" />
-                  <span>Quản Trị (Admin)</span>
+                  <span>Admin</span>
                 </span>
                 <div className="flex items-baseline justify-between mt-1">
                   <span className="text-2xl font-black text-purple-950">
@@ -1868,13 +1867,13 @@ export default function AdminPage() {
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50/50 p-4 rounded-2xl border border-emerald-200/80 shadow-xs">
                 <span className="text-[11px] font-bold text-emerald-700 uppercase flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
-                  <span>Sinh Viên / Khách</span>
+                  <span>Khách Thuê</span>
                 </span>
                 <div className="flex items-baseline justify-between mt-1">
                   <span className="text-2xl font-black text-emerald-950">
                     {accounts.filter((a) => a.role === 'student').length}
                   </span>
-                  <span className="text-xs text-emerald-600 font-bold">khách thuê</span>
+                  <span className="text-xs text-emerald-600 font-bold">thành viên</span>
                 </div>
               </div>
             </div>
@@ -1888,17 +1887,17 @@ export default function AdminPage() {
                     { id: 'all', label: 'Tất Cả', count: accounts.length },
                     {
                       id: 'staff',
-                      label: 'Nhân Viên (Staff)',
+                      label: 'Staff',
                       count: accounts.filter((a) => a.role === 'staff').length
                     },
                     {
                       id: 'admin',
-                      label: 'Quản Trị Viên',
+                      label: 'Admin',
                       count: accounts.filter((a) => a.role === 'admin').length
                     },
                     {
                       id: 'student',
-                      label: 'Sinh Viên / Khách',
+                      label: 'Khách Thuê',
                       count: accounts.filter((a) => a.role === 'student').length
                     }
                   ] as const
@@ -2052,17 +2051,17 @@ export default function AdminPage() {
                           {acc.role === 'admin' ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-purple-100 text-purple-900 border border-purple-200">
                               <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                              <span>Quản Trị Viên (Admin)</span>
+                              <span>Admin</span>
                             </span>
                           ) : acc.role === 'staff' ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-indigo-100 text-indigo-900 border border-indigo-200 shadow-xs">
                               <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
-                              <span>Nhân Viên Vận Hành (Staff)</span>
+                              <span>Staff</span>
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                               <Users className="w-3.5 h-3.5 text-slate-500" />
-                              <span>Sinh Viên / Khách Thuê</span>
+                              <span>Khách Thuê</span>
                             </span>
                           )}
                         </div>
@@ -2114,9 +2113,9 @@ export default function AdminPage() {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (confirm(`Bạn có chắc chắn muốn nâng ${acc.name} (${acc.email}) lên quyền Quản trị viên (Admin) cao nhất?`)) {
+                                      if (confirm(`Bạn có chắc chắn muốn nâng ${acc.name} (${acc.email}) lên quyền Admin cao nhất?`)) {
                                         updateAccountRole(acc.email, 'admin');
-                                        setAccountToast(`Đã nâng ${acc.name} lên Quản trị viên (Admin)!`);
+                                        setAccountToast(`Đã nâng ${acc.name} lên Admin!`);
                                         setTimeout(() => setAccountToast(null), 3500);
                                       }
                                     }}
@@ -3500,7 +3499,7 @@ export default function AdminPage() {
                       className="accent-indigo-600"
                     />
                     <div>
-                      <span>Nhân Viên (Staff)</span>
+                      <span>Staff</span>
                       <p className="text-[10px] font-normal text-slate-500">Quản lý trọ, duyệt cọc, chat</p>
                     </div>
                   </label>
@@ -3521,7 +3520,7 @@ export default function AdminPage() {
                       className="accent-purple-600"
                     />
                     <div>
-                      <span>Quản Trị Viên (Admin)</span>
+                      <span>Admin</span>
                       <p className="text-[10px] font-normal text-slate-500">Toàn quyền hệ thống</p>
                     </div>
                   </label>

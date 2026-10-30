@@ -148,7 +148,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               }`}
             >
               <Heart className={`w-3.5 h-3.5 ${filters.wishlistOnly ? 'fill-white' : 'text-rose-500'}`} />
-              <span>Phòng Đã Lưu</span>
+              <span>Yêu Thích</span>
               {wishlistIds.length > 0 && (
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                   filters.wishlistOnly ? 'bg-white text-rose-700' : 'bg-rose-100 text-rose-700'

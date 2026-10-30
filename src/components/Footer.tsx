@@ -150,7 +150,7 @@ export const Footer: React.FC = () => {
           <p>© 2026 UniStay Việt Nam – Hệ thống Phòng trọ Sinh viên Cần Thơ &amp; Toàn Quốc.</p>
           <div className="flex items-center gap-6">
             <Link href="/admin" className="hover:text-indigo-400 transition-colors font-medium">
-              Trang Quản Trị Chủ Trọ (Admin)
+              Trang Admin
             </Link>
             <span className="hover:text-slate-400">Quy định đặt cọc</span>
             <span className="hover:text-slate-400">Chính sách bảo mật</span>

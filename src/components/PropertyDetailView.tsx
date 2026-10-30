@@ -148,10 +148,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                   ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-xs'
                   : 'bg-white hover:bg-rose-50 border-slate-200 hover:border-rose-200 text-slate-700'
               }`}
-              title="Lưu lại phòng để so sánh"
+              title="Lưu vào danh sách yêu thích"
             >
               <Heart className={`w-3.5 h-3.5 ${saved ? 'fill-rose-500 text-rose-500' : 'text-slate-500'}`} />
-              <span>{saved ? 'Đã lưu phòng' : 'Thả tim lưu phòng'}</span>
+              <span>{saved ? 'Đã thích' : 'Yêu thích'}</span>
             </button>
           )}
 

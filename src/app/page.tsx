@@ -253,7 +253,7 @@ export default function HomePage() {
             </h3>
             <p className="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-5">
               {properties.length === 0
-                ? 'Tất cả dữ liệu mẫu đã được xóa. Khi Quản trị viên (Admin) thêm phòng mới, danh sách phòng sẽ tự động hiển thị tại đây theo thời gian thực.'
+                ? 'Chưa có phòng nào. Khi Admin thêm phòng mới, danh sách sẽ tự động hiển thị tại đây.'
                 : 'Bạn đang bật bộ lọc hoặc nhập từ khóa tìm kiếm (ví dụ trên thanh Search đang có chữ). Hãy xóa bộ lọc để xem toàn bộ danh sách phòng.'}
             </p>
             {hasActiveFilters && (

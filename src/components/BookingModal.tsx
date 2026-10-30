@@ -714,14 +714,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                   className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Phone className="w-4 h-4" />
-                  <span>Nhắn Zalo Báo Chủ Trọ Ngay</span>
+                  <span>Nhắn Zalo Chủ Trọ</span>
                 </button>
                 <Link
                   href="/my-bookings"
                   onClick={onClose}
                   className="py-3 px-5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-200 flex items-center justify-center gap-1.5 transition-colors"
                 >
-                  <span>Xem Lịch Sử Giao Dịch ↗</span>
+                  <span>Xem Vé Cọc ↗</span>
                 </Link>
                 <button
                   type="button"

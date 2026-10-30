@@ -315,10 +315,10 @@ function ProfileContent() {
                 </h1>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   {user.role === 'admin'
-                    ? 'Quản trị viên (Admin)'
+                    ? 'Admin'
                     : user.role === 'staff'
-                    ? 'Nhân viên (Staff)'
-                    : 'Thành viên Khách thuê'}
+                    ? 'Staff'
+                    : 'Khách thuê'}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-400 flex items-center justify-center sm:justify-start gap-1.5">
@@ -422,7 +422,7 @@ function ProfileContent() {
                 }`}
               >
                 <Heart className="w-4 h-4 fill-current" />
-                <span>Phòng Trọ Đã Lưu (Yêu Thích)</span>
+                <span>Yêu Thích</span>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                     activeTab === 'wishlist'
@@ -444,7 +444,7 @@ function ProfileContent() {
                 }`}
               >
                 <Receipt className="w-4 h-4" />
-                <span>Lịch Sử Đặt Cọc &amp; Giữ Chỗ</span>
+                <span>Lịch Sử Đặt Cọc</span>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                     activeTab === 'bookings'
@@ -472,10 +472,10 @@ function ProfileContent() {
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                       <UserIcon className="w-5 h-5 text-indigo-600" />
-                      <span>Thông Tin Hồ Sơ Cá Nhân</span>
+                      <span>Hồ Sơ Cá Nhân</span>
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Thông tin này giúp quản trị viên và chủ trọ liên hệ khi bạn giữ chỗ hoặc hẹn xem phòng.
+                      Thông tin này giúp quản lý và chủ trọ liên hệ khi bạn giữ chỗ hoặc hẹn xem phòng.
                     </p>
                   </div>
                 </div>
@@ -652,7 +652,7 @@ function ProfileContent() {
                     onClick={() => switchTab('wishlist')}
                     className="p-3.5 bg-rose-50/60 hover:bg-rose-100/70 rounded-2xl border border-rose-100 cursor-pointer transition-colors"
                   >
-                    <span className="text-[11px] text-slate-500 block">Đã lưu:</span>
+                    <span className="text-[11px] text-slate-500 block">Yêu thích:</span>
                     <span className="text-xl font-black text-rose-600">
                       {wishlistProperties.length} phòng
                     </span>
@@ -675,7 +675,7 @@ function ProfileContent() {
                     onClick={() => switchTab('wishlist')}
                     className="w-full py-2.5 px-4 bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-700 font-bold text-xs rounded-xl flex items-center justify-between transition-colors border border-slate-200/60 cursor-pointer"
                   >
-                    <span>Xem phòng trọ yêu thích</span>
+                    <span>Xem mục yêu thích</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                   <button
@@ -683,7 +683,7 @@ function ProfileContent() {
                     onClick={() => switchTab('bookings')}
                     className="w-full py-2.5 px-4 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 font-bold text-xs rounded-xl flex items-center justify-between transition-colors border border-slate-200/60 cursor-pointer"
                   >
-                    <span>Xem lịch sử đặt cọc VietQR</span>
+                    <span>Xem lịch sử đặt cọc</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -721,7 +721,7 @@ function ProfileContent() {
               <div>
                 <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                   <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />
-                  <span>Danh Sách Phòng Trọ Đã Lưu Yêu Thích</span>
+                  <span>Danh Sách Yêu Thích</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Những căn phòng bạn đã thả tim để tiện so sánh giá, vị trí và tiện nghi trước khi quyết định đặt cọc.
@@ -777,7 +777,7 @@ function ProfileContent() {
               <div>
                 <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                   <Receipt className="w-5 h-5 text-indigo-600" />
-                  <span>Lịch Sử Đặt Cọc &amp; Giữ Chỗ Của Bạn</span>
+                  <span>Lịch Sử Đặt Cọc</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Biên lai VietQR 24/7 và thông tin người quản lý hỗ trợ cho các đơn giữ phòng của bạn.
