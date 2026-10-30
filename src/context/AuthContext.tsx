@@ -156,29 +156,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.getItem('unistay_google_client_id') || DEFAULT_GOOGLE_CLIENT_ID;
       setGoogleClientIdState(savedClientId);
 
-      const savedKnown = localStorage.getItem('unistay_known_accounts');
-      if (savedKnown) {
-        const parsedKnown = JSON.parse(savedKnown);
-        if (Array.isArray(parsedKnown)) {
-          const sanitizedKnown = parsedKnown.map((item: StoredAccount) => {
-            const itemEmail = item.email?.toLowerCase().trim();
-            if (itemEmail === 'truongvantuan43344@gmail.com') {
-              return { ...item, avatar: TRUONG_HUNG_ADMIN_AVATAR };
-            }
-            if (itemEmail === 'hungtce181568@fpt.edu.vn') {
-              return { ...item, avatar: TRUONG_HUNG_K18_AVATAR };
-            }
-            if (item.avatar && (item.avatar.includes('unsplash') || item.avatar.includes('photo-1534528741775'))) {
-              return { ...item, avatar: undefined };
-            }
-            return item;
-          });
-          setKnownAccounts(sanitizedKnown);
-          try {
-            localStorage.setItem('unistay_known_accounts', JSON.stringify(sanitizedKnown));
-          } catch {}
+      const defaultAccounts: StoredAccount[] = [
+        {
+          name: 'Trương Hùng (Admin)',
+          email: 'truongvantuan43344@gmail.com',
+          avatar: TRUONG_HUNG_ADMIN_AVATAR,
+          role: 'admin'
+        },
+        {
+          name: 'Truong Hung (K18 CT)',
+          email: 'hungtce181568@fpt.edu.vn',
+          avatar: TRUONG_HUNG_K18_AVATAR,
+          role: 'student'
         }
+      ];
+
+      const savedKnown = localStorage.getItem('unistay_known_accounts');
+      let knownList: StoredAccount[] = [];
+      if (savedKnown) {
+        try {
+          const parsedKnown = JSON.parse(savedKnown);
+          if (Array.isArray(parsedKnown)) knownList = parsedKnown;
+        } catch {}
       }
+
+      // Luôn kết hợp các tài khoản hệ thống với tài khoản đã lưu
+      const mapKnown = new Map<string, StoredAccount>();
+      defaultAccounts.forEach((a) => mapKnown.set(a.email.toLowerCase().trim(), a));
+      knownList.forEach((a) => {
+        if (a && a.email) {
+          const key = a.email.toLowerCase().trim();
+          const existing = mapKnown.get(key);
+          mapKnown.set(key, { ...existing, ...a });
+        }
+      });
+
+      const sanitizedKnown = Array.from(mapKnown.values()).map((item) => {
+        const itemEmail = item.email.toLowerCase().trim();
+        if (itemEmail === 'truongvantuan43344@gmail.com') {
+          return { ...item, avatar: TRUONG_HUNG_ADMIN_AVATAR, role: 'admin' as const };
+        }
+        if (itemEmail === 'hungtce181568@fpt.edu.vn') {
+          return { ...item, avatar: TRUONG_HUNG_K18_AVATAR, role: 'student' as const };
+        }
+        return item;
+      });
+
+      setKnownAccounts(sanitizedKnown);
+      try {
+        localStorage.setItem('unistay_known_accounts', JSON.stringify(sanitizedKnown));
+      } catch {}
 
       const savedUser = localStorage.getItem('unistay_auth_user');
       if (savedUser) {

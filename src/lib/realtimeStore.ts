@@ -19,6 +19,7 @@ export interface RealtimeState {
   accounts: UserAccount[];
   settings: SiteSettings;
   tombstones: RealtimeTombstones;
+  wishlists?: Record<string, string[]>;
   updatedAt: number;
 }
 
@@ -45,6 +46,26 @@ const DEFAULT_TOMBSTONES: RealtimeTombstones = {
   bookings: [],
   accounts: []
 };
+
+export const DEFAULT_WISHLISTS: Record<string, string[]> = {
+  'hungtce181568@fpt.edu.vn': ['prop-1793242710688'],
+  'truongvantuan43344@gmail.com': []
+};
+
+function mergeWishlistsServer(
+  current: Record<string, string[]> = {},
+  incoming?: Record<string, string[]>
+): Record<string, string[]> {
+  const result: Record<string, string[]> = { ...current };
+  if (incoming && typeof incoming === 'object') {
+    Object.entries(incoming).forEach(([email, ids]) => {
+      if (email && Array.isArray(ids)) {
+        result[email.toLowerCase().trim()] = Array.from(new Set(ids));
+      }
+    });
+  }
+  return result;
+}
 
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 const DATA_DIR = IS_VERCEL ? '/tmp/unistay-data' : path.join(process.cwd(), 'data');
@@ -256,6 +277,7 @@ export function getRealtimeState(): RealtimeState {
         reviews: mergeReviewsServer([], parsed.reviews, tombstones.reviews),
         accounts: mergeAccountsServer(DEFAULT_ACCOUNTS, parsed.accounts, tombstones.accounts),
         settings: parsed.settings ? { ...DEFAULT_SETTINGS, ...parsed.settings } : DEFAULT_SETTINGS,
+        wishlists: mergeWishlistsServer(DEFAULT_WISHLISTS, parsed.wishlists),
         tombstones,
         updatedAt: parsed.updatedAt || Date.now()
       };
@@ -274,6 +296,7 @@ export function getRealtimeState(): RealtimeState {
     accounts: DEFAULT_ACCOUNTS,
     settings: DEFAULT_SETTINGS,
     tombstones: DEFAULT_TOMBSTONES,
+    wishlists: DEFAULT_WISHLISTS,
     updatedAt: Date.now()
   };
   globalThis.__unistayRealtimeState = initial;
@@ -314,6 +337,7 @@ export function updateRealtimeState(partial: Partial<RealtimeState>): RealtimeSt
     reviews: mergeReviewsServer(current.reviews, partial.reviews, nextTombstones.reviews),
     accounts: mergeAccountsServer(current.accounts, partial.accounts, nextTombstones.accounts),
     settings: partial.settings !== undefined ? { ...current.settings, ...partial.settings } : current.settings,
+    wishlists: mergeWishlistsServer(current.wishlists || DEFAULT_WISHLISTS, partial.wishlists),
     tombstones: nextTombstones,
     updatedAt: Date.now()
   };

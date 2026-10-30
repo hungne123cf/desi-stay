@@ -23,7 +23,8 @@ export async function POST(request: Request) {
       reviews: body.reviews,
       accounts: body.accounts,
       settings: body.settings,
-      tombstones: body.tombstones
+      tombstones: body.tombstones,
+      wishlists: body.wishlists
     });
     return NextResponse.json(updated, {
       headers: {

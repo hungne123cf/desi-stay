@@ -60,15 +60,10 @@ export const Navbar: React.FC = () => {
     return null;
   }
 
-  const handleSwitchGoogleAccount = async () => {
+  const handleSwitchGoogleAccount = () => {
     setUserDropdownOpen(false);
     setMobileMenuOpen(false);
-    const res = await loginWithGoogle();
-    if (res.requiresModal) {
-      setShowAccountSwitcher(true);
-    } else if (res.user?.role === 'admin') {
-      window.location.href = '/admin';
-    }
+    setShowAccountSwitcher(true);
   };
 
   useEffect(() => {
@@ -414,8 +409,11 @@ export const Navbar: React.FC = () => {
         isOpen={showAccountSwitcher}
         onClose={() => setShowAccountSwitcher(false)}
         onSuccess={(role) => {
+          setShowAccountSwitcher(false);
           if (role === 'admin' || role === 'staff') {
             window.location.href = '/admin';
+          } else {
+            window.location.reload();
           }
         }}
       />
