@@ -4,6 +4,9 @@ export const DEFAULT_GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
   '397249070493-tdjj1fnblridf17atv36jat90vju5n0v.apps.googleusercontent.com';
 
+export const TRUONG_HUNG_REAL_AVATAR =
+  'https://lh3.googleusercontent.com/a/ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I=s384-c';
+
 export const ADMIN_EMAILS = [
   'truongvantuan43344@gmail.com',
   'admin@unistay.com'
@@ -14,7 +17,7 @@ export const PREDEFINED_ADMINS = [
     email: 'truongvantuan43344@gmail.com',
     password: 'Admin@123456',
     name: 'Trương Hùng (Admin)',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    avatar: TRUONG_HUNG_REAL_AVATAR,
     role: 'admin' as const,
     phone: '+84 901 234 567'
   },
@@ -36,7 +39,7 @@ export const DEFAULT_ACCOUNTS: UserAccount[] = [
     role: 'admin',
     phone: '0901234567',
     college: 'ĐH Cần Thơ (CTU)',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    avatar: TRUONG_HUNG_REAL_AVATAR,
     createdAt: '2026-10-25T00:00:00.000Z',
     lastLoginAt: '2026-10-29T14:00:00.000Z'
   },

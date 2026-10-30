@@ -1994,17 +1994,40 @@ export default function AdminPage() {
                       >
                         {/* User Identity Info */}
                         <div className="flex items-start gap-3.5 min-w-0">
-                          {acc.avatar ? (
-                            <img
-                              src={acc.avatar}
-                              alt={acc.name}
-                              className="w-11 h-11 rounded-2xl object-cover ring-2 ring-slate-100 shrink-0"
-                            />
-                          ) : (
-                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
-                              {acc?.name ? acc.name.charAt(0).toUpperCase() : 'U'}
-                            </div>
-                          )}
+                          <div className="relative group shrink-0">
+                            {acc.avatar ? (
+                              <img
+                                src={acc.avatar}
+                                alt={acc.name}
+                                className="w-11 h-11 rounded-2xl object-cover ring-2 ring-slate-100 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                                {acc?.name ? acc.name.charAt(0).toUpperCase() : 'U'}
+                              </div>
+                            )}
+                            <label
+                              title="Tải ảnh đại diện thật cho tài khoản này"
+                              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-slate-900/80 hover:bg-indigo-600 text-white flex items-center justify-center shadow-sm cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Upload className="w-2.5 h-2.5" />
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  try {
+                                    const { url } = await uploadOrCompressImage(file);
+                                    addOrUpdateAccount({ email: acc.email, name: acc.name, avatar: url });
+                                    setAccountToast(`Đã cập nhật ảnh đại diện thật cho ${acc.name}!`);
+                                    setTimeout(() => setAccountToast(null), 3000);
+                                  } catch {}
+                                }}
+                              />
+                            </label>
+                          </div>
 
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">

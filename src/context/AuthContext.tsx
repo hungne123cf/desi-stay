@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '@/types';
-import { DEFAULT_GOOGLE_CLIENT_ID, isEmailAdmin, PREDEFINED_ADMINS } from '@/config/auth';
+import { DEFAULT_GOOGLE_CLIENT_ID, isEmailAdmin, PREDEFINED_ADMINS, TRUONG_HUNG_REAL_AVATAR } from '@/config/auth';
 import { isSupabaseConfigured } from '@/lib/env';
 import { createClient } from '@/lib/supabase/client';
 
@@ -103,7 +103,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedKnown) {
         const parsedKnown = JSON.parse(savedKnown);
         if (Array.isArray(parsedKnown)) {
-          setKnownAccounts(parsedKnown);
+          const sanitizedKnown = parsedKnown.map((item: StoredAccount) =>
+            item.email?.toLowerCase().trim() === 'truongvantuan43344@gmail.com' &&
+            (!item.avatar || item.avatar.includes('photo-1534528741775'))
+              ? { ...item, avatar: TRUONG_HUNG_REAL_AVATAR }
+              : item
+          );
+          setKnownAccounts(sanitizedKnown);
+          try {
+            localStorage.setItem('unistay_known_accounts', JSON.stringify(sanitizedKnown));
+          } catch {}
         }
       }
 
@@ -111,6 +120,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         parsed.role = getAssignedRole(parsed.email);
+        if (
+          parsed.email?.toLowerCase().trim() === 'truongvantuan43344@gmail.com' &&
+          (!parsed.avatar || parsed.avatar.includes('photo-1534528741775'))
+        ) {
+          parsed.avatar = TRUONG_HUNG_REAL_AVATAR;
+          try {
+            localStorage.setItem('unistay_auth_user', JSON.stringify(parsed));
+          } catch {}
+        }
         setUser(parsed);
       } else {
         setUser(null);

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Property, Booking, CurrencyCode, SiteSettings, ChatMessage, PropertyReview, UserAccount, UserRole } from '@/types';
 import { siteConfig } from '@/config/site';
-import { DEFAULT_ACCOUNTS } from '@/config/auth';
+import { DEFAULT_ACCOUNTS, TRUONG_HUNG_REAL_AVATAR } from '@/config/auth';
 
 export interface ReviewEligibility {
   hasPurchased: boolean;
@@ -383,44 +383,60 @@ function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): Prope
   return Array.from(map.values());
 }
 
+function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
+  const cleanEmail = acc.email?.toLowerCase().trim();
+  if (
+    cleanEmail === 'truongvantuan43344@gmail.com' &&
+    (!acc.avatar || acc.avatar.includes('photo-1534528741775') || acc.avatar.includes('unsplash'))
+  ) {
+    return {
+      ...acc,
+      avatar: TRUONG_HUNG_REAL_AVATAR
+    };
+  }
+  return acc;
+}
+
 function mergeAccounts(prev: UserAccount[], incoming: UserAccount[]): UserAccount[] {
-  if (!incoming || incoming.length === 0) return prev;
+  if (!incoming || incoming.length === 0) return prev.map(sanitizeAccountAvatar);
   const map = new Map<string, UserAccount>();
   prev.forEach((a) => {
     if (a && a.email && !isPermanentlyDeleted(a.email)) {
-      map.set(a.email.toLowerCase().trim(), a);
+      map.set(a.email.toLowerCase().trim(), sanitizeAccountAvatar(a));
     }
   });
   incoming.forEach((a) => {
     if (a && a.email && !isPermanentlyDeleted(a.email)) {
-      const key = a.email.toLowerCase().trim();
+      const cleanAcc = sanitizeAccountAvatar(a);
+      const key = cleanAcc.email.toLowerCase().trim();
       const existing = map.get(key);
       const isSuspendedTombstone = isTombstonedDeleted('account', key);
-      const effectiveSuspended = isSuspendedTombstone || (existing ? Boolean(existing.isSuspended) : Boolean(a.isSuspended));
+      const effectiveSuspended = isSuspendedTombstone || (existing ? Boolean(existing.isSuspended) : Boolean(cleanAcc.isSuspended));
 
       if (!existing) {
         map.set(key, {
-          ...a,
+          ...cleanAcc,
           isSuspended: effectiveSuspended
         });
       } else {
         if (isRecentlyMutated(key)) {
           map.set(key, {
-            ...a,
+            ...cleanAcc,
             isSuspended: existing.isSuspended,
             suspendedAt: existing.suspendedAt
           });
         } else {
           map.set(key, {
             ...existing,
-            ...a,
+            ...cleanAcc,
+            avatar: cleanAcc.avatar || existing.avatar,
             isSuspended: effectiveSuspended
           });
         }
       }
     }
   });
-  return Array.from(map.values());
+  return Array.from(map.values()).map(sanitizeAccountAvatar);
 }
 
 export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -492,7 +508,11 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (savedAccounts) {
         const parsed = JSON.parse(savedAccounts);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setAccounts((prev) => mergeAccounts(prev, parsed));
+          const sanitized = parsed.map(sanitizeAccountAvatar);
+          setAccounts((prev) => mergeAccounts(prev, sanitized));
+          try {
+            localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(sanitized));
+          } catch {}
         }
       }
       const savedProps = localStorage.getItem('unistay_real_properties_v4');
@@ -1352,40 +1372,42 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  const addOrUpdateAccount = (acc: Partial<UserAccount> & { email: string; name: string }) => {
+  const addOrUpdateAccount = (acc: Partial<UserAccount> & { email: string; name?: string }) => {
     const cleanEmail = acc.email.toLowerCase().trim();
     if (!cleanEmail) return;
-    const targetRole: UserRole = acc.role || 'staff';
+
+    let targetRole: UserRole = acc.role || 'staff';
 
     setAccounts((prev) => {
-      const exists = prev.some((a) => a.email.toLowerCase().trim() === cleanEmail);
+      const existing = prev.find((a) => a.email.toLowerCase().trim() === cleanEmail);
+      targetRole = acc.role || existing?.role || 'staff';
       let updated: UserAccount[];
-      if (exists) {
+      if (existing) {
         updated = prev.map((a) =>
           a.email.toLowerCase().trim() === cleanEmail
-            ? {
+            ? sanitizeAccountAvatar({
                 ...a,
-                name: acc.name || a.name,
+                name: acc.name?.trim() || a.name,
                 role: targetRole,
-                phone: acc.phone ?? a.phone,
-                college: acc.college ?? a.college,
-                avatar: acc.avatar ?? a.avatar,
-                isStaffAssigned: targetRole === 'staff'
-              }
+                phone: acc.phone !== undefined ? acc.phone : a.phone,
+                college: acc.college !== undefined ? acc.college : a.college,
+                avatar: acc.avatar !== undefined ? acc.avatar : a.avatar,
+                isStaffAssigned: acc.role ? targetRole === 'staff' : a.isStaffAssigned
+              })
             : a
         );
       } else {
-        const newAcc: UserAccount = {
+        const newAcc: UserAccount = sanitizeAccountAvatar({
           id: `acc-${Date.now()}`,
           email: cleanEmail,
-          name: acc.name.trim(),
+          name: (acc.name || cleanEmail.split('@')[0]).trim(),
           role: targetRole,
           phone: acc.phone?.trim() || null,
           college: acc.college?.trim() || null,
           avatar: acc.avatar || null,
           createdAt: new Date().toISOString(),
           isStaffAssigned: targetRole === 'staff'
-        };
+        });
         updated = [newAcc, ...prev];
       }
 
