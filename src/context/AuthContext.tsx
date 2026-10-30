@@ -45,19 +45,23 @@ export function isAccountSuspended(email: string): boolean {
     return false;
   }
   try {
-    const rawTombstones = localStorage.getItem('unistay_tombstone_suspended_accounts');
-    if (rawTombstones) {
-      const parsed = JSON.parse(rawTombstones);
-      if (Array.isArray(parsed) && parsed.some((e: string) => e?.toLowerCase().trim() === clean)) {
-        return true;
-      }
-    }
+    // 1. Kiểm tra trạng thái thực tế trong danh sách tài khoản hiện hữu
     const rawAccounts = localStorage.getItem('unistay_real_accounts_v4');
     if (rawAccounts) {
       const accounts = JSON.parse(rawAccounts);
       if (Array.isArray(accounts)) {
         const found = accounts.find((a: any) => a?.email?.toLowerCase().trim() === clean);
-        if (found && Boolean(found.isSuspended)) return true;
+        if (found) {
+          return Boolean(found.isSuspended);
+        }
+      }
+    }
+    // 2. Chỉ kiểm tra tombstone nếu tài khoản tồn tại trong danh sách tạm khóa
+    const rawTombstones = localStorage.getItem('unistay_tombstone_suspended_accounts');
+    if (rawTombstones) {
+      const parsed = JSON.parse(rawTombstones);
+      if (Array.isArray(parsed) && parsed.some((e: string) => e?.toLowerCase().trim() === clean)) {
+        return true;
       }
     }
   } catch {}
@@ -307,19 +311,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: loggedUser.role
       });
 
+      // Lưu ngay lập tức vào unistay_real_accounts_v4 để Admin thấy tức thì không bị trễ hay giới hạn 3 tài khoản
+      const targetAcc = {
+        id: loggedUser.id,
+        email: loggedUser.email,
+        name: loggedUser.name,
+        avatar: loggedUser.avatar || null,
+        role: loggedUser.role,
+        phone: loggedUser.phone || null,
+        isSuspended: false
+      };
+
+      try {
+        const rawAccounts = localStorage.getItem('unistay_real_accounts_v4');
+        const accList: any[] = rawAccounts ? JSON.parse(rawAccounts) : [];
+        const existingIdx = accList.findIndex((a) => a?.email?.toLowerCase().trim() === cleanEmail);
+        if (existingIdx >= 0) {
+          accList[existingIdx] = { ...accList[existingIdx], ...targetAcc };
+        } else {
+          accList.push(targetAcc);
+        }
+        localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(accList));
+      } catch {}
+
+      // Gửi đồng bộ lên Server Store API để các trình duyệt và tab khác nhận diện tài khoản này ngay lập tức
+      try {
+        fetch('/api/store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accounts: [targetAcc]
+          })
+        }).catch(() => {});
+      } catch {}
+
       // Phát sóng cập nhật tài khoản sang PropertyContext và Server Store để danh sách tài khoản của Admin cập nhật tức thì
       try {
         const syncChannel = new BroadcastChannel('unistay_realtime_sync');
         syncChannel.postMessage({
           type: 'ACCOUNT_UPSERTED',
-          account: {
-            id: loggedUser.id,
-            email: loggedUser.email,
-            name: loggedUser.name,
-            avatar: loggedUser.avatar || null,
-            role: loggedUser.role,
-            phone: loggedUser.phone || null
-          }
+          account: targetAcc
         });
         syncChannel.close();
       } catch {}

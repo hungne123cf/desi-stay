@@ -74,6 +74,17 @@
       "avatar": null,
       "createdAt": "2026-10-25T00:00:00.000Z",
       "lastLoginAt": "2026-10-29T13:00:00.000Z"
+    },
+    {
+      "id": "acc-student-k18",
+      "email": "hungtce181568@fpt.edu.vn",
+      "name": "Truong Hung (K18 CT)",
+      "role": "student",
+      "phone": "123456789",
+      "college": "ĐH FPT Cần Thơ",
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I=s384-c",
+      "createdAt": "2026-10-28T00:00:00.000Z",
+      "lastLoginAt": "2026-10-30T14:00:00.000Z"
     }
   ],
   "settings": {

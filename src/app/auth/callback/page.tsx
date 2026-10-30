@@ -30,7 +30,35 @@ export default function AuthCallbackPage() {
           }
         } catch {}
 
-        if (isAccountSuspended(cleanEmail)) {
+        // Kiểm tra xem tài khoản có thực sự đang bị Quản trị viên khóa chủ động trong danh sách hay không
+        const rawAccounts = typeof window !== 'undefined' ? localStorage.getItem('unistay_real_accounts_v4') : null;
+        let isActivelySuspended = false;
+        if (rawAccounts) {
+          try {
+            const accs = JSON.parse(rawAccounts);
+            if (Array.isArray(accs)) {
+              const found = accs.find((a: any) => a?.email?.toLowerCase().trim() === cleanEmail);
+              if (found && Boolean(found.isSuspended)) {
+                isActivelySuspended = true;
+              }
+            }
+          } catch {}
+        }
+
+        if (!isActivelySuspended) {
+          try {
+            const rawSusp = localStorage.getItem('unistay_tombstone_suspended_accounts');
+            if (rawSusp) {
+              const parsed = JSON.parse(rawSusp);
+              if (Array.isArray(parsed) && parsed.some((e: string) => e?.toLowerCase().trim() === cleanEmail)) {
+                const next = parsed.filter((e: string) => e?.toLowerCase().trim() !== cleanEmail);
+                localStorage.setItem('unistay_tombstone_suspended_accounts', JSON.stringify(next));
+              }
+            }
+          } catch {}
+        }
+
+        if (isActivelySuspended || isAccountSuspended(cleanEmail)) {
           setError('Tài khoản này đã bị Quản trị viên tạm khóa. Không thể đăng nhập vào UniStay!');
           try {
             const channel = new BroadcastChannel('unistay_auth_channel');

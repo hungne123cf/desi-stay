@@ -192,7 +192,12 @@ function mergeAccountsServer(
   const map = new Map<string, UserAccount>();
 
   (current || []).forEach((a) => {
-    if (a && a.email && !tombSet.has(a.email.toLowerCase().trim())) {
+    const isProtected =
+      a?.email &&
+      ['truongvantuan43344@gmail.com', 'admin@unistay.com', 'hungtce181568@fpt.edu.vn'].includes(
+        a.email.toLowerCase().trim()
+      );
+    if (a && a.email && (isProtected || !tombSet.has(a.email.toLowerCase().trim()))) {
       map.set(a.email.toLowerCase().trim(), a);
     }
   });
@@ -201,6 +206,7 @@ function mergeAccountsServer(
     incoming.forEach((a) => {
       if (a && a.email) {
         const key = a.email.toLowerCase().trim();
+        tombSet.delete(key);
         const existing = map.get(key);
         if (!existing) {
           map.set(key, a);

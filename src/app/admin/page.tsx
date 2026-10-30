@@ -2175,12 +2175,11 @@ export default function AdminPage() {
                         user.email.toLowerCase().trim() === cleanEmail
                     );
                     const resolvedAvatar =
-                      acc.avatar ||
-                      (cleanEmail === 'truongvantuan43344@gmail.com'
+                      cleanEmail === 'truongvantuan43344@gmail.com'
                         ? TRUONG_HUNG_ADMIN_AVATAR
                         : cleanEmail === 'hungtce181568@fpt.edu.vn'
                         ? TRUONG_HUNG_K18_AVATAR
-                        : null);
+                        : acc.avatar || null;
 
                     return (
                       <div

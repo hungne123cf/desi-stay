@@ -142,6 +142,13 @@ function recordPermanentDelete(id: string) {
 function isPermanentlyDeleted(id: string): boolean {
   if (!id) return false;
   const cleanId = id.trim().toLowerCase();
+  if (
+    cleanId === 'truongvantuan43344@gmail.com' ||
+    cleanId === 'admin@unistay.com' ||
+    cleanId === 'hungtce181568@fpt.edu.vn'
+  ) {
+    return false;
+  }
   if (recentlyPermanentlyDeleted.has(cleanId)) return true;
   const permSet = getPersistentSet(KEY_PERMANENT_DELETED);
   return permSet.has(cleanId);
@@ -380,10 +387,6 @@ function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): Prope
 
 function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
   const cleanEmail = acc.email?.toLowerCase().trim();
-  // Nếu tài khoản đã có link ảnh thật từ Google hoặc ảnh tải lên, giữ nguyên 100%
-  if (acc.avatar && acc.avatar.startsWith('http') && !acc.avatar.includes('unsplash.com')) {
-    return acc;
-  }
   if (cleanEmail === 'truongvantuan43344@gmail.com') {
     return {
       ...acc,
@@ -396,48 +399,60 @@ function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
       avatar: TRUONG_HUNG_K18_AVATAR
     };
   }
+  // Nếu tài khoản đã có link ảnh thật từ Google hoặc ảnh tải lên, giữ nguyên 100%
+  if (acc.avatar && acc.avatar.startsWith('http') && !acc.avatar.includes('unsplash.com')) {
+    return acc;
+  }
   return acc;
 }
 
 function mergeAccounts(prev: UserAccount[], incoming: UserAccount[]): UserAccount[] {
-  if (!incoming || incoming.length === 0) return prev.map(sanitizeAccountAvatar).filter((a) => !isPermanentlyDeleted(a.email));
   const map = new Map<string, UserAccount>();
+  // 1. Luôn bảo đảm các tài khoản hệ thống (DEFAULT_ACCOUNTS) luôn có mặt làm nền tảng
+  DEFAULT_ACCOUNTS.forEach((a) => {
+    if (a && a.email && !isPermanentlyDeleted(a.email)) {
+      map.set(a.email.toLowerCase().trim(), sanitizeAccountAvatar(a));
+    }
+  });
   prev.forEach((a) => {
     if (a && a.email && !isPermanentlyDeleted(a.email)) {
       map.set(a.email.toLowerCase().trim(), sanitizeAccountAvatar(a));
     }
   });
-  incoming.forEach((a) => {
-    if (a && a.email && !isPermanentlyDeleted(a.email)) {
-      const cleanAcc = sanitizeAccountAvatar(a);
-      const key = cleanAcc.email.toLowerCase().trim();
-      const existing = map.get(key);
-      const isSuspendedTombstone = isTombstonedDeleted('account', key);
-      const effectiveSuspended = isSuspendedTombstone || (isRecentlyMutated(key) ? Boolean(existing?.isSuspended) : Boolean(cleanAcc.isSuspended));
+  if (Array.isArray(incoming)) {
+    incoming.forEach((a) => {
+      if (a && a.email) {
+        clearPermanentDelete(a.email);
+        const cleanAcc = sanitizeAccountAvatar(a);
+        const key = cleanAcc.email.toLowerCase().trim();
+        const existing = map.get(key);
+        const isSuspendedTombstone = isTombstonedDeleted('account', key);
+        const effectiveSuspended = isSuspendedTombstone || (isRecentlyMutated(key) ? Boolean(existing?.isSuspended) : Boolean(cleanAcc.isSuspended));
 
-      if (!existing) {
-        map.set(key, {
-          ...cleanAcc,
-          isSuspended: effectiveSuspended
-        });
-      } else {
-        if (isRecentlyMutated(key)) {
+        if (!existing) {
           map.set(key, {
             ...cleanAcc,
-            isSuspended: existing.isSuspended,
-            suspendedAt: existing.suspendedAt
-          });
-        } else {
-          map.set(key, {
-            ...existing,
-            ...cleanAcc,
-            avatar: cleanAcc.avatar || existing.avatar,
             isSuspended: effectiveSuspended
           });
+        } else {
+          if (isRecentlyMutated(key)) {
+            map.set(key, {
+              ...cleanAcc,
+              isSuspended: existing.isSuspended,
+              suspendedAt: existing.suspendedAt
+            });
+          } else {
+            map.set(key, {
+              ...existing,
+              ...cleanAcc,
+              avatar: cleanAcc.avatar || existing.avatar,
+              isSuspended: effectiveSuspended
+            });
+          }
         }
       }
-    }
-  });
+    });
+  }
   return Array.from(map.values()).map(sanitizeAccountAvatar).filter((a) => !isPermanentlyDeleted(a.email));
 }
 
@@ -1462,13 +1477,59 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             registered.forEach((u: any) => {
               const email = u.email?.toLowerCase().trim();
               if (email && !currentMap.has(email)) {
-                currentMap.set(email, {
+                currentMap.set(email, sanitizeAccountAvatar({
                   id: `acc-${email.replace(/[^a-z0-9]/g, '')}`,
                   email,
                   name: u.name || email.split('@')[0],
                   role: u.role || 'student',
                   createdAt: new Date().toISOString()
-                });
+                }));
+                changed = true;
+              }
+            });
+          }
+        }
+      } catch {}
+
+      // From current auth user in localStorage
+      try {
+        const rawAuth = localStorage.getItem('unistay_auth_user');
+        if (rawAuth) {
+          const u = JSON.parse(rawAuth);
+          const email = u?.email?.toLowerCase().trim();
+          if (email && !currentMap.has(email)) {
+            clearPermanentDelete(email);
+            currentMap.set(email, sanitizeAccountAvatar({
+              id: u.id || `acc-${email.replace(/[^a-z0-9]/g, '')}`,
+              email,
+              name: u.name || email.split('@')[0],
+              role: u.role || 'student',
+              avatar: u.avatar || undefined,
+              phone: u.phone || undefined,
+              createdAt: new Date().toISOString()
+            }));
+            changed = true;
+          }
+        }
+      } catch {}
+
+      // From known Google accounts in localStorage
+      try {
+        const rawKnown = localStorage.getItem('unistay_known_accounts');
+        if (rawKnown) {
+          const list = JSON.parse(rawKnown);
+          if (Array.isArray(list)) {
+            list.forEach((k: any) => {
+              const email = k?.email?.toLowerCase().trim();
+              if (email && !currentMap.has(email)) {
+                currentMap.set(email, sanitizeAccountAvatar({
+                  id: `acc-${email.replace(/[^a-z0-9]/g, '')}`,
+                  email,
+                  name: k.name || email.split('@')[0],
+                  role: k.role || 'student',
+                  avatar: k.avatar || undefined,
+                  createdAt: new Date().toISOString()
+                }));
                 changed = true;
               }
             });
