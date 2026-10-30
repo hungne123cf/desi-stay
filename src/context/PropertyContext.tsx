@@ -378,8 +378,16 @@ function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
       avatar: TRUONG_HUNG_REAL_AVATAR
     };
   }
-  // Loại bỏ hoàn toàn ảnh stock Unsplash giả cho các tài khoản
-  if (acc.avatar && (acc.avatar.includes('unsplash.com') || acc.avatar.includes('photo-1573496359142'))) {
+  // Loại bỏ hoàn toàn ảnh Super Admin bị rò rỉ sang các tài khoản khác và ảnh stock Unsplash
+  if (
+    acc.avatar &&
+    (acc.avatar === TRUONG_HUNG_REAL_AVATAR ||
+      acc.avatar.includes('ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT') ||
+      acc.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I') ||
+      acc.avatar.includes('unsplash.com') ||
+      acc.avatar.includes('photo-1573496359142') ||
+      acc.avatar.includes('photo-1534528741775'))
+  ) {
     return {
       ...acc,
       avatar: null
@@ -733,6 +741,16 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             });
           }
           if (p.settings) setSettings(p.settings);
+        } else if (event.data?.type === 'ACCOUNT_UPSERTED' && event.data?.account) {
+          const acc = sanitizeAccountAvatar(event.data.account);
+          setAccounts((prev) => {
+            const merged = mergeAccounts(prev, [acc]);
+            try {
+              localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+          syncToServer({ accounts: [acc] });
         }
       };
     } catch {}
@@ -1606,6 +1624,17 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(updated));
       } catch {}
       syncToServer({ accounts: updated });
+
+      // Phát sóng khóa tài khoản tức thì tới tất cả tab/cửa sổ để kết thúc phiên đăng nhập ngay lập tức
+      try {
+        const authCh = new BroadcastChannel('unistay_auth_channel');
+        authCh.postMessage({ type: 'ACCOUNT_SUSPENDED', email: cleanEmail, isSuspended: nextSuspended });
+        authCh.close();
+        const syncCh = new BroadcastChannel('unistay_realtime_sync');
+        syncCh.postMessage({ type: 'ACCOUNT_SUSPENDED', email: cleanEmail, isSuspended: nextSuspended });
+        syncCh.close();
+      } catch {}
+
       return updated;
     });
   };
@@ -1635,6 +1664,16 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       } catch {}
       syncToServer({ accounts: updated, tombstones: { accounts: [cleanEmail] } });
+
+      try {
+        const authCh = new BroadcastChannel('unistay_auth_channel');
+        authCh.postMessage({ type: 'ACCOUNT_SUSPENDED', email: cleanEmail, isSuspended: true });
+        authCh.close();
+        const syncCh = new BroadcastChannel('unistay_realtime_sync');
+        syncCh.postMessage({ type: 'ACCOUNT_SUSPENDED', email: cleanEmail, isSuspended: true });
+        syncCh.close();
+      } catch {}
+
       return updated;
     });
   };

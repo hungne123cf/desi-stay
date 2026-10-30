@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, isAccountSuspended } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
 import { GoogleAccountChooserModal } from '@/components/GoogleAccountChooserModal';
 import {
@@ -24,7 +24,7 @@ export const Navbar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout, loginWithGoogle } = useAuth();
-  const { settings, wishlistIds, bookings } = useProperties();
+  const { settings, wishlistIds, bookings, accounts } = useProperties();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
@@ -33,6 +33,20 @@ export const Navbar: React.FC = () => {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Kiểm tra tức thì nếu tài khoản đang đăng nhập bị Quản trị viên khóa/vô hiệu hóa
+  useEffect(() => {
+    if (user?.email) {
+      const cleanEmail = user.email.toLowerCase().trim();
+      const isSuspendedInList = (accounts || []).some(
+        (a) => a.email.toLowerCase().trim() === cleanEmail && a.isSuspended
+      );
+      if (isSuspendedInList || isAccountSuspended(cleanEmail)) {
+        logout();
+        alert('Tài khoản của bạn đã bị Quản trị viên tạm khóa. Phiên làm việc đã kết thúc.');
+      }
+    }
+  }, [user, accounts, logout]);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
 

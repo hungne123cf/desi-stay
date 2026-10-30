@@ -30,6 +30,39 @@ export function getAssignedRole(email: string): UserRole {
   return 'student';
 }
 
+export function isAccountSuspended(email: string): boolean {
+  if (!email || typeof window === 'undefined') return false;
+  const clean = email.toLowerCase().trim();
+  if (clean === 'truongvantuan43344@gmail.com' || clean === 'admin@unistay.com') {
+    return false;
+  }
+  try {
+    const rawTombstones = localStorage.getItem('unistay_tombstone_suspended_accounts');
+    if (rawTombstones) {
+      const parsed = JSON.parse(rawTombstones);
+      if (Array.isArray(parsed) && parsed.some((e: string) => e?.toLowerCase().trim() === clean)) {
+        return true;
+      }
+    }
+    const rawPermanent = localStorage.getItem('unistay_tombstone_permanent_deleted');
+    if (rawPermanent) {
+      const parsed = JSON.parse(rawPermanent);
+      if (Array.isArray(parsed) && parsed.some((e: string) => e?.toLowerCase().trim() === clean)) {
+        return true;
+      }
+    }
+    const rawAccounts = localStorage.getItem('unistay_real_accounts_v4');
+    if (rawAccounts) {
+      const accounts = JSON.parse(rawAccounts);
+      if (Array.isArray(accounts)) {
+        const found = accounts.find((a: any) => a?.email?.toLowerCase().trim() === clean);
+        if (found && Boolean(found.isSuspended)) return true;
+      }
+    }
+  } catch {}
+  return false;
+}
+
 async function syncAccountToSupabase(account: {
   email: string;
   name: string;
@@ -103,12 +136,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedKnown) {
         const parsedKnown = JSON.parse(savedKnown);
         if (Array.isArray(parsedKnown)) {
-          const sanitizedKnown = parsedKnown.map((item: StoredAccount) =>
-            item.email?.toLowerCase().trim() === 'truongvantuan43344@gmail.com' &&
-            (!item.avatar || item.avatar.includes('photo-1534528741775') || item.avatar.includes('unsplash') || item.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I'))
-              ? { ...item, avatar: TRUONG_HUNG_REAL_AVATAR }
-              : item
-          );
+          const sanitizedKnown = parsedKnown.map((item: StoredAccount) => {
+            const itemEmail = item.email?.toLowerCase().trim();
+            if (itemEmail === 'truongvantuan43344@gmail.com') {
+              return { ...item, avatar: TRUONG_HUNG_REAL_AVATAR };
+            }
+            if (
+              item.avatar &&
+              (item.avatar === TRUONG_HUNG_REAL_AVATAR ||
+                item.avatar.includes('ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT') ||
+                item.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I') ||
+                item.avatar.includes('unsplash') ||
+                item.avatar.includes('photo-1534528741775'))
+            ) {
+              return { ...item, avatar: undefined };
+            }
+            return item;
+          });
           setKnownAccounts(sanitizedKnown);
           try {
             localStorage.setItem('unistay_known_accounts', JSON.stringify(sanitizedKnown));
@@ -119,17 +163,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedUser = localStorage.getItem('unistay_auth_user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
-        parsed.role = getAssignedRole(parsed.email);
-        if (
-          parsed.email?.toLowerCase().trim() === 'truongvantuan43344@gmail.com' &&
-          (!parsed.avatar || parsed.avatar.includes('photo-1534528741775') || parsed.avatar.includes('unsplash') || parsed.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I'))
-        ) {
-          parsed.avatar = TRUONG_HUNG_REAL_AVATAR;
+        const userEmail = parsed.email?.toLowerCase().trim();
+
+        if (userEmail && isAccountSuspended(userEmail)) {
+          // Tài khoản đã bị Quản trị viên khóa -> Hủy phiên đăng nhập ngay lập tức
+          try {
+            localStorage.removeItem('unistay_auth_user');
+          } catch {}
+          setUser(null);
+        } else {
+          parsed.role = getAssignedRole(parsed.email);
+          if (userEmail === 'truongvantuan43344@gmail.com') {
+            parsed.avatar = TRUONG_HUNG_REAL_AVATAR;
+          } else {
+            // Không bao giờ để avatar của Admin bị rò rỉ sang tài khoản sinh viên/khách thuê
+            if (
+              parsed.avatar &&
+              (parsed.avatar === TRUONG_HUNG_REAL_AVATAR ||
+                parsed.avatar.includes('ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT') ||
+                parsed.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I') ||
+                parsed.avatar.includes('unsplash') ||
+                parsed.avatar.includes('photo-1534528741775'))
+            ) {
+              parsed.avatar = undefined;
+            }
+          }
           try {
             localStorage.setItem('unistay_auth_user', JSON.stringify(parsed));
           } catch {}
+          setUser(parsed);
         }
-        setUser(parsed);
       } else {
         setUser(null);
       }
@@ -176,6 +239,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
 
       const cleanEmail = account.email.toLowerCase().trim();
+
+      // Kiểm tra tài khoản có bị Quản trị viên tạm khóa hay không
+      if (isAccountSuspended(cleanEmail)) {
+        setIsLoading(false);
+        throw new Error('Tài khoản này đã bị Quản trị viên tạm khóa. Không thể đăng nhập vào hệ thống lúc này!');
+      }
+
       const role = getAssignedRole(cleanEmail);
       const displayName =
         account.name?.trim() ||
@@ -184,11 +254,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .replace(/[._-]/g, ' ')
           .replace(/\b\w/g, (l) => l.toUpperCase());
 
+      let cleanAvatar: string | undefined = account.avatar || undefined;
+      if (cleanEmail === 'truongvantuan43344@gmail.com') {
+        cleanAvatar = TRUONG_HUNG_REAL_AVATAR;
+      } else {
+        if (
+          cleanAvatar &&
+          (cleanAvatar === TRUONG_HUNG_REAL_AVATAR ||
+            cleanAvatar.includes('ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT') ||
+            cleanAvatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I') ||
+            cleanAvatar.includes('unsplash') ||
+            cleanAvatar.includes('photo-1534528741775'))
+        ) {
+          cleanAvatar = undefined;
+        }
+      }
+
       const loggedUser: User = {
         id: `usr-g-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
         name: displayName,
         email: cleanEmail,
-        avatar: account.avatar || undefined,
+        avatar: cleanAvatar,
         role,
         phone: isEmailAdmin(cleanEmail) ? '+84 901 234 567' : undefined
       };
@@ -202,6 +288,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar: loggedUser.avatar,
         role: loggedUser.role
       });
+
+      // Phát sóng cập nhật tài khoản sang PropertyContext và Server Store để danh sách tài khoản của Admin cập nhật tức thì
+      try {
+        const syncChannel = new BroadcastChannel('unistay_realtime_sync');
+        syncChannel.postMessage({
+          type: 'ACCOUNT_UPSERTED',
+          account: {
+            id: loggedUser.id,
+            email: loggedUser.email,
+            name: loggedUser.name,
+            avatar: loggedUser.avatar || null,
+            role: loggedUser.role,
+            phone: loggedUser.phone || null
+          }
+        });
+        syncChannel.close();
+      } catch {}
 
       void syncAccountToSupabase({
         email: loggedUser.email,
@@ -221,12 +324,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sync user session across tabs/popups via BroadcastChannel and storage events
   useEffect(() => {
     let channel: BroadcastChannel | null = null;
+    let syncCh: BroadcastChannel | null = null;
+
+    const terminateSuspendedSession = (targetEmail: string) => {
+      const cleanTarget = targetEmail.toLowerCase().trim();
+      setUser((curr) => {
+        if (curr && curr.email.toLowerCase().trim() === cleanTarget) {
+          try {
+            localStorage.removeItem('unistay_auth_user');
+          } catch {}
+          setTimeout(() => {
+            alert('Tài khoản của bạn đã bị Quản trị viên tạm khóa. Phiên làm việc đã kết thúc.');
+            window.location.href = '/';
+          }, 50);
+          return null;
+        }
+        return curr;
+      });
+    };
+
     try {
       channel = new BroadcastChannel('unistay_auth_channel');
       channel.onmessage = (event) => {
         if (event.data?.type === 'UNISTAY_GOOGLE_AUTH_SUCCESS' && event.data?.user) {
-          setUser(event.data.user);
+          if (!isAccountSuspended(event.data.user.email)) {
+            setUser(event.data.user);
+          }
           setIsLoading(false);
+        } else if (event.data?.type === 'ACCOUNT_SUSPENDED' && event.data?.email && event.data?.isSuspended) {
+          terminateSuspendedSession(event.data.email);
         } else if (event.data?.type === 'ROLE_UPDATED' && event.data?.email) {
           setUser((curr) => {
             if (curr && curr.email.toLowerCase().trim() === event.data.email.toLowerCase().trim()) {
@@ -244,18 +370,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // BroadcastChannel not supported in older environments
     }
 
+    try {
+      syncCh = new BroadcastChannel('unistay_realtime_sync');
+      syncCh.onmessage = (event) => {
+        if (event.data?.type === 'ACCOUNT_SUSPENDED' && event.data?.email && event.data?.isSuspended) {
+          terminateSuspendedSession(event.data.email);
+        }
+      };
+    } catch {}
+
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'unistay_auth_user') {
         if (e.newValue) {
           try {
-            setUser(JSON.parse(e.newValue));
+            const parsed = JSON.parse(e.newValue);
+            if (isAccountSuspended(parsed.email)) {
+              localStorage.removeItem('unistay_auth_user');
+              setUser(null);
+            } else {
+              setUser(parsed);
+            }
           } catch {
             // ignore
           }
         } else {
           setUser(null);
         }
-      } else if (e.key === 'unistay_assigned_roles' || e.key === 'unistay_real_accounts_v4') {
+      } else if (
+        e.key === 'unistay_tombstone_suspended_accounts' ||
+        e.key === 'unistay_real_accounts_v4' ||
+        e.key === 'unistay_tombstone_permanent_deleted'
+      ) {
+        setUser((curr) => {
+          if (curr?.email && isAccountSuspended(curr.email)) {
+            try {
+              localStorage.removeItem('unistay_auth_user');
+            } catch {}
+            setTimeout(() => {
+              alert('Tài khoản của bạn đã bị Quản trị viên tạm khóa. Phiên làm việc đã kết thúc.');
+              window.location.href = '/';
+            }, 50);
+            return null;
+          }
+          return curr;
+        });
+      } else if (e.key === 'unistay_assigned_roles') {
         setUser((curr) => {
           if (!curr?.email) return curr;
           const freshRole = getAssignedRole(curr.email);
@@ -274,6 +433,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener('storage', handleStorage);
     return () => {
       if (channel) channel.close();
+      if (syncCh) syncCh.close();
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
@@ -363,6 +523,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await new Promise((r) => setTimeout(r, 350));
 
     const cleanEmail = email.toLowerCase().trim();
+    if (isAccountSuspended(cleanEmail)) {
+      setIsLoading(false);
+      throw new Error('Tài khoản này đã bị Quản trị viên tạm khóa. Không thể đăng nhập vào hệ thống lúc này!');
+    }
 
     let registeredList: StoredAccount[] = [];
     try {
@@ -436,6 +600,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await new Promise((r) => setTimeout(r, 400));
 
     const cleanEmail = email.toLowerCase().trim();
+    if (isAccountSuspended(cleanEmail)) {
+      setIsLoading(false);
+      throw new Error('Địa chỉ email này đã bị Quản trị viên khóa khỏi hệ thống!');
+    }
     const cleanName = name.trim();
 
     if (pass.length < 6) {

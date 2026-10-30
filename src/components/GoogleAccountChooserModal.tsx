@@ -12,9 +12,11 @@ import {
   ChevronDown,
   Trash2,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Lock,
+  AlertCircle
 } from 'lucide-react';
-import { useAuth, StoredAccount } from '@/context/AuthContext';
+import { useAuth, StoredAccount, isAccountSuspended } from '@/context/AuthContext';
 import { UserRole } from '@/types';
 
 interface Props {
@@ -73,6 +75,11 @@ export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, on
   if (!isOpen) return null;
 
   const handleSelectAccount = async (account: StoredAccount) => {
+    setFormError('');
+    if (isAccountSuspended(account.email)) {
+      setFormError('Tài khoản này đã bị Quản trị viên tạm khóa. Không thể đăng nhập!');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const user = await loginWithGoogleAccount({
@@ -82,6 +89,8 @@ export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, on
       });
       onSuccess(user.role);
       onClose();
+    } catch (err: any) {
+      setFormError(err.message || 'Đã xảy ra lỗi đăng nhập.');
     } finally {
       setIsSubmitting(false);
     }
@@ -122,6 +131,12 @@ export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, on
       return;
     }
 
+    const cleanEmail = emailInput.toLowerCase().trim();
+    if (isAccountSuspended(cleanEmail)) {
+      setFormError('Tài khoản này đã bị Quản trị viên tạm khóa. Không thể đăng nhập!');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const displayName =
@@ -137,8 +152,8 @@ export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, on
       });
       onSuccess(user.role);
       onClose();
-    } catch {
-      setFormError('Đã xảy ra lỗi xác thực. Vui lòng thử lại.');
+    } catch (err: any) {
+      setFormError(err.message || 'Đã xảy ra lỗi xác thực. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
     }
@@ -311,55 +326,73 @@ export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, on
           <div className="md:col-span-7">
             {step === 'chooser' && (
               <div>
+                {formError && (
+                  <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                    <span>{formError}</span>
+                  </div>
+                )}
                 <div className="divide-y divide-slate-200/70 border-b border-slate-200/70">
-                  {knownAccounts.map((account) => (
-                    <div
-                      key={account.email}
-                      className="group flex items-center justify-between py-3 px-2 hover:bg-slate-50/90 rounded-xl transition-colors"
-                    >
-                      <button
-                        type="button"
-                        disabled={isSubmitting}
-                        onClick={() => handleSelectAccount(account)}
-                        className="flex-1 flex items-center gap-3.5 text-left min-w-0 cursor-pointer"
+                  {knownAccounts.map((account) => {
+                    const isSuspended = isAccountSuspended(account.email);
+                    return (
+                      <div
+                        key={account.email}
+                        className={`group flex items-center justify-between py-3 px-2 rounded-xl transition-colors ${
+                          isSuspended ? 'opacity-70 bg-red-50/30' : 'hover:bg-slate-50/90'
+                        }`}
                       >
-                        {account.avatar ? (
-                          <img
-                            src={account.avatar}
-                            alt={account.name}
-                            className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-slate-200"
-                          />
-                        ) : (
-                          <div
-                            className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${getAvatarColor(
-                              account.email
-                            )}`}
-                          >
-                            {account.name[0]?.toUpperCase() || 'U'}
+                        <button
+                          type="button"
+                          disabled={isSubmitting}
+                          onClick={() => handleSelectAccount(account)}
+                          className="flex-1 flex items-center gap-3.5 text-left min-w-0 cursor-pointer"
+                        >
+                          {account.avatar ? (
+                            <img
+                              src={account.avatar}
+                              alt={account.name}
+                              className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-slate-200"
+                            />
+                          ) : (
+                            <div
+                              className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${getAvatarColor(
+                                account.email
+                              )}`}
+                            >
+                              {account.name[0]?.toUpperCase() || 'U'}
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-[13px] font-medium text-slate-800 truncate">
+                                {account.name}
+                              </p>
+                              {isSuspended && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-red-600 bg-red-100/80 px-1.5 py-0.5 rounded-full font-bold">
+                                  <Lock className="w-2.5 h-2.5" /> Đã bị khóa
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 truncate">{account.email}</p>
                           </div>
-                        )}
+                        </button>
 
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-medium text-slate-800 truncate">
-                            {account.name}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate">{account.email}</p>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeKnownAccount(account.email);
-                        }}
-                        title="Xóa tài khoản khỏi trình duyệt này"
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeKnownAccount(account.email);
+                          }}
+                          title="Xóa tài khoản khỏi trình duyệt này"
+                          className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
 
                   {/* Use another account */}
                   <button

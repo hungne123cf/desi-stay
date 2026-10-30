@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, isAccountSuspended } from '@/context/AuthContext';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function AuthCallbackPage() {
@@ -15,25 +15,56 @@ export default function AuthCallbackPage() {
       payload: { email: string; name: string; avatar?: string },
       isPopup: boolean
     ) {
-      const user = await loginWithGoogleAccount(payload);
-
       try {
-        const channel = new BroadcastChannel('unistay_auth_channel');
-        channel.postMessage({ type: 'UNISTAY_GOOGLE_AUTH_SUCCESS', user });
-        channel.close();
-      } catch {
-        // ignore if BroadcastChannel unsupported
-      }
+        const cleanEmail = payload.email.toLowerCase().trim();
 
-      if (isPopup || (window.opener && window.opener !== window)) {
-        window.close();
-        return;
-      }
+        if (isAccountSuspended(cleanEmail)) {
+          setError('Tài khoản này đã bị Quản trị viên tạm khóa. Không thể đăng nhập vào UniStay!');
+          try {
+            const channel = new BroadcastChannel('unistay_auth_channel');
+            channel.postMessage({ type: 'UNISTAY_GOOGLE_AUTH_CANCEL' });
+            channel.close();
+          } catch {}
+          setTimeout(() => {
+            if (isPopup || (window.opener && window.opener !== window)) {
+              window.close();
+            } else {
+              router.replace('/auth/login');
+            }
+          }, 2500);
+          return;
+        }
 
-      if (user.role === 'admin') {
-        router.replace('/admin');
-      } else {
-        router.replace('/');
+        const user = await loginWithGoogleAccount(payload);
+
+        try {
+          const channel = new BroadcastChannel('unistay_auth_channel');
+          channel.postMessage({ type: 'UNISTAY_GOOGLE_AUTH_SUCCESS', user });
+          channel.close();
+        } catch {
+          // ignore if BroadcastChannel unsupported
+        }
+
+        if (isPopup || (window.opener && window.opener !== window)) {
+          window.close();
+          return;
+        }
+
+        if (user.role === 'admin') {
+          router.replace('/admin');
+        } else {
+          router.replace('/');
+        }
+      } catch (err: any) {
+        console.error('Finalize user error:', err);
+        setError(err.message || 'Lỗi xác thực tài khoản Google');
+        setTimeout(() => {
+          if (isPopup || (window.opener && window.opener !== window)) {
+            window.close();
+          } else {
+            router.replace('/auth/login');
+          }
+        }, 2500);
       }
     }
 
@@ -85,13 +116,26 @@ export default function AuthCallbackPage() {
 
           const email = parsed.email || '';
           const name = parsed.name || email.split('@')[0];
-          const picture = parsed.picture || '';
+          let picture = parsed.picture || '';
+
+          // Nếu id_token không có ảnh (thường gặp ở tài khoản trường/Google Workspace) nhưng có accessToken
+          if (!picture && accessToken) {
+            try {
+              const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${accessToken}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.picture) picture = data.picture;
+              }
+            } catch {}
+          }
 
           await finalizeUser(
             {
               email,
               name,
-              avatar: picture
+              avatar: picture || undefined
             },
             isPopup
           );

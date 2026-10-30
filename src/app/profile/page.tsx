@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, isAccountSuspended } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ReviewModal } from '@/components/ReviewModal';
@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 
 const SAMPLE_AVATARS = [
-  'https://lh3.googleusercontent.com/a/ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT=s384-c',
+  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80',
   'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=250&q=80',
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80',
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=250&q=80',
@@ -105,13 +105,19 @@ function ProfileContent() {
   } | null>(null);
 
   useEffect(() => {
+    if (user?.email && isAccountSuspended(user.email)) {
+      logout();
+      alert('Tài khoản của bạn đã bị Quản trị viên tạm khóa. Phiên làm việc đã kết thúc.');
+      router.replace('/');
+      return;
+    }
     if (user) {
       setName(user.name || '');
       setPhone(user.phone || '');
       setCollege(user.college || '');
       setAvatar(user.avatar || '');
     }
-  }, [user]);
+  }, [user, logout, router]);
 
   // Lấy các mã đơn thuộc về trình duyệt hoặc tài khoản người dùng
   let savedLocalBookingIds: string[] = [];
