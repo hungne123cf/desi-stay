@@ -240,7 +240,7 @@ function getAdminReplyTombstone(reviewId: string): string | undefined {
 }
 
 function mergeProperties(prev: Property[], incoming: Property[]): Property[] {
-  if (!incoming || incoming.length === 0) return prev;
+  if (!incoming || incoming.length === 0) return prev.filter((p) => !isPermanentlyDeleted(p.id));
   const map = new Map<string, Property>();
   prev.forEach((p) => {
     if (p && p.id && !isPermanentlyDeleted(p.id)) {
@@ -286,7 +286,7 @@ function mergeProperties(prev: Property[], incoming: Property[]): Property[] {
       }
     }
   });
-  return Array.from(map.values());
+  return Array.from(map.values()).filter((p) => !isPermanentlyDeleted(p.id));
 }
 
 function mergeMessages(prev: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
@@ -305,7 +305,7 @@ function mergeMessages(prev: ChatMessage[], incoming: ChatMessage[]): ChatMessag
 }
 
 function mergeBookings(prev: Booking[], incoming: Booking[]): Booking[] {
-  if (!incoming || incoming.length === 0) return prev;
+  if (!incoming || incoming.length === 0) return prev.filter((b) => !isPermanentlyDeleted(b.id));
   const map = new Map<string, Booking>();
   prev.forEach((b) => {
     if (b && b.id && !isPermanentlyDeleted(b.id)) {
@@ -340,11 +340,11 @@ function mergeBookings(prev: Booking[], incoming: Booking[]): Booking[] {
       }
     }
   });
-  return Array.from(map.values());
+  return Array.from(map.values()).filter((b) => !isPermanentlyDeleted(b.id));
 }
 
 function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): PropertyReview[] {
-  if (!incoming || incoming.length === 0) return prev;
+  if (!incoming || incoming.length === 0) return prev.filter((r) => !isPermanentlyDeleted(r.id));
   const map = new Map<string, PropertyReview>();
   prev.forEach((r) => {
     if (r && r.id && !isPermanentlyDeleted(r.id)) {
@@ -384,7 +384,7 @@ function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): Prope
       }
     }
   });
-  return Array.from(map.values());
+  return Array.from(map.values()).filter((r) => !isPermanentlyDeleted(r.id));
 }
 
 function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
@@ -409,7 +409,7 @@ function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
 }
 
 function mergeAccounts(prev: UserAccount[], incoming: UserAccount[]): UserAccount[] {
-  if (!incoming || incoming.length === 0) return prev.map(sanitizeAccountAvatar);
+  if (!incoming || incoming.length === 0) return prev.map(sanitizeAccountAvatar).filter((a) => !isPermanentlyDeleted(a.email));
   const map = new Map<string, UserAccount>();
   prev.forEach((a) => {
     if (a && a.email && !isPermanentlyDeleted(a.email)) {
@@ -447,7 +447,7 @@ function mergeAccounts(prev: UserAccount[], incoming: UserAccount[]): UserAccoun
       }
     }
   });
-  return Array.from(map.values()).map(sanitizeAccountAvatar);
+  return Array.from(map.values()).map(sanitizeAccountAvatar).filter((a) => !isPermanentlyDeleted(a.email));
 }
 
 export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -543,6 +543,12 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     reviews?: PropertyReview[];
     accounts?: UserAccount[];
     settings?: SiteSettings;
+    tombstones?: {
+      properties?: string[];
+      reviews?: string[];
+      bookings?: string[];
+      accounts?: string[];
+    };
   }) => {
     // 1. Đồng bộ Real-Time tức thì đa tab/cửa sổ qua BroadcastChannel
     try {
@@ -577,7 +583,24 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetch(`/api/store?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((serverState) => {
-        if (!isMounted) return;
+        if (!isMounted || !serverState) return;
+
+        // Xử lý tombstones từ server
+        if (serverState.tombstones) {
+          if (Array.isArray(serverState.tombstones.properties)) {
+            serverState.tombstones.properties.forEach((id: string) => recordPermanentDelete(id));
+          }
+          if (Array.isArray(serverState.tombstones.reviews)) {
+            serverState.tombstones.reviews.forEach((id: string) => recordPermanentDelete(id));
+          }
+          if (Array.isArray(serverState.tombstones.bookings)) {
+            serverState.tombstones.bookings.forEach((id: string) => recordPermanentDelete(id));
+          }
+          if (Array.isArray(serverState.tombstones.accounts)) {
+            serverState.tombstones.accounts.forEach((email: string) => recordPermanentDelete(email));
+          }
+        }
+
         const serverProps: Property[] = Array.isArray(serverState.properties)
           ? serverState.properties.filter(isRealAdminProperty)
           : [];
@@ -596,7 +619,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         const finalProps = serverProps.map((p) => {
           const pReviews = serverReviews.filter(
-            (r) => r.propertyId === p.id || r.propertyCode === p.code
+            (r) => !r.isDeleted && (r.propertyId === p.id || r.propertyCode === p.code)
           );
           if (pReviews.length === 0) {
             return { ...p, rating: 0, reviewsCount: 0 };
@@ -635,6 +658,20 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       syncChannel.onmessage = (event) => {
         if (event.data?.type === 'SYNC_UPDATE' && event.data?.payload) {
           const p = event.data.payload;
+          if (p.tombstones) {
+            if (Array.isArray(p.tombstones.properties)) {
+              p.tombstones.properties.forEach((id: string) => recordPermanentDelete(id));
+            }
+            if (Array.isArray(p.tombstones.reviews)) {
+              p.tombstones.reviews.forEach((id: string) => recordPermanentDelete(id));
+            }
+            if (Array.isArray(p.tombstones.bookings)) {
+              p.tombstones.bookings.forEach((id: string) => recordPermanentDelete(id));
+            }
+            if (Array.isArray(p.tombstones.accounts)) {
+              p.tombstones.accounts.forEach((email: string) => recordPermanentDelete(email));
+            }
+          }
           if (Array.isArray(p.properties) && p.properties.length > 0) {
             setProperties((prev) => {
               const merged = mergeProperties(prev, p.properties);
@@ -764,14 +801,31 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setupEventSource();
 
-    // 3. Fallback polling dự phòng mỗi 2.5 giây để phản hồi siêu tốc giữa các thiết bị
+    // 3. Fallback polling dự phòng mỗi 2 giây để phản hồi siêu tốc giữa các thiết bị
     pollInterval = setInterval(() => {
       if (!isMounted) return;
       fetch(`/api/store?t=${Date.now()}`, { cache: 'no-store' })
         .then((res) => res.json())
         .then((data) => {
           if (!isMounted || !data) return;
-          if (Array.isArray(data.properties) && data.properties.length > 0) {
+
+          // Xử lý tombstones từ server
+          if (data.tombstones) {
+            if (Array.isArray(data.tombstones.properties)) {
+              data.tombstones.properties.forEach((id: string) => recordPermanentDelete(id));
+            }
+            if (Array.isArray(data.tombstones.reviews)) {
+              data.tombstones.reviews.forEach((id: string) => recordPermanentDelete(id));
+            }
+            if (Array.isArray(data.tombstones.bookings)) {
+              data.tombstones.bookings.forEach((id: string) => recordPermanentDelete(id));
+            }
+            if (Array.isArray(data.tombstones.accounts)) {
+              data.tombstones.accounts.forEach((email: string) => recordPermanentDelete(email));
+            }
+          }
+
+          if (Array.isArray(data.properties)) {
             const cleanProps = data.properties.filter(isRealAdminProperty);
             setProperties((prev) => {
               const merged = mergeProperties(prev, cleanProps);
@@ -781,7 +835,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               return merged;
             });
           }
-          if (Array.isArray(data.bookings) && data.bookings.length > 0) {
+          if (Array.isArray(data.bookings)) {
             const cleanBookings = data.bookings.filter(isRealUserBooking);
             setBookings((prev) => {
               const merged = mergeBookings(prev, cleanBookings);
@@ -821,7 +875,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (data.settings) setSettings(data.settings);
         })
         .catch(() => {});
-    }, 2500);
+    }, 2000);
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'unistay_real_reviews_v4' && e.newValue) {
@@ -949,7 +1003,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
       } catch {}
-      syncToServer({ properties: updated });
+      syncToServer({ properties: updated, tombstones: { properties: [id] } });
       return updated;
     });
   };
@@ -1092,44 +1146,49 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  const recalculatePropertyRating = (propertyId: string, allReviews: PropertyReview[]) => {
-    let matchingProperty: Property | undefined;
+  const recalculatePropertyRating = (
+    propertyId: string,
+    allReviews: PropertyReview[],
+    deletedReviewIds?: string[]
+  ) => {
     setProperties((prevProps) => {
-      matchingProperty = prevProps.find(
+      const matching = prevProps.find(
         (p) => p.id === propertyId || p.code === propertyId || p.slug === propertyId
       );
-      return prevProps;
-    });
 
-    const propReviews = allReviews.filter((r) => {
-      if (r.isDeleted) return false;
-      if (r.propertyId === propertyId) return true;
-      if (matchingProperty) {
-        if (matchingProperty.code && (r.propertyCode === matchingProperty.code || r.propertyId === matchingProperty.code)) return true;
-        if (matchingProperty.slug && r.propertyId === matchingProperty.slug) return true;
-        if (matchingProperty.id && r.propertyId === matchingProperty.id) return true;
-      }
-      return false;
-    });
+      const propReviews = allReviews.filter((r) => {
+        if (r.isDeleted) return false;
+        if (r.propertyId === propertyId) return true;
+        if (matching) {
+          if (matching.code && (r.propertyCode === matching.code || r.propertyId === matching.code)) return true;
+          if (matching.slug && r.propertyId === matching.slug) return true;
+          if (matching.id && r.propertyId === matching.id) return true;
+        }
+        return false;
+      });
 
-    const count = propReviews.length;
-    const avg =
-      count > 0
-        ? Number(
-            (propReviews.reduce((sum, r) => sum + r.rating, 0) / count).toFixed(2)
-          )
-        : 0;
+      const count = propReviews.length;
+      const avg =
+        count > 0
+          ? Number((propReviews.reduce((sum, r) => sum + r.rating, 0) / count).toFixed(1))
+          : 0;
 
-    setProperties((prevProps) => {
       const updatedProps = prevProps.map((p) =>
-        p.id === propertyId || (matchingProperty && p.id === matchingProperty.id)
+        p.id === propertyId || (matching && p.id === matching.id) || p.code === propertyId
           ? { ...p, rating: avg, reviewsCount: count, updatedAt: Date.now() }
           : p
       );
+
       try {
         localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updatedProps));
       } catch {}
-      syncToServer({ properties: updatedProps, reviews: allReviews });
+
+      syncToServer({
+        properties: updatedProps,
+        reviews: allReviews,
+        ...(deletedReviewIds && deletedReviewIds.length > 0 ? { tombstones: { reviews: deletedReviewIds } } : {})
+      });
+
       return updatedProps;
     });
   };
@@ -1220,7 +1279,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const permanentDeleteReview = (reviewId: string) => {
-    // Xóa vĩnh viễn đánh giá
+    // Xóa vĩnh viễn đánh giá (xóa khỏi toàn bộ hệ thống và đồng bộ tức thì)
     markTombstone('review', reviewId, 'permanent');
     setReviews((prev) => {
       const target = prev.find((r) => r.id === reviewId);
@@ -1229,9 +1288,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(updated));
       } catch {}
       if (target) {
-        recalculatePropertyRating(target.propertyId, updated);
+        recalculatePropertyRating(target.propertyId, updated, [reviewId]);
       } else {
-        syncToServer({ reviews: updated });
+        syncToServer({ reviews: updated, tombstones: { reviews: [reviewId] } });
       }
       return updated;
     });
@@ -1560,7 +1619,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           localStorage.setItem('unistay_assigned_roles', JSON.stringify(map));
         }
       } catch {}
-      syncToServer({ accounts: updated });
+      syncToServer({ accounts: updated, tombstones: { accounts: [cleanEmail] } });
       return updated;
     });
   };

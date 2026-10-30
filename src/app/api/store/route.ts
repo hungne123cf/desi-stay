@@ -22,9 +22,14 @@ export async function POST(request: Request) {
       messages: body.messages,
       reviews: body.reviews,
       accounts: body.accounts,
-      settings: body.settings
+      settings: body.settings,
+      tombstones: body.tombstones
     });
-    return NextResponse.json(updated);
+    return NextResponse.json(updated, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+      }
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Invalid payload' },

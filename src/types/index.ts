@@ -149,6 +149,7 @@ export interface PropertyReview {
   rating: number;
   comment: string;
   adminReply?: string;
+  repliedAt?: string;
   createdAt: string;
   updatedAt?: number;
   isDeleted?: boolean;

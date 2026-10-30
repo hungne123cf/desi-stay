@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
@@ -49,6 +49,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // State cho chức năng Rating & Comment
   const [ratingInput, setRatingInput] = useState<number>(5);
@@ -96,6 +101,14 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
         remainingReviews: 0,
         nextBookingToReview: null
       };
+
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!property || property.isDeleted) {
     return (
