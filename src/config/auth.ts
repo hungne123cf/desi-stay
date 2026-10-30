@@ -25,7 +25,6 @@ export const PREDEFINED_ADMINS = [
     email: 'admin@unistay.com',
     password: 'Admin@123456',
     name: 'UniStay Super Admin',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
     role: 'admin' as const,
     phone: '+84 909 888 777'
   }
@@ -50,7 +49,6 @@ export const DEFAULT_ACCOUNTS: UserAccount[] = [
     role: 'admin',
     phone: '0909888777',
     college: 'Ban Quản Trị Hệ Thống',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
     createdAt: '2026-10-25T00:00:00.000Z',
     lastLoginAt: '2026-10-29T13:00:00.000Z'
   }

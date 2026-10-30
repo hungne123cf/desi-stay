@@ -218,7 +218,11 @@ function saveAdminReplyTombstone(reviewId: string, reply: string) {
   try {
     const raw = localStorage.getItem(KEY_ADMIN_REPLIES);
     const map = raw ? JSON.parse(raw) : {};
-    map[reviewId] = reply;
+    if (!reply) {
+      delete map[reviewId];
+    } else {
+      map[reviewId] = reply;
+    }
     localStorage.setItem(KEY_ADMIN_REPLIES, JSON.stringify(map));
   } catch {}
 }
@@ -392,6 +396,13 @@ function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
     return {
       ...acc,
       avatar: TRUONG_HUNG_REAL_AVATAR
+    };
+  }
+  // Loại bỏ hoàn toàn ảnh stock Unsplash giả cho các tài khoản
+  if (acc.avatar && (acc.avatar.includes('unsplash.com') || acc.avatar.includes('photo-1573496359142'))) {
+    return {
+      ...acc,
+      avatar: null
     };
   }
   return acc;
@@ -1092,11 +1103,18 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const replyToReview = (reviewId: string, adminReply: string) => {
-    saveAdminReplyTombstone(reviewId, adminReply);
+    const trimmed = adminReply.trim();
+    saveAdminReplyTombstone(reviewId, trimmed);
     recordLocalMutation(reviewId);
     setReviews((prev) => {
       const updated = prev.map((r) =>
-        r.id === reviewId ? { ...r, adminReply, repliedAt: new Date().toISOString() } : r
+        r.id === reviewId
+          ? {
+              ...r,
+              adminReply: trimmed || undefined,
+              repliedAt: trimmed ? new Date().toISOString() : undefined
+            }
+          : r
       );
       try {
         localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(updated));

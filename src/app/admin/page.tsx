@@ -1801,11 +1801,28 @@ export default function AdminPage() {
                         </p>
 
                         {rev.adminReply && (
-                          <div className="ml-4 p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 text-xs">
-                            <span className="font-bold text-indigo-950 block mb-0.5">
-                              Phản hồi từ Quản lý UniStay:
-                            </span>
-                            <p className="text-indigo-900">{rev.adminReply}</p>
+                          <div className="ml-4 p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 text-xs flex items-start justify-between gap-3">
+                            <div>
+                              <span className="font-bold text-indigo-950 block mb-0.5">
+                                Phản hồi từ Quản lý UniStay:
+                              </span>
+                              <p className="text-indigo-900">{rev.adminReply}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm('Bạn có chắc muốn gỡ bỏ câu phản hồi này không?')) {
+                                  replyToReview(rev.id, '');
+                                  setTrashToast('Đã xóa câu phản hồi của Ban Quản Lý!');
+                                  setTimeout(() => setTrashToast(null), 3000);
+                                }
+                              }}
+                              className="px-2.5 py-1 text-slate-400 hover:text-red-600 rounded-lg hover:bg-white/90 text-[11px] font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1 border border-transparent hover:border-red-200"
+                              title="Xóa câu phản hồi này"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Xóa phản hồi</span>
+                            </button>
                           </div>
                         )}
 

@@ -87,7 +87,7 @@
       "role": "admin",
       "phone": "0909888777",
       "college": "Ban Quản Trị Hệ Thống",
-      "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80",
+      "avatar": null,
       "createdAt": "2026-10-25T00:00:00.000Z",
       "lastLoginAt": "2026-10-29T13:00:00.000Z"
     }
