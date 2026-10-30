@@ -251,7 +251,7 @@ function mergeProperties(prev: Property[], incoming: Property[]): Property[] {
     if (p && p.id && !isPermanentlyDeleted(p.id)) {
       const existing = map.get(p.id);
       const isDeletedTombstone = isTombstonedDeleted('prop', p.id);
-      const effectiveDeleted = isDeletedTombstone || (existing ? Boolean(existing.isDeleted) : Boolean(p.isDeleted));
+      const effectiveDeleted = isDeletedTombstone || (isRecentlyMutated(p.id) ? Boolean(existing?.isDeleted) : Boolean(p.isDeleted));
 
       if (!existing) {
         map.set(p.id, {
@@ -316,7 +316,7 @@ function mergeBookings(prev: Booking[], incoming: Booking[]): Booking[] {
     if (b && b.id && !isPermanentlyDeleted(b.id)) {
       const existing = map.get(b.id);
       const isArchivedTombstone = isTombstonedDeleted('booking', b.id);
-      const effectiveArchived = isArchivedTombstone || (existing ? Boolean(existing.isArchived) : Boolean(b.isArchived));
+      const effectiveArchived = isArchivedTombstone || (isRecentlyMutated(b.id) ? Boolean(existing?.isArchived) : Boolean(b.isArchived));
 
       if (!existing) {
         map.set(b.id, {
@@ -356,8 +356,8 @@ function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): Prope
       const existing = map.get(r.id);
       const isDeletedTombstone = isTombstonedDeleted('review', r.id);
       const savedReply = getAdminReplyTombstone(r.id);
-      const effectiveAdminReply = r.adminReply || existing?.adminReply || savedReply;
-      const effectiveDeleted = isDeletedTombstone || (existing ? Boolean(existing.isDeleted) : Boolean(r.isDeleted));
+      const effectiveAdminReply = r.adminReply !== undefined ? r.adminReply : (existing?.adminReply || savedReply);
+      const effectiveDeleted = isDeletedTombstone || (isRecentlyMutated(r.id) ? Boolean(existing?.isDeleted) : Boolean(r.isDeleted));
 
       if (!existing) {
         map.set(r.id, {
@@ -422,7 +422,7 @@ function mergeAccounts(prev: UserAccount[], incoming: UserAccount[]): UserAccoun
       const key = cleanAcc.email.toLowerCase().trim();
       const existing = map.get(key);
       const isSuspendedTombstone = isTombstonedDeleted('account', key);
-      const effectiveSuspended = isSuspendedTombstone || (existing ? Boolean(existing.isSuspended) : Boolean(cleanAcc.isSuspended));
+      const effectiveSuspended = isSuspendedTombstone || (isRecentlyMutated(key) ? Boolean(existing?.isSuspended) : Boolean(cleanAcc.isSuspended));
 
       if (!existing) {
         map.set(key, {
@@ -635,18 +635,50 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       syncChannel.onmessage = (event) => {
         if (event.data?.type === 'SYNC_UPDATE' && event.data?.payload) {
           const p = event.data.payload;
-          if (Array.isArray(p.properties) && p.properties.length > 0) setProperties((prev) => mergeProperties(prev, p.properties));
+          if (Array.isArray(p.properties) && p.properties.length > 0) {
+            setProperties((prev) => {
+              const merged = mergeProperties(prev, p.properties);
+              try {
+                localStorage.setItem('unistay_real_properties_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          }
           if (Array.isArray(p.bookings) && p.bookings.length > 0) {
-            setBookings((prev) => mergeBookings(prev, p.bookings));
+            setBookings((prev) => {
+              const merged = mergeBookings(prev, p.bookings);
+              try {
+                localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
           if (Array.isArray(p.messages)) {
-            setMessages((prev) => mergeMessages(prev, p.messages));
+            setMessages((prev) => {
+              const merged = mergeMessages(prev, p.messages);
+              try {
+                localStorage.setItem('unistay_real_messages_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
           if (Array.isArray(p.reviews)) {
-            setReviews((prev) => mergeReviews(prev, p.reviews));
+            setReviews((prev) => {
+              const merged = mergeReviews(prev, p.reviews);
+              try {
+                localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
           if (Array.isArray(p.accounts)) {
-            setAccounts((prev) => mergeAccounts(prev, p.accounts));
+            setAccounts((prev) => {
+              const merged = mergeAccounts(prev, p.accounts);
+              try {
+                localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
           if (p.settings) setSettings(p.settings);
         }
@@ -791,11 +823,34 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .catch(() => {});
     }, 2500);
 
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'unistay_real_reviews_v4' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setReviews((prev) => mergeReviews(prev, parsed));
+        } catch {}
+      }
+      if (e.key === 'unistay_real_properties_v4' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setProperties((prev) => mergeProperties(prev, parsed));
+        } catch {}
+      }
+      if (e.key === 'unistay_real_bookings_v4' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setBookings((prev) => mergeBookings(prev, parsed));
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
       isMounted = false;
       if (syncChannel) syncChannel.close();
       if (eventSource) eventSource.close();
       if (pollInterval) clearInterval(pollInterval);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
