@@ -39,6 +39,8 @@ export interface Property {
   reviewsCount: number;
   images: string[];
   createdAt: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface Booking {
@@ -66,6 +68,8 @@ export interface Booking {
   visitTimeSlot?: string;
   adminNotes: string;
   createdAt: string;
+  isArchived?: boolean;
+  archivedAt?: string;
 }
 
 export interface CurrentUser {
@@ -92,6 +96,8 @@ export interface UserAccount {
   createdAt: string;
   lastLoginAt?: string;
   isStaffAssigned?: boolean;
+  isSuspended?: boolean;
+  suspendedAt?: string;
 }
 
 export interface SiteSettings {
@@ -143,5 +149,7 @@ export interface PropertyReview {
   comment: string;
   adminReply?: string;
   createdAt: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
 }
 

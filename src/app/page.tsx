@@ -48,6 +48,9 @@ export default function HomePage() {
     const queryNorm = removeVietnameseAccents(filters.searchQuery.trim());
 
     const matched = properties.filter((item) => {
+      // 0. Bỏ qua các phòng đã bị xóa mềm (đang trong thùng rác)
+      if (item.isDeleted) return false;
+
       // 1. Lọc theo từ khóa tìm kiếm (Tên phòng, địa chỉ, quận/huyện, trường ĐH, mã phòng)
       if (queryNorm) {
         const searchableText = removeVietnameseAccents(

@@ -73,20 +73,36 @@ export default function AdminPage() {
     settings,
     formatPrice,
     addProperty,
+    updateProperty,
     deleteProperty,
+    restoreProperty,
+    permanentDeleteProperty,
     updateBookingStatus,
+    archiveBooking,
+    restoreBooking,
     updateSettings,
     sendChatMessage,
     markConversationRead,
     deleteConversation,
     replyToReview,
     deleteReview,
+    restoreReview,
+    permanentDeleteReview,
     updateAccountRole,
     addOrUpdateAccount,
-    deleteAccount
+    deleteAccount,
+    toggleAccountSuspension,
+    permanentDeleteAccount
   } = useProperties();
 
-  const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'chat' | 'reviews' | 'accounts' | 'settings'>('listings');
+  const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'chat' | 'reviews' | 'accounts' | 'settings' | 'trash'>('listings');
+  const [trashSubTab, setTrashSubTab] = useState<'properties' | 'bookings' | 'accounts' | 'reviews'>('properties');
+  const [trashToast, setTrashToast] = useState<string | null>(null);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{
+    type: 'property' | 'review' | 'account';
+    id: string;
+    title: string;
+  } | null>(null);
   const [selectedConvId, setSelectedConvId] = useState<string>('');
   const [adminReplyText, setAdminReplyText] = useState<string>('');
   const [replyingReviewId, setReplyingReviewId] = useState<string | null>(null);
@@ -326,10 +342,24 @@ export default function AdminPage() {
   const unreadChatCount = messages.filter(
     (m) => m.senderRole === 'student' && !m.isReadByAdmin
   ).length;
-  const pendingBookingsCount = bookings.filter((b) => b.status === 'pending').length;
+  const pendingBookingsCount = bookings.filter((b) => b.status === 'pending' && !b.isArchived).length;
+
+  const activeProperties = properties.filter((p) => !p.isDeleted);
+  const deletedProperties = properties.filter((p) => p.isDeleted);
+  const activeBookings = bookings.filter((b) => !b.isArchived);
+  const archivedBookings = bookings.filter((b) => b.isArchived);
+  const activeAccounts = accounts.filter((a) => !a.isSuspended);
+  const suspendedAccounts = accounts.filter((a) => a.isSuspended);
+  const activeReviews = reviews.filter((r) => !r.isDeleted);
+  const deletedReviews = reviews.filter((r) => r.isDeleted);
+  const totalTrashCount =
+    deletedProperties.length +
+    archivedBookings.length +
+    suspendedAccounts.length +
+    deletedReviews.length;
 
   const navItems: {
-    id: 'listings' | 'leads' | 'chat' | 'reviews' | 'accounts' | 'settings';
+    id: 'listings' | 'leads' | 'chat' | 'reviews' | 'accounts' | 'settings' | 'trash';
     label: string;
     sublabel: string;
     icon: React.ReactNode;
@@ -341,7 +371,7 @@ export default function AdminPage() {
       label: 'Quản Lý Phòng Trọ',
       sublabel: 'Kho phòng & giá thuê',
       icon: <Layers className="w-4 h-4 shrink-0" />,
-      badge: properties.length,
+      badge: activeProperties.length,
       badgeColor: 'bg-slate-800 text-slate-200 border border-slate-700'
     },
     {
@@ -349,7 +379,7 @@ export default function AdminPage() {
       label: 'Đơn Cọc & Lịch Hẹn',
       sublabel: 'Duyệt Bill VietQR & hẹn xem',
       icon: <Users className="w-4 h-4 shrink-0" />,
-      badge: pendingBookingsCount > 0 ? `${pendingBookingsCount} chờ` : bookings.length,
+      badge: pendingBookingsCount > 0 ? `${pendingBookingsCount} chờ` : activeBookings.length,
       badgeColor:
         pendingBookingsCount > 0
           ? 'bg-amber-500 text-slate-950 font-black'
@@ -374,7 +404,7 @@ export default function AdminPage() {
       label: 'Đánh Giá & Bình Luận',
       sublabel: 'Quản lý sao & phản hồi SV',
       icon: <Star className="w-4 h-4 shrink-0" />,
-      badge: `${reviews.length} ⭐`,
+      badge: `${activeReviews.length} ⭐`,
       badgeColor: 'bg-slate-800 text-amber-300 border border-slate-700'
     },
     {
@@ -382,7 +412,7 @@ export default function AdminPage() {
       label: 'Quản Lý Tài Khoản',
       sublabel: 'Chỉ định Staff & Phân quyền',
       icon: <UserCheck className="w-4 h-4 shrink-0" />,
-      badge: `${accounts.length}`,
+      badge: `${activeAccounts.length}`,
       badgeColor: 'bg-indigo-950 text-indigo-300 border border-indigo-700/60 font-bold'
     },
     {
@@ -392,6 +422,14 @@ export default function AdminPage() {
       icon: <Wallet className="w-4 h-4 shrink-0" />,
       badge: formatPrice(totalRevenueUSD, 'VND'),
       badgeColor: 'bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-bold'
+    },
+    {
+      id: 'trash',
+      label: 'Thùng Rác & Khôi Phục',
+      sublabel: 'Khôi phục phòng, cọc & tài khoản',
+      icon: <Trash2 className="w-4 h-4 shrink-0" />,
+      badge: totalTrashCount > 0 ? `${totalTrashCount} mục` : undefined,
+      badgeColor: 'bg-rose-950 text-rose-300 border border-rose-800/80 font-bold'
     }
   ];
 
@@ -636,8 +674,15 @@ export default function AdminPage() {
               onClick={() => setActiveTab('listings')}
               className="px-3.5 py-2.5 rounded-2xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 cursor-pointer transition-colors"
             >
-              <span className="text-[10px] font-semibold text-slate-500 block">Tổng phòng trọ</span>
-              <span className="text-base font-black text-slate-900">{properties.length} phòng</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-slate-500 block">Phòng trọ đang bán</span>
+                {deletedProperties.length > 0 && (
+                  <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.2 rounded">
+                    +{deletedProperties.length} rác
+                  </span>
+                )}
+              </div>
+              <span className="text-base font-black text-slate-900">{activeProperties.length} phòng</span>
             </div>
 
             <div
@@ -645,11 +690,11 @@ export default function AdminPage() {
               className="px-3.5 py-2.5 rounded-2xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 cursor-pointer transition-colors"
             >
               <span className="text-[10px] font-semibold text-slate-500 block">Khách đặt &amp; Hẹn</span>
-              <span className="text-base font-black text-indigo-600">{bookings.length} đơn</span>
+              <span className="text-base font-black text-indigo-600">{activeBookings.length} đơn</span>
             </div>
 
             <div
-              onClick={() => setActiveTab('leads')}
+              onClick={() => setActiveTab('settings')}
               className="px-3.5 py-2.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 cursor-pointer"
             >
               <span className="text-[10px] font-semibold text-emerald-700 block">Tiền cọc đã thu</span>
@@ -663,7 +708,7 @@ export default function AdminPage() {
               className="px-3.5 py-2.5 rounded-2xl bg-amber-50/70 border border-amber-200/70 cursor-pointer"
             >
               <span className="text-[10px] font-semibold text-amber-800 block">Đánh giá SV</span>
-              <span className="text-base font-black text-amber-700">{reviews.length} nhận xét ⭐</span>
+              <span className="text-base font-black text-amber-700">{activeReviews.length} nhận xét ⭐</span>
             </div>
           </div>
         </div>
@@ -671,6 +716,28 @@ export default function AdminPage() {
         {/* Tab 1: Listings */}
         {activeTab === 'listings' && (
           <div className="space-y-4">
+            {deletedProperties.length > 0 && (
+              <div className="p-3.5 bg-rose-50/90 border border-rose-200/90 rounded-2xl flex items-center justify-between gap-3 text-xs text-rose-950 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>
+                    Đang có <strong>{deletedProperties.length} phòng trọ</strong> nằm trong Thùng Rác (đã xóa mềm).
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('trash');
+                    setTrashSubTab('properties');
+                  }}
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors cursor-pointer text-xs shrink-0 flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Mở Thùng Rác để Khôi Phục →</span>
+                </button>
+              </div>
+            )}
+
             {propertyCreatedToast && (
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-4 text-xs text-emerald-900 shadow-xs">
                 <div className="flex items-center gap-2 font-bold">
@@ -701,25 +768,27 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {properties.length === 0 ? (
+                    {activeProperties.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="p-12 text-center text-slate-500">
                           <Building className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                          <p className="font-bold text-slate-700 text-sm">Chưa có phòng trọ nào trong hệ thống</p>
+                          <p className="font-bold text-slate-700 text-sm">Chưa có phòng trọ nào đang mở cho thuê</p>
                           <p className="text-xs text-slate-400 mt-1 mb-4">
-                            Toàn bộ dữ liệu mẫu đã được xóa sạch. Hãy bấm &ldquo;+ Thêm Phòng Mới&rdquo; để đăng phòng trọ thực tế đầu tiên!
+                            {deletedProperties.length > 0
+                              ? `Tất cả ${deletedProperties.length} phòng đang nằm trong thùng rác. Bạn có thể khôi phục lại bất kỳ lúc nào!`
+                              : 'Hãy bấm "+ Thêm Phòng Mới" để đăng phòng trọ thực tế đầu tiên!'}
                           </p>
                           <button
                             onClick={() => setShowAddModal(true)}
                             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
                           >
                             <Plus className="w-4 h-4" />
-                            <span>Thêm Phòng Trọ Đầu Tiên</span>
+                            <span>Thêm Phòng Trọ Mới</span>
                           </button>
                         </td>
                       </tr>
                     ) : (
-                      properties.map((prop) => (
+                      activeProperties.map((prop) => (
                         <tr key={prop.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="p-4">
                             <button
@@ -796,6 +865,28 @@ export default function AdminPage() {
         {/* Tab 2: Leads */}
         {activeTab === 'leads' && (
           <div className="mt-6 space-y-4">
+            {archivedBookings.length > 0 && (
+              <div className="p-3.5 bg-amber-50/90 border border-amber-200/90 rounded-2xl flex items-center justify-between gap-3 text-xs text-amber-950 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span>
+                    Có <strong>{archivedBookings.length} đơn cọc &amp; lịch hẹn</strong> đang nằm trong mục Lưu Trữ (xóa mềm).
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('trash');
+                    setTrashSubTab('bookings');
+                  }}
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-colors cursor-pointer text-xs shrink-0 flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Mở Kho Lưu Trữ Đơn Cọc →</span>
+                </button>
+              </div>
+            )}
+
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -811,7 +902,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {bookings.length === 0 ? (
+                    {activeBookings.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="p-12 text-center text-slate-500">
                           <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
@@ -822,7 +913,7 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ) : (
-                      bookings.map((lead) => (
+                      activeBookings.map((lead) => (
                         <tr key={lead.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="p-4">
                             <span className="font-bold text-slate-900 block">{lead.studentName}</span>
@@ -923,6 +1014,18 @@ export default function AdminPage() {
                                 <Phone className="w-3 h-3 text-emerald-600" />
                                 <span>Zalo</span>
                               </a>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  archiveBooking(lead.id);
+                                  setTrashToast(`Đã lưu trữ đơn cọc #${lead.reference}! Xem lại ở mục Thùng Rác & Khôi Phục.`);
+                                  setTimeout(() => setTrashToast(null), 3500);
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-colors cursor-pointer"
+                                title="Lưu trữ đơn này (Xóa mềm)"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -2018,20 +2121,30 @@ export default function AdminPage() {
                                   </button>
                                 )}
 
-                                {/* Delete Account Button */}
+                                {/* Khóa / Mở khóa tài khoản (Xóa mềm) */}
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (confirm(`Bạn có chắc muốn xóa tài khoản ${acc.email} khỏi danh sách?`)) {
-                                      deleteAccount(acc.email);
-                                      setAccountToast(`Đã xóa tài khoản ${acc.email}`);
-                                      setTimeout(() => setAccountToast(null), 3000);
-                                    }
+                                    toggleAccountSuspension(acc.email);
+                                    setAccountToast(
+                                      acc.isSuspended
+                                        ? `Đã mở khóa tài khoản ${acc.email}!`
+                                        : `Đã khóa tài khoản ${acc.email} (Xóa mềm)!`
+                                    );
+                                    setTimeout(() => setAccountToast(null), 3000);
                                   }}
-                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                                  title="Xóa tài khoản"
+                                  className={`p-2 rounded-xl transition-colors cursor-pointer border ${
+                                    acc.isSuspended
+                                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
+                                      : 'text-slate-500 bg-slate-50 border-slate-200 hover:text-amber-700 hover:bg-amber-50'
+                                  }`}
+                                  title={acc.isSuspended ? 'Mở khóa tài khoản' : 'Khóa tài khoản (Xóa mềm)'}
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  {acc.isSuspended ? (
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <Lock className="w-3.5 h-3.5" />
+                                  )}
                                 </button>
                               </>
                             )
@@ -2047,6 +2160,421 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 7: THÙNG RÁC & KHÔI PHỤC DỮ LIỆU ĐÃ XÓA MỀM (TRASH & ARCHIVE)         */}
+        {/* ========================================================================= */}
+        {activeTab === 'trash' && (
+          <div className="space-y-6">
+            {/* Trash Toast Feedback */}
+            {trashToast && (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-4 text-xs text-emerald-950 font-bold shadow-xs animate-in fade-in duration-150">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{trashToast}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTrashToast(null)}
+                  className="text-emerald-700 hover:text-emerald-900 font-bold cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
+            )}
+
+            {/* Trash Sub-tabs Header Bar */}
+            <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                    <Trash2 className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-base font-black text-slate-900">
+                    Kho Dữ Liệu Đã Xóa Mềm &amp; Lưu Trữ
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Mọi dữ liệu xóa mềm đều được bảo vệ toàn vẹn. Bạn có thể <strong>Khôi phục (1-Click)</strong> về trang chính hoặc <strong>Xóa vĩnh viễn</strong>.
+                </p>
+              </div>
+
+              {/* Sub-tabs selector pills */}
+              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/80 rounded-2xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setTrashSubTab('properties')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    trashSubTab === 'properties'
+                      ? 'bg-white text-rose-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Building className="w-3.5 h-3.5" />
+                  <span>Phòng Trọ ({deletedProperties.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTrashSubTab('bookings')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    trashSubTab === 'bookings'
+                      ? 'bg-white text-amber-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>Đơn Cọc ({archivedBookings.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTrashSubTab('accounts')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    trashSubTab === 'accounts'
+                      ? 'bg-white text-indigo-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Tài Khoản Khóa ({suspendedAccounts.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTrashSubTab('reviews')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    trashSubTab === 'reviews'
+                      ? 'bg-white text-purple-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Star className="w-3.5 h-3.5" />
+                  <span>Đánh Giá Ẩn ({deletedReviews.length})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-tab 1: Soft-deleted Properties */}
+            {trashSubTab === 'properties' && (
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+                {deletedProperties.length === 0 ? (
+                  <div className="p-12 text-center space-y-3">
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto shadow-xs">
+                      <CheckCircle className="w-7 h-7" />
+                    </div>
+                    <p className="text-base font-black text-slate-800">Thùng rác phòng trọ sạch sẽ!</p>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      Hiện tại không có phòng trọ nào bị xóa mềm. Tất cả các phòng trọ của bạn đều đang hiển thị hoạt động tốt bên ngoài trang khách.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                        <tr>
+                          <th className="p-4">Phòng trọ đã xóa</th>
+                          <th className="p-4">Khu vực / Tỉnh</th>
+                          <th className="p-4">Giá thuê</th>
+                          <th className="p-4">Thời gian xóa</th>
+                          <th className="p-4 text-right">Hành động khôi phục</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {deletedProperties.map((prop) => (
+                          <tr key={prop.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={prop.images[0]}
+                                  alt=""
+                                  className="w-14 h-11 object-cover rounded-xl border border-slate-200 grayscale opacity-75"
+                                />
+                                <div>
+                                  <span className="font-mono text-[10px] text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md font-bold">
+                                    {prop.code} (Đã xóa mềm)
+                                  </span>
+                                  <h4 className="font-bold text-slate-900 mt-0.5 max-w-[220px] truncate">
+                                    {prop.title}
+                                  </h4>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4 text-slate-600">
+                              <span className="font-semibold block">{prop.area}</span>
+                              <span className="text-[11px] text-slate-400">{prop.city}</span>
+                            </td>
+                            <td className="p-4">
+                              <span className="font-black text-slate-800">
+                                {formatPrice(prop.pricePerMonthUSD, 'VND')}
+                              </span>
+                            </td>
+                            <td className="p-4 text-slate-400 font-mono text-[11px]">
+                              {prop.deletedAt
+                                ? new Date(prop.deletedAt).toLocaleString('vi-VN')
+                                : 'Gần đây'}
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    restoreProperty(prop.id);
+                                    setTrashToast(`Đã khôi phục phòng "${prop.title}" về trang chủ thành công!`);
+                                    setTimeout(() => setTrashToast(null), 3500);
+                                  }}
+                                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                  <span>Khôi phục lại</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPermanentDeleteTarget({
+                                      type: 'property',
+                                      id: prop.id,
+                                      title: prop.title
+                                    });
+                                  }}
+                                  className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                  title="Xóa vĩnh viễn không thể khôi phục"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Xóa vĩnh viễn</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Sub-tab 2: Archived Bookings */}
+            {trashSubTab === 'bookings' && (
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+                {archivedBookings.length === 0 ? (
+                  <div className="p-12 text-center space-y-3">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto shadow-xs">
+                      <Receipt className="w-7 h-7" />
+                    </div>
+                    <p className="text-base font-black text-slate-800">Không có đơn cọc nào trong mục lưu trữ</p>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      Các đơn cọc đã hủy hoặc hoàn tất có thể lưu trữ vào đây để làm gọn giao diện quản lý duyệt cọc chính.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                        <tr>
+                          <th className="p-4">Mã đơn cọc</th>
+                          <th className="p-4">Khách thuê</th>
+                          <th className="p-4">Phòng</th>
+                          <th className="p-4">Tiền cọc</th>
+                          <th className="p-4">Ngày lưu trữ</th>
+                          <th className="p-4 text-right">Khôi phục</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {archivedBookings.map((b) => (
+                          <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="p-4 font-mono font-bold text-slate-800">
+                              #{b.reference}
+                            </td>
+                            <td className="p-4">
+                              <span className="font-bold text-slate-900 block">{b.studentName}</span>
+                              <span className="text-[11px] text-slate-500">{b.studentContact}</span>
+                            </td>
+                            <td className="p-4">
+                              <span className="font-semibold text-slate-800 block">{b.propertyCode}</span>
+                              <span className="text-[10px] text-slate-400 truncate max-w-[150px] block">
+                                {b.propertyTitle}
+                              </span>
+                            </td>
+                            <td className="p-4 font-black text-emerald-700">
+                              {formatPrice(b.tokenAmountUSD, 'VND')}
+                            </td>
+                            <td className="p-4 text-slate-400 text-[11px] font-mono">
+                              {b.archivedAt ? new Date(b.archivedAt).toLocaleDateString('vi-VN') : 'Lưu trữ'}
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedReceiptLead(b)}
+                                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                                >
+                                  Xem bill
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    restoreBooking(b.id);
+                                    setTrashToast(`Đã khôi phục đơn cọc #${b.reference} về bảng duyệt chính!`);
+                                    setTimeout(() => setTrashToast(null), 3500);
+                                  }}
+                                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                  <span>Khôi phục</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Sub-tab 3: Suspended Accounts */}
+            {trashSubTab === 'accounts' && (
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+                {suspendedAccounts.length === 0 ? (
+                  <div className="p-12 text-center space-y-3">
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center mx-auto shadow-xs">
+                      <UserCheck className="w-7 h-7" />
+                    </div>
+                    <p className="text-base font-black text-slate-800">Không có tài khoản nào bị khóa</p>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      Tất cả các tài khoản Nhân viên (Staff) và Sinh viên đều đang hoạt động bình thường.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {suspendedAccounts.map((acc) => (
+                      <div
+                        key={acc.id || acc.email}
+                        className="p-4 lg:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm flex items-center justify-center shrink-0">
+                            {acc.name ? acc.name[0]?.toUpperCase() : 'U'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold text-slate-900">{acc.name}</h4>
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                Đã khóa / Vô hiệu hóa
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">{acc.email}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              toggleAccountSuspension(acc.email);
+                              setTrashToast(`Đã mở khóa tài khoản ${acc.email} thành công!`);
+                              setTimeout(() => setTrashToast(null), 3500);
+                            }}
+                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Mở khóa tài khoản</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPermanentDeleteTarget({
+                                type: 'account',
+                                id: acc.email,
+                                title: acc.email
+                              });
+                            }}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Xóa vĩnh viễn</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Sub-tab 4: Soft-deleted Reviews */}
+            {trashSubTab === 'reviews' && (
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+                {deletedReviews.length === 0 ? (
+                  <div className="p-12 text-center space-y-3">
+                    <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center mx-auto shadow-xs">
+                      <Star className="w-7 h-7" />
+                    </div>
+                    <p className="text-base font-black text-slate-800">Không có đánh giá nào bị ẩn</p>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      Các đánh giá vi phạm hoặc cần hòa giải sẽ được lưu ở đây khi bạn bấm xóa mềm.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {deletedReviews.map((rev) => (
+                      <div
+                        key={rev.id}
+                        className="p-4 lg:p-5 flex flex-col md:flex-row md:items-start justify-between gap-4 hover:bg-slate-50/60"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-slate-900">{rev.userName}</span>
+                            <span className="text-amber-500 font-bold text-xs">
+                              {'★'.repeat(rev.rating)}
+                            </span>
+                            <span className="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded font-bold border border-rose-200">
+                              Đang bị ẩn
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed italic bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+                            &ldquo;{rev.comment}&rdquo;
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              restoreReview(rev.id);
+                              setTrashToast(`Đã khôi phục đánh giá của ${rev.userName}!`);
+                              setTimeout(() => setTrashToast(null), 3500);
+                            }}
+                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Bỏ ẩn / Khôi phục</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPermanentDeleteTarget({
+                                type: 'review',
+                                id: rev.id,
+                                title: `Đánh giá của ${rev.userName}`
+                              });
+                            }}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Xóa vĩnh viễn</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -2640,18 +3168,18 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Popup Modal */}
+      {/* Delete Confirmation Popup Modal (Soft Delete) */}
       {propertyToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
           <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900">Xác nhận xóa phòng trọ?</h3>
+                <h3 className="text-base font-black text-slate-900">Chuyển phòng vào Thùng Rác?</h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  Bạn có chắc chắn muốn xóa phòng trọ này khỏi hệ thống? Phòng sẽ bị gỡ khỏi trang User ngay lập tức và không thể hoàn tác.
+                  Phòng trọ này sẽ lập tức được ẩn khỏi trang Người Dùng nhưng được lưu an toàn trong <strong>Thùng Rác</strong>. Bạn có thể khôi phục lại bất kỳ lúc nào!
                 </p>
               </div>
             </div>
@@ -2687,12 +3215,64 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => {
                   deleteProperty(propertyToDelete.id);
+                  const title = propertyToDelete.title;
                   setPropertyToDelete(null);
+                  setTrashToast(`Đã chuyển phòng "${title}" vào Thùng Rác (Xóa mềm an toàn)!`);
+                  setTimeout(() => setTrashToast(null), 4000);
                 }}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md shadow-red-600/20 inline-flex items-center gap-1.5 transition-all cursor-pointer"
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-md inline-flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Xác nhận xóa vĩnh viễn</span>
+                <span>Đưa Vào Thùng Rác</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Permanent Delete Confirmation Modal */}
+      {permanentDeleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-rose-700">CẢNH BÁO: XÓA VĨNH VIỄN!</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Hành động này sẽ <strong>xóa hoàn toàn</strong> dữ liệu của &ldquo;<strong>{permanentDeleteTarget.title}</strong>&rdquo; khỏi hệ thống và <span className="text-rose-600 font-bold">KHÔNG THỂ KHÔI PHỤC</span> nữa.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setPermanentDeleteTarget(null)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Hủy bỏ (Giữ lại)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (permanentDeleteTarget.type === 'property') {
+                    permanentDeleteProperty(permanentDeleteTarget.id);
+                  } else if (permanentDeleteTarget.type === 'account') {
+                    permanentDeleteAccount(permanentDeleteTarget.id);
+                  } else if (permanentDeleteTarget.type === 'review') {
+                    permanentDeleteReview(permanentDeleteTarget.id);
+                  }
+                  const name = permanentDeleteTarget.title;
+                  setPermanentDeleteTarget(null);
+                  setTrashToast(`Đã xóa vĩnh viễn "${name}" khỏi hệ thống.`);
+                  setTimeout(() => setTrashToast(null), 3500);
+                }}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md inline-flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Xác Nhận Xóa Vĩnh Viễn</span>
               </button>
             </div>
           </div>

@@ -57,7 +57,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
   const property = properties.find((p) => p.id === propertyId);
 
   const propertyActualReviews = reviews.filter(
-    (r) => property && (r.propertyId === property.id || r.propertyCode === property.code)
+    (r) => property && !r.isDeleted && (r.propertyId === property.id || r.propertyCode === property.code)
   );
   const propertyReviewsCount = propertyActualReviews.length;
   const propertyRating =
@@ -79,12 +79,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
         nextBookingToReview: null
       };
 
-  if (!property) {
+  if (!property || property.isDeleted) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-2xl font-bold text-slate-800">Không tìm thấy phòng</h2>
+        <h2 className="text-2xl font-bold text-slate-800">Phòng trọ này hiện đang tạm đóng hoặc không còn khả dụng</h2>
         <p className="text-sm text-slate-500 mt-2 mb-6">
-          Phòng trọ này có thể đã được thuê hết hoặc đã ngừng hiển thị.
+          Phòng trọ này có thể đã được thuê hết, chủ nhà tạm ngưng hoặc đã chuyển vào mục lưu trữ.
         </p>
         <Link
           href="/"

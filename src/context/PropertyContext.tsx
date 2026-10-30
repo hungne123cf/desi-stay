@@ -26,8 +26,12 @@ interface PropertyContextType {
   addProperty: (property: Omit<Property, 'id' | 'code' | 'rating' | 'reviewsCount' | 'createdAt'>) => void;
   updateProperty: (id: string, property: Partial<Property>) => void;
   deleteProperty: (id: string) => void;
+  restoreProperty: (id: string) => void;
+  permanentDeleteProperty: (id: string) => void;
   addBooking: (booking: Omit<Booking, 'id' | 'reference' | 'createdAt'>) => string;
   updateBookingStatus: (id: string, status: Booking['status']) => void;
+  archiveBooking: (id: string) => void;
+  restoreBooking: (id: string) => void;
   updateSettings: (newSettings: Partial<SiteSettings>) => void;
   sendChatMessage: (msg: Omit<ChatMessage, 'id' | 'createdAt'>) => void;
   markConversationRead: (conversationId: string) => void;
@@ -35,6 +39,8 @@ interface PropertyContextType {
   addReview: (review: Omit<PropertyReview, 'id' | 'createdAt'>) => void;
   replyToReview: (reviewId: string, adminReply: string) => void;
   deleteReview: (reviewId: string) => void;
+  restoreReview: (reviewId: string) => void;
+  permanentDeleteReview: (reviewId: string) => void;
   getReviewEligibility: (
     propertyId: string,
     propertyCode: string,
@@ -44,6 +50,8 @@ interface PropertyContextType {
   updateAccountRole: (email: string, role: UserRole) => void;
   addOrUpdateAccount: (acc: Partial<UserAccount> & { email: string; name: string }) => void;
   deleteAccount: (email: string) => void;
+  toggleAccountSuspension: (email: string) => void;
+  permanentDeleteAccount: (email: string) => void;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -485,6 +493,35 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const deleteProperty = (id: string) => {
+    // Xóa mềm: đánh dấu isDeleted = true để có thể khôi phục từ thùng rác
+    setProperties((prev) => {
+      const updated = prev.map((p) =>
+        p.id === id ? { ...p, isDeleted: true, deletedAt: new Date().toISOString() } : p
+      );
+      try {
+        localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ properties: updated });
+      return updated;
+    });
+  };
+
+  const restoreProperty = (id: string) => {
+    // Khôi phục phòng trọ từ thùng rác về trạng thái hoạt động bình thường
+    setProperties((prev) => {
+      const updated = prev.map((p) =>
+        p.id === id ? { ...p, isDeleted: false, deletedAt: undefined } : p
+      );
+      try {
+        localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ properties: updated });
+      return updated;
+    });
+  };
+
+  const permanentDeleteProperty = (id: string) => {
+    // Xóa vĩnh viễn (xóa cứng) khỏi toàn bộ hệ thống
     setProperties((prev) => {
       const updated = prev.filter((p) => p.id !== id);
       try {
@@ -524,6 +561,34 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const updateBookingStatus = (id: string, status: Booking['status']) => {
     setBookings((prev) => {
       const updated = prev.map((b) => (b.id === id ? { ...b, status } : b));
+      try {
+        localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ bookings: updated });
+      return updated;
+    });
+  };
+
+  const archiveBooking = (id: string) => {
+    // Xóa mềm / Lưu trữ đơn cọc: ẩn khỏi bảng duyệt nhưng giữ nguyên dữ liệu kế toán
+    setBookings((prev) => {
+      const updated = prev.map((b) =>
+        b.id === id ? { ...b, isArchived: true, archivedAt: new Date().toISOString() } : b
+      );
+      try {
+        localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ bookings: updated });
+      return updated;
+    });
+  };
+
+  const restoreBooking = (id: string) => {
+    // Khôi phục đơn cọc về lại danh sách duyệt bình thường
+    setBookings((prev) => {
+      const updated = prev.map((b) =>
+        b.id === id ? { ...b, isArchived: false, archivedAt: undefined } : b
+      );
       try {
         localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(updated));
       } catch {}
@@ -604,7 +669,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const recalculatePropertyRating = (propertyId: string, allReviews: PropertyReview[]) => {
-    const propReviews = allReviews.filter((r) => r.propertyId === propertyId);
+    const propReviews = allReviews.filter((r) => r.propertyId === propertyId && !r.isDeleted);
     const count = propReviews.length;
     const avg =
       count > 0
@@ -662,6 +727,45 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const deleteReview = (reviewId: string) => {
+    // Xóa mềm đánh giá (ẩn khỏi trang người dùng)
+    setReviews((prev) => {
+      const updated = prev.map((r) =>
+        r.id === reviewId ? { ...r, isDeleted: true, deletedAt: new Date().toISOString() } : r
+      );
+      try {
+        localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(updated));
+      } catch {}
+      const target = prev.find((r) => r.id === reviewId);
+      if (target) {
+        recalculatePropertyRating(target.propertyId, updated);
+      } else {
+        syncToServer({ reviews: updated });
+      }
+      return updated;
+    });
+  };
+
+  const restoreReview = (reviewId: string) => {
+    // Khôi phục đánh giá bị ẩn
+    setReviews((prev) => {
+      const updated = prev.map((r) =>
+        r.id === reviewId ? { ...r, isDeleted: false, deletedAt: undefined } : r
+      );
+      try {
+        localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(updated));
+      } catch {}
+      const target = prev.find((r) => r.id === reviewId);
+      if (target) {
+        recalculatePropertyRating(target.propertyId, updated);
+      } else {
+        syncToServer({ reviews: updated });
+      }
+      return updated;
+    });
+  };
+
+  const permanentDeleteReview = (reviewId: string) => {
+    // Xóa vĩnh viễn đánh giá
     setReviews((prev) => {
       const target = prev.find((r) => r.id === reviewId);
       const updated = prev.filter((r) => r.id !== reviewId);
@@ -945,7 +1049,37 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
+  const toggleAccountSuspension = (email: string) => {
+    const cleanEmail = email.toLowerCase().trim();
+    if (cleanEmail === 'truongvantuan43344@gmail.com' || cleanEmail === 'admin@unistay.com') {
+      alert('Không thể khóa tài khoản Quản trị viên cấp cao!');
+      return;
+    }
+
+    setAccounts((prev) => {
+      const updated = prev.map((a) =>
+        a.email.toLowerCase().trim() === cleanEmail
+          ? {
+              ...a,
+              isSuspended: !a.isSuspended,
+              suspendedAt: !a.isSuspended ? new Date().toISOString() : undefined
+            }
+          : a
+      );
+      try {
+        localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ accounts: updated });
+      return updated;
+    });
+  };
+
   const deleteAccount = (email: string) => {
+    // Xóa mềm: đánh dấu vô hiệu hóa/khóa tài khoản
+    toggleAccountSuspension(email);
+  };
+
+  const permanentDeleteAccount = (email: string) => {
     const cleanEmail = email.toLowerCase().trim();
     if (cleanEmail === 'truongvantuan43344@gmail.com' || cleanEmail === 'admin@unistay.com') {
       alert('Không thể xóa tài khoản Quản trị viên cấp cao!');
@@ -983,8 +1117,12 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addProperty,
         updateProperty,
         deleteProperty,
+        restoreProperty,
+        permanentDeleteProperty,
         addBooking,
         updateBookingStatus,
+        archiveBooking,
+        restoreBooking,
         updateSettings,
         sendChatMessage,
         markConversationRead,
@@ -992,11 +1130,15 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addReview,
         replyToReview,
         deleteReview,
+        restoreReview,
+        permanentDeleteReview,
         getReviewEligibility,
         migrateConversationId,
         updateAccountRole,
         addOrUpdateAccount,
-        deleteAccount
+        deleteAccount,
+        toggleAccountSuspension,
+        permanentDeleteAccount
       }}
     >
       {children}
