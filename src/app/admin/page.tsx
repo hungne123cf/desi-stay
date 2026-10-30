@@ -1638,19 +1638,61 @@ export default function AdminPage() {
         {/* Tab 5: Student Reviews & 5-Star Ratings Manager */}
         {activeTab === 'reviews' && (
           <div className="space-y-4">
+            {/* Action Feedback Toast */}
+            {trashToast && (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-4 text-xs text-emerald-950 font-bold shadow-xs animate-in fade-in duration-150">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{trashToast}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('trash');
+                      setTrashSubTab('reviews');
+                    }}
+                    className="text-emerald-700 hover:text-emerald-900 underline font-bold cursor-pointer"
+                  >
+                    Mở Thùng Rác
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrashToast(null)}
+                    className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer ml-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
               <div className="p-5 border-b border-slate-100 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    Quản Lý Đánh Giá Sao &amp; Bình Luận Sinh Viên ({reviews.length})
+                    Quản Lý Đánh Giá Sao &amp; Bình Luận Sinh Viên ({activeReviews.length})
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Xem toàn bộ đánh giá thực tế trên các phòng trọ, phản hồi khách thuê hoặc xóa bình luận spam.
                   </p>
                 </div>
+                {deletedReviews.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('trash');
+                      setTrashSubTab('reviews');
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Đã ẩn trong Thùng rác ({deletedReviews.length})</span>
+                  </button>
+                )}
               </div>
 
-              {reviews.length === 0 ? (
+              {activeReviews.length === 0 ? (
                 <div className="p-12 text-center text-slate-500">
                   <Star className="w-10 h-10 text-amber-300 mx-auto mb-2" />
                   <p className="font-bold text-slate-700 text-sm">
@@ -1662,7 +1704,7 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {(reviews || []).filter(Boolean).map((rev) => {
+                  {activeReviews.map((rev) => {
                     const matchedProp = (properties || []).find(
                       (p) => p && (p.id === rev.propertyId || p.code === rev.propertyCode)
                     );
@@ -1740,10 +1782,16 @@ export default function AdminPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => deleteReview(rev.id)}
-                              className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs cursor-pointer"
+                              onClick={() => {
+                                deleteReview(rev.id);
+                                setTrashToast(`Đã chuyển đánh giá của "${rev.userName}" vào Thùng Rác (Xóa mềm)! Bạn có thể khôi phục trong mục Thùng Rác.`);
+                                setTimeout(() => setTrashToast(null), 4000);
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs cursor-pointer flex items-center gap-1 transition-colors"
+                              title="Ẩn đánh giá này và chuyển vào Thùng Rác"
                             >
-                              Xóa
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Xóa</span>
                             </button>
                           </div>
                         </div>
