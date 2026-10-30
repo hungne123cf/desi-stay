@@ -22,7 +22,7 @@ import {
 
 interface PropertyCardProps {
   property: Property;
-  onBookNow: (property: Property) => void;
+  onBookNow?: (property: Property) => void;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow }) => {
@@ -294,7 +294,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
 
             <button
               type="button"
-              onClick={() => onBookNow(property)}
+              onClick={() => {
+                if (onBookNow) {
+                  onBookNow(property);
+                } else if (typeof window !== 'undefined') {
+                  window.location.href = `/properties/${property.id}`;
+                }
+              }}
               className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/25 transition-all cursor-pointer active:scale-98"
             >
               <Zap className="w-3.5 h-3.5" />

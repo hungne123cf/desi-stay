@@ -393,7 +393,7 @@ export default function AdminPage() {
       badge:
         unreadChatCount > 0
           ? `${unreadChatCount} mới`
-          : Array.from(new Set(messages.map((m) => m.conversationId))).length,
+          : Array.from(new Set((messages || []).map((m) => m?.conversationId).filter(Boolean))).length,
       badgeColor:
         unreadChatCount > 0
           ? 'bg-red-600 text-white animate-pulse'
@@ -1415,7 +1415,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {bookings.map((b) => (
+                      {(bookings || []).filter(Boolean).map((b) => (
                         <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="p-3.5 pl-5 font-mono font-bold text-slate-900">
                             {b.reference || b.id}
@@ -1470,7 +1470,7 @@ export default function AdminPage() {
             <div className="border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
               <div className="p-4 border-b border-slate-100 bg-slate-50 font-bold text-xs text-slate-700 flex items-center justify-between">
                 <span>
-                  Danh Sách Khách Nhắn Tin ({Array.from(new Set(messages.map((m) => m.conversationId))).length})
+                  Danh Sách Khách Nhắn Tin ({Array.from(new Set((messages || []).map((m) => m?.conversationId).filter(Boolean))).length})
                 </span>
                 {unreadChatCount > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px]">
@@ -1479,18 +1479,18 @@ export default function AdminPage() {
                 )}
               </div>
               <div className="flex-1 overflow-y-auto divide-y divide-slate-100 max-h-[220px] md:max-h-[480px]">
-                {Array.from(new Set(messages.map((m) => m.conversationId))).length === 0 ? (
+                {Array.from(new Set((messages || []).map((m) => m?.conversationId).filter(Boolean))).length === 0 ? (
                   <div className="p-8 text-center text-xs text-slate-400">
                     Chưa có tin nhắn nào từ khách hàng.
                   </div>
                 ) : (
-                  Array.from(new Set(messages.map((m) => m.conversationId))).map((convId) => {
-                    const convMsgs = messages.filter((m) => m.conversationId === convId);
+                  Array.from(new Set((messages || []).map((m) => m?.conversationId).filter(Boolean))).map((convId) => {
+                    const convMsgs = (messages || []).filter((m) => m && m.conversationId === convId);
                     const lastMsg = convMsgs[convMsgs.length - 1];
                     const unread = convMsgs.filter(
-                      (m) => m.senderRole === 'student' && !m.isReadByAdmin
+                      (m) => m && m.senderRole === 'student' && !m.isReadByAdmin
                     ).length;
-                    const active = (selectedConvId || messages[0]?.conversationId) === convId;
+                    const active = (selectedConvId || messages?.[0]?.conversationId) === convId;
 
                     return (
                       <div
@@ -1530,8 +1530,8 @@ export default function AdminPage() {
             {/* Khung nội dung chat bên phải */}
             <div className="md:col-span-2 flex flex-col">
               {(() => {
-                const activeConvId = selectedConvId || messages[0]?.conversationId;
-                const convMsgs = messages.filter((m) => m.conversationId === activeConvId);
+                const activeConvId = selectedConvId || messages?.[0]?.conversationId;
+                const convMsgs = (messages || []).filter((m) => m && m.conversationId === activeConvId);
                 const studentInfo = convMsgs[0];
 
                 if (!activeConvId || convMsgs.length === 0) {
@@ -1658,17 +1658,19 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {reviews.map((rev) => {
-                    const matchedProp = properties.find(
-                      (p) => p.id === rev.propertyId || p.code === rev.propertyCode
+                  {(reviews || []).filter(Boolean).map((rev) => {
+                    const matchedProp = (properties || []).find(
+                      (p) => p && (p.id === rev.propertyId || p.code === rev.propertyCode)
                     );
-                    const isVerifiedTenant = bookings.some(
+                    const isVerifiedTenant = (bookings || []).some(
                       (b) =>
+                        b &&
                         (b.propertyCode === rev.propertyCode ||
                           b.propertyTitle === rev.propertyTitle) &&
                         (b.status === 'token_paid' || b.status === 'confirmed') &&
-                        (b.studentName.toLowerCase() === rev.userName.toLowerCase() ||
+                        ((b.studentName && rev.userName && b.studentName.toLowerCase() === rev.userName.toLowerCase()) ||
                           (rev.userEmail &&
+                            b.studentContact &&
                             b.studentContact.replace(/[^0-9]/g, '') ===
                               rev.userEmail.replace(/[^0-9]/g, '')))
                     );

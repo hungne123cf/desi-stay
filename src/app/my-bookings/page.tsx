@@ -135,13 +135,21 @@ export default function MyBookingsPage() {
               </p>
             </div>
 
-            <Link
-              href="/"
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all self-start sm:self-auto inline-flex items-center gap-2"
-            >
-              <span>+ Tìm Thêm Phòng Trọ</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <Link
+                href="/profile?tab=bookings"
+                className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/10 transition-all inline-flex items-center gap-1.5"
+              >
+                <span>👤 Mở Trong Hồ Sơ</span>
+              </Link>
+              <Link
+                href="/"
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all inline-flex items-center gap-2"
+              >
+                <span>+ Tìm Phòng</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
         </div>
       </div>
