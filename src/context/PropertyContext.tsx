@@ -100,6 +100,74 @@ function isRealUserBooking(b: Booking): boolean {
   return true;
 }
 
+// Cơ chế khóa bảo vệ chống xung đột Real-time (Optimistic Mutation Lock)
+// Giúp ngăn ngừa việc polling ngầm ghi đè dữ liệu cũ khi người dùng vừa bấm Khôi phục hoặc Xóa mềm
+const recentLocalMutations = new Map<string, number>();
+const recentlyPermanentlyDeleted = new Map<string, number>();
+
+function recordLocalMutation(id: string) {
+  if (id) recentLocalMutations.set(id, Date.now());
+}
+
+function isRecentlyMutated(id: string): boolean {
+  if (!id) return false;
+  const t = recentLocalMutations.get(id);
+  if (!t) return false;
+  if (Date.now() - t < 6000) return true; // Trong vòng 6 giây vừa thao tác, giữ nguyên trạng thái mới nhất của client
+  recentLocalMutations.delete(id);
+  return false;
+}
+
+function recordPermanentDelete(id: string) {
+  if (id) recentlyPermanentlyDeleted.set(id, Date.now());
+}
+
+function isRecentlyPermanentlyDeleted(id: string): boolean {
+  if (!id) return false;
+  const t = recentlyPermanentlyDeleted.get(id);
+  if (!t) return false;
+  if (Date.now() - t < 10000) return true; // Trong 10 giây sau khi xóa vĩnh viễn, không cho server hồi sinh lại
+  recentlyPermanentlyDeleted.delete(id);
+  return false;
+}
+
+function mergeProperties(prev: Property[], incoming: Property[]): Property[] {
+  if (!incoming || incoming.length === 0) return prev;
+  const map = new Map<string, Property>();
+  prev.forEach((p) => {
+    if (p && p.id && !isRecentlyPermanentlyDeleted(p.id)) {
+      map.set(p.id, p);
+    }
+  });
+  incoming.forEach((p) => {
+    if (p && p.id && !isRecentlyPermanentlyDeleted(p.id)) {
+      const existing = map.get(p.id);
+      if (!existing) {
+        map.set(p.id, p);
+      } else {
+        if (isRecentlyMutated(p.id)) {
+          // Ưu tiên trạng thái vừa thao tác (khôi phục/xóa mềm) trên client, không để server polling ghi đè ngược lại
+          map.set(p.id, {
+            ...p,
+            isDeleted: existing.isDeleted,
+            deletedAt: existing.deletedAt,
+            updatedAt: existing.updatedAt || Date.now()
+          });
+        } else {
+          const prevTime = existing.updatedAt || 0;
+          const incomingTime = p.updatedAt || 0;
+          if (prevTime > incomingTime) {
+            map.set(p.id, existing);
+          } else {
+            map.set(p.id, { ...existing, ...p });
+          }
+        }
+      }
+    }
+  });
+  return Array.from(map.values());
+}
+
 function mergeMessages(prev: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
   if (!incoming || incoming.length === 0) return prev;
   const map = new Map<string, ChatMessage>();
@@ -124,7 +192,15 @@ function mergeBookings(prev: Booking[], incoming: Booking[]): Booking[] {
   incoming.forEach((b) => {
     if (b && b.id) {
       const existing = map.get(b.id);
-      map.set(b.id, existing ? { ...existing, ...b } : b);
+      if (existing && isRecentlyMutated(b.id)) {
+        map.set(b.id, {
+          ...b,
+          isArchived: existing.isArchived,
+          archivedAt: existing.archivedAt
+        });
+      } else {
+        map.set(b.id, existing ? { ...existing, ...b } : b);
+      }
     }
   });
   return Array.from(map.values());
@@ -146,13 +222,23 @@ function mergeAccounts(prev: UserAccount[], incoming: UserAccount[]): UserAccoun
   if (!incoming || incoming.length === 0) return prev;
   const map = new Map<string, UserAccount>();
   prev.forEach((a) => {
-    if (a && a.email) map.set(a.email.toLowerCase().trim(), a);
+    if (a && a.email && !isRecentlyPermanentlyDeleted(a.email)) {
+      map.set(a.email.toLowerCase().trim(), a);
+    }
   });
   incoming.forEach((a) => {
-    if (a && a.email) {
+    if (a && a.email && !isRecentlyPermanentlyDeleted(a.email)) {
       const key = a.email.toLowerCase().trim();
       const existing = map.get(key);
-      map.set(key, existing ? { ...existing, ...a } : a);
+      if (existing && isRecentlyMutated(key)) {
+        map.set(key, {
+          ...a,
+          isSuspended: existing.isSuspended,
+          suspendedAt: existing.suspendedAt
+        });
+      } else {
+        map.set(key, existing ? { ...existing, ...a } : a);
+      }
     }
   });
   return Array.from(map.values());
@@ -245,7 +331,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       localStorage.removeItem('unistay_vn_bookings_v3');
     } catch {}
 
-    fetch('/api/store')
+    fetch(`/api/store?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((serverState) => {
         if (!isMounted) return;
@@ -277,7 +363,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           );
           return { ...p, rating: avg, reviewsCount: pReviews.length };
         });
-        setProperties(finalProps);
+        setProperties((prev) => mergeProperties(prev, finalProps));
         setBookings((prev) => mergeBookings(prev, serverBookings));
         setMessages((prev) => mergeMessages(prev, serverMessages));
         setReviews((prev) => mergeReviews(prev, serverReviews));
@@ -306,7 +392,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       syncChannel.onmessage = (event) => {
         if (event.data?.type === 'SYNC_UPDATE' && event.data?.payload) {
           const p = event.data.payload;
-          if (Array.isArray(p.properties) && p.properties.length > 0) setProperties(p.properties);
+          if (Array.isArray(p.properties) && p.properties.length > 0) setProperties((prev) => mergeProperties(prev, p.properties));
           if (Array.isArray(p.bookings) && p.bookings.length > 0) {
             setBookings((prev) => mergeBookings(prev, p.bookings));
           }
@@ -337,7 +423,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const data = JSON.parse(event.data);
             if (Array.isArray(data.properties) && data.properties.length > 0) {
               const cleanProps = data.properties.filter(isRealAdminProperty);
-              setProperties(cleanProps);
+              setProperties((prev) => mergeProperties(prev, cleanProps));
               localStorage.setItem('unistay_real_properties_v4', JSON.stringify(cleanProps));
             }
             if (Array.isArray(data.bookings) && data.bookings.length > 0) {
@@ -401,13 +487,13 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // 3. Fallback polling dự phòng mỗi 2.5 giây để phản hồi siêu tốc giữa các thiết bị
     pollInterval = setInterval(() => {
       if (!isMounted) return;
-      fetch('/api/store')
+      fetch(`/api/store?t=${Date.now()}`, { cache: 'no-store' })
         .then((res) => res.json())
         .then((data) => {
           if (!isMounted || !data) return;
           if (Array.isArray(data.properties) && data.properties.length > 0) {
             const cleanProps = data.properties.filter(isRealAdminProperty);
-            setProperties(cleanProps);
+            setProperties((prev) => mergeProperties(prev, cleanProps));
           }
           if (Array.isArray(data.bookings) && data.bookings.length > 0) {
             const cleanBookings = data.bookings.filter(isRealUserBooking);
@@ -494,9 +580,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const deleteProperty = (id: string) => {
     // Xóa mềm: đánh dấu isDeleted = true để có thể khôi phục từ thùng rác
+    recordLocalMutation(id);
     setProperties((prev) => {
       const updated = prev.map((p) =>
-        p.id === id ? { ...p, isDeleted: true, deletedAt: new Date().toISOString() } : p
+        p.id === id ? { ...p, isDeleted: true, deletedAt: new Date().toISOString(), updatedAt: Date.now() } : p
       );
       try {
         localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
@@ -508,9 +595,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const restoreProperty = (id: string) => {
     // Khôi phục phòng trọ từ thùng rác về trạng thái hoạt động bình thường
+    recordLocalMutation(id);
     setProperties((prev) => {
       const updated = prev.map((p) =>
-        p.id === id ? { ...p, isDeleted: false, deletedAt: undefined } : p
+        p.id === id ? { ...p, isDeleted: false, deletedAt: undefined, updatedAt: Date.now() } : p
       );
       try {
         localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
@@ -522,6 +610,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const permanentDeleteProperty = (id: string) => {
     // Xóa vĩnh viễn (xóa cứng) khỏi toàn bộ hệ thống
+    recordPermanentDelete(id);
     setProperties((prev) => {
       const updated = prev.filter((p) => p.id !== id);
       try {

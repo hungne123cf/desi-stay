@@ -4,7 +4,13 @@ import { getRealtimeState, updateRealtimeState } from '@/lib/realtimeStore';
 export async function GET(request: Request) {
   void request.url;
   const state = getRealtimeState();
-  return NextResponse.json(state);
+  return NextResponse.json(state, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0'
+    }
+  });
 }
 
 export async function POST(request: Request) {

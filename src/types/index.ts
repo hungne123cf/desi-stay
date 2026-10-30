@@ -39,6 +39,7 @@ export interface Property {
   reviewsCount: number;
   images: string[];
   createdAt: string;
+  updatedAt?: number;
   isDeleted?: boolean;
   deletedAt?: string;
 }
@@ -149,6 +150,7 @@ export interface PropertyReview {
   comment: string;
   adminReply?: string;
   createdAt: string;
+  updatedAt?: number;
   isDeleted?: boolean;
   deletedAt?: string;
 }
