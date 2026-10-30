@@ -5,7 +5,7 @@ export const DEFAULT_GOOGLE_CLIENT_ID =
   '397249070493-tdjj1fnblridf17atv36jat90vju5n0v.apps.googleusercontent.com';
 
 export const TRUONG_HUNG_REAL_AVATAR =
-  'https://lh3.googleusercontent.com/a/ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I=s384-c';
+  'https://lh3.googleusercontent.com/a/ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT=s384-c';
 
 export const ADMIN_EMAILS = [
   'truongvantuan43344@gmail.com',

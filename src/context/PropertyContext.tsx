@@ -387,7 +387,7 @@ function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
   const cleanEmail = acc.email?.toLowerCase().trim();
   if (
     cleanEmail === 'truongvantuan43344@gmail.com' &&
-    (!acc.avatar || acc.avatar.includes('photo-1534528741775') || acc.avatar.includes('unsplash'))
+    (!acc.avatar || acc.avatar.includes('photo-1534528741775') || acc.avatar.includes('unsplash') || acc.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I'))
   ) {
     return {
       ...acc,

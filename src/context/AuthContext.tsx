@@ -105,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(parsedKnown)) {
           const sanitizedKnown = parsedKnown.map((item: StoredAccount) =>
             item.email?.toLowerCase().trim() === 'truongvantuan43344@gmail.com' &&
-            (!item.avatar || item.avatar.includes('photo-1534528741775'))
+            (!item.avatar || item.avatar.includes('photo-1534528741775') || item.avatar.includes('unsplash') || item.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I'))
               ? { ...item, avatar: TRUONG_HUNG_REAL_AVATAR }
               : item
           );
@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         parsed.role = getAssignedRole(parsed.email);
         if (
           parsed.email?.toLowerCase().trim() === 'truongvantuan43344@gmail.com' &&
-          (!parsed.avatar || parsed.avatar.includes('photo-1534528741775'))
+          (!parsed.avatar || parsed.avatar.includes('photo-1534528741775') || parsed.avatar.includes('unsplash') || parsed.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I'))
         ) {
           parsed.avatar = TRUONG_HUNG_REAL_AVATAR;
           try {
