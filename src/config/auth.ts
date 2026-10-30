@@ -4,8 +4,15 @@ export const DEFAULT_GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
   '397249070493-tdjj1fnblridf17atv36jat90vju5n0v.apps.googleusercontent.com';
 
-export const TRUONG_HUNG_REAL_AVATAR =
+// Avatar thật từ Google của tài khoản Sinh viên: Truong Hung (K18 CT) - hungtce181568@fpt.edu.vn
+export const TRUONG_HUNG_K18_AVATAR =
   'https://lh3.googleusercontent.com/a/ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT=s384-c';
+
+// Avatar thật từ Google của tài khoản Super Admin: Trương Hùng - truongvantuan43344@gmail.com
+export const TRUONG_HUNG_ADMIN_AVATAR =
+  'https://lh3.googleusercontent.com/a/ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I=s384-c';
+
+export const TRUONG_HUNG_REAL_AVATAR = TRUONG_HUNG_ADMIN_AVATAR;
 
 export const ADMIN_EMAILS = [
   'truongvantuan43344@gmail.com',
@@ -17,7 +24,7 @@ export const PREDEFINED_ADMINS = [
     email: 'truongvantuan43344@gmail.com',
     password: 'Admin@123456',
     name: 'Trương Hùng (Admin)',
-    avatar: TRUONG_HUNG_REAL_AVATAR,
+    avatar: TRUONG_HUNG_ADMIN_AVATAR,
     role: 'admin' as const,
     phone: '+84 901 234 567'
   },
@@ -38,7 +45,7 @@ export const DEFAULT_ACCOUNTS: UserAccount[] = [
     role: 'admin',
     phone: '0901234567',
     college: 'ĐH Cần Thơ (CTU)',
-    avatar: TRUONG_HUNG_REAL_AVATAR,
+    avatar: TRUONG_HUNG_ADMIN_AVATAR,
     createdAt: '2026-10-25T00:00:00.000Z',
     lastLoginAt: '2026-10-29T14:00:00.000Z'
   },
@@ -51,6 +58,17 @@ export const DEFAULT_ACCOUNTS: UserAccount[] = [
     college: 'Ban Quản Trị Hệ Thống',
     createdAt: '2026-10-25T00:00:00.000Z',
     lastLoginAt: '2026-10-29T13:00:00.000Z'
+  },
+  {
+    id: 'acc-student-k18',
+    email: 'hungtce181568@fpt.edu.vn',
+    name: 'Truong Hung (K18 CT)',
+    role: 'student',
+    phone: '123456789',
+    college: 'ĐH FPT Cần Thơ',
+    avatar: TRUONG_HUNG_K18_AVATAR,
+    createdAt: '2026-10-28T00:00:00.000Z',
+    lastLoginAt: '2026-10-30T14:00:00.000Z'
   }
 ];
 

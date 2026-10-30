@@ -17,6 +17,7 @@ import {
   buildVietQrUrl,
   resolveVietQrBankCode
 } from '@/data/vietnamBanks';
+import { TRUONG_HUNG_ADMIN_AVATAR, TRUONG_HUNG_K18_AVATAR } from '@/config/auth';
 import { uploadOrCompressImage } from '@/lib/supabase/storage';
 import {
   ShieldCheck,
@@ -57,7 +58,8 @@ import {
   Landmark,
   RotateCcw,
   Receipt,
-  FileText
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -121,6 +123,7 @@ export default function AdminPage() {
   const [accountSearchQuery, setAccountSearchQuery] = useState('');
   const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'staff' | 'admin' | 'student'>('all');
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [addStaffError, setAddStaffError] = useState('');
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffEmail, setNewStaffEmail] = useState('');
   const [newStaffPhone, setNewStaffPhone] = useState('');
@@ -1381,8 +1384,11 @@ export default function AdminPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-slate-600" />
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Lịch Sử Tiền Cọc ({bookings.length})
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>Lịch Sử Tiền Cọc</span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-xs font-bold">
+                        {bookings.length}
+                      </span>
                     </h3>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -1473,11 +1479,14 @@ export default function AdminPage() {
             {/* Danh sách cuộc hội thoại bên trái */}
             <div className="border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
               <div className="p-4 border-b border-slate-100 bg-slate-50 font-bold text-xs text-slate-700 flex items-center justify-between">
-                <span>
-                  Hộp Thư Tin Nhắn ({Array.from(new Set((messages || []).map((m) => m?.conversationId).filter(Boolean))).length})
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-800 font-bold text-xs">Hộp Thư Tin Nhắn</span>
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black">
+                    {Array.from(new Set((messages || []).map((m) => m?.conversationId).filter(Boolean))).length}
+                  </span>
+                </div>
                 {unreadChatCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px]">
+                  <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold shadow-2xs animate-pulse">
                     {unreadChatCount} chưa đọc
                   </span>
                 )}
@@ -1491,6 +1500,16 @@ export default function AdminPage() {
                   Array.from(new Set((messages || []).map((m) => m?.conversationId).filter(Boolean))).map((convId) => {
                     const convMsgs = (messages || []).filter((m) => m && m.conversationId === convId);
                     const lastMsg = convMsgs[convMsgs.length - 1];
+                    const studentMsg = convMsgs.find((m) => m.senderRole === 'student');
+                    const studentEmail = (lastMsg?.studentEmail || studentMsg?.studentEmail || (convId.includes('@') ? convId : '')).trim();
+                    const studentName = lastMsg?.studentName || studentMsg?.studentName || (studentEmail ? studentEmail.split('@')[0] : convId);
+
+                    const matchedAcc = accounts.find((a) => a.email.toLowerCase() === studentEmail.toLowerCase());
+                    let avatarUrl = matchedAcc?.avatar || lastMsg?.senderAvatar || studentMsg?.senderAvatar;
+                    if (!avatarUrl && studentEmail.toLowerCase() === 'hungtce181568@fpt.edu.vn') {
+                      avatarUrl = TRUONG_HUNG_K18_AVATAR;
+                    }
+
                     const unread = convMsgs.filter(
                       (m) => m && m.senderRole === 'student' && !m.isReadByAdmin
                     ).length;
@@ -1503,25 +1522,47 @@ export default function AdminPage() {
                           setSelectedConvId(convId);
                           markConversationRead(convId);
                         }}
-                        className={`p-3.5 cursor-pointer transition-colors flex items-start justify-between gap-2 ${
+                        className={`p-3.5 cursor-pointer transition-colors flex items-center gap-3 ${
                           active
                             ? 'bg-indigo-50/90 border-l-4 border-l-indigo-600'
                             : 'hover:bg-slate-50'
                         }`}
                       >
-                        <div className="min-w-0">
-                          <span className="text-xs font-bold text-slate-900 block truncate">
-                            {lastMsg?.studentName || convId}
-                          </span>
-                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        {/* Zalo-style Circular Avatar with Online Dot */}
+                        <div className="relative shrink-0">
+                          {avatarUrl ? (
+                            <img
+                              src={avatarUrl}
+                              alt={studentName}
+                              className="w-11 h-11 rounded-full object-cover border border-slate-200 shadow-2xs"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold text-sm flex items-center justify-center uppercase shadow-2xs">
+                              {studentName.charAt(0) || 'K'}
+                            </div>
+                          )}
+                          <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white absolute bottom-0 right-0 shadow-2xs" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-0.5">
+                            <span className="text-xs font-bold text-slate-900 truncate">
+                              {studentName}
+                            </span>
+                            <span className="text-[10px] text-slate-400 shrink-0">
+                              {lastMsg?.createdAt?.split('•')[0]?.trim() || lastMsg?.createdAt}
+                            </span>
+                          </div>
+                          <p className={`text-[11px] truncate ${unread > 0 ? 'font-bold text-slate-900' : 'text-slate-500'}`}>
                             {lastMsg?.senderRole === 'admin' ? 'Bạn: ' : ''}
                             {lastMsg?.text}
                           </p>
-                          <span className="text-[10px] text-slate-400">{lastMsg?.createdAt}</span>
                         </div>
+
                         {unread > 0 && (
-                          <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold shrink-0">
-                            {unread} mới
+                          <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black shrink-0 flex items-center justify-center shadow-2xs">
+                            {unread}
                           </span>
                         )}
                       </div>
@@ -1536,7 +1577,16 @@ export default function AdminPage() {
               {(() => {
                 const activeConvId = selectedConvId || messages?.[0]?.conversationId;
                 const convMsgs = (messages || []).filter((m) => m && m.conversationId === activeConvId);
-                const studentInfo = convMsgs[0];
+                const studentMsg = convMsgs.find((m) => m.senderRole === 'student');
+                const lastMsg = convMsgs[convMsgs.length - 1];
+                const studentEmail = (lastMsg?.studentEmail || studentMsg?.studentEmail || (activeConvId?.includes('@') ? activeConvId : '')).trim();
+                const studentName = lastMsg?.studentName || studentMsg?.studentName || (studentEmail ? studentEmail.split('@')[0] : 'Khách thuê');
+
+                const matchedAcc = accounts.find((a) => a.email.toLowerCase() === studentEmail.toLowerCase());
+                let activeAvatar = matchedAcc?.avatar || lastMsg?.senderAvatar || studentMsg?.senderAvatar;
+                if (!activeAvatar && studentEmail.toLowerCase() === 'hungtce181568@fpt.edu.vn') {
+                  activeAvatar = TRUONG_HUNG_K18_AVATAR;
+                }
 
                 if (!activeConvId || convMsgs.length === 0) {
                   return (
@@ -1552,19 +1602,41 @@ export default function AdminPage() {
 
                 return (
                   <>
-                    <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 block">
-                          {studentInfo?.studentName}
-                        </span>
-                        <span className="text-[11px] text-slate-500">
-                          Liên hệ: {studentInfo?.studentEmail || activeConvId}
-                        </span>
+                    <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+                      <div className="flex items-center gap-3">
+                        <div className="relative shrink-0">
+                          {activeAvatar ? (
+                            <img
+                              src={activeAvatar}
+                              alt={studentName}
+                              className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-2xs"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold text-sm flex items-center justify-center uppercase shadow-2xs">
+                              {studentName.charAt(0) || 'K'}
+                            </div>
+                          )}
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white absolute bottom-0 right-0 shadow-2xs" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-slate-900 block leading-tight">
+                            {studentName}
+                          </span>
+                          <span className="text-[10px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                            <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-ping" />
+                              Đang trực tuyến
+                            </span>
+                            <span>•</span>
+                            <span>{studentEmail || activeConvId}</span>
+                          </span>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => deleteConversation(activeConvId)}
-                        className="text-[11px] text-red-600 hover:underline font-semibold cursor-pointer"
+                        className="text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-200 font-semibold cursor-pointer transition-colors"
                       >
                         Xóa hội thoại
                       </button>
@@ -1573,23 +1645,55 @@ export default function AdminPage() {
                     <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30 max-h-[380px] text-xs">
                       {convMsgs.map((m) => {
                         const isAdmin = m.senderRole === 'admin';
+                        const adminAvatar = TRUONG_HUNG_ADMIN_AVATAR;
+
                         return (
                           <div
                             key={m.id}
-                            className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
+                            className={`flex items-end gap-2 ${isAdmin ? 'justify-end' : 'justify-start'}`}
                           >
-                            <div
-                              className={`px-3.5 py-2.5 rounded-2xl max-w-[75%] ${
-                                isAdmin
-                                  ? 'bg-indigo-600 text-white rounded-br-xs'
-                                  : 'bg-white border border-slate-200 text-slate-800 rounded-bl-xs'
-                              }`}
-                            >
-                              {m.text}
+                            {!isAdmin && (
+                              <div className="shrink-0 mb-1">
+                                {activeAvatar ? (
+                                  <img
+                                    src={activeAvatar}
+                                    alt="Student"
+                                    className="w-7 h-7 rounded-full object-cover border border-slate-200 shadow-2xs"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center uppercase">
+                                    {(m.senderName || 'K').charAt(0)}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                              <div
+                                className={`px-3.5 py-2.5 rounded-2xl ${
+                                  isAdmin
+                                    ? 'bg-indigo-600 text-white rounded-br-xs shadow-xs'
+                                    : 'bg-white border border-slate-200 text-slate-800 rounded-bl-xs shadow-2xs'
+                                }`}
+                              >
+                                {m.text}
+                              </div>
+                              <span className="text-[10px] text-slate-400 mt-0.5 px-1">
+                                {m.createdAt}
+                              </span>
                             </div>
-                            <span className="text-[10px] text-slate-400 mt-0.5 px-1">
-                              {m.createdAt}
-                            </span>
+
+                            {isAdmin && (
+                              <div className="shrink-0 mb-1">
+                                <img
+                                  src={adminAvatar}
+                                  alt="Admin"
+                                  className="w-7 h-7 rounded-full object-cover border border-indigo-200 shadow-2xs"
+                                  referrerPolicy="no-referrer"
+                                />
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -1601,10 +1705,11 @@ export default function AdminPage() {
                         if (!adminReplyText.trim()) return;
                         sendChatMessage({
                           conversationId: activeConvId,
-                          studentName: studentInfo?.studentName || 'Sinh viên',
-                          studentEmail: studentInfo?.studentEmail,
+                          studentName: studentName,
+                          studentEmail: studentEmail,
                           senderRole: 'admin',
-                          senderName: user?.name || 'Quản lý',
+                          senderName: user?.name || 'Trương Hùng (Admin)',
+                          senderAvatar: TRUONG_HUNG_ADMIN_AVATAR,
                           text: adminReplyText.trim(),
                           isReadByAdmin: true
                         });
@@ -1622,7 +1727,7 @@ export default function AdminPage() {
                       />
                       <button
                         type="submit"
-                        className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
+                        className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
                       >
                         <Send className="w-3.5 h-3.5" />
                         <span>Gửi</span>
@@ -1670,8 +1775,11 @@ export default function AdminPage() {
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
               <div className="p-5 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    Quản Lý Đánh Giá Sao &amp; Bình Luận Sinh Viên ({activeReviews.length})
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span>Quản Lý Đánh Giá Sao &amp; Bình Luận Sinh Viên</span>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+                      {activeReviews.length}
+                    </span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Xem toàn bộ đánh giá thực tế trên các phòng trọ, phản hồi khách thuê hoặc xóa bình luận spam.
@@ -1687,7 +1795,10 @@ export default function AdminPage() {
                     className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Đã ẩn trong Thùng rác ({deletedReviews.length})</span>
+                    <span>Đã ẩn trong Thùng rác</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold">
+                      {deletedReviews.length}
+                    </span>
                   </button>
                 )}
               </div>
@@ -1978,13 +2089,20 @@ export default function AdminPage() {
                       key={tab.id}
                       type="button"
                       onClick={() => setAccountRoleFilter(tab.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                         active
                           ? 'bg-slate-900 text-white shadow-sm'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      {tab.label} ({tab.count})
+                      <span>{tab.label}</span>
+                      <span
+                        className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                          active ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
                     </button>
                   );
                 })}
@@ -2023,7 +2141,12 @@ export default function AdminPage() {
             {/* Account List / Table */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-500">
-                <span>DANH SÁCH TÀI KHOẢN ({filteredAccounts.length})</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-700 font-bold">DANH SÁCH TÀI KHOẢN</span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[11px] font-black">
+                    {filteredAccounts.length}
+                  </span>
+                </div>
                 <span className="text-[11px] text-slate-400">
                   {user?.role === 'admin'
                     ? 'Quản trị viên có toàn quyền chỉ định & thay đổi vai trò'
@@ -2051,6 +2174,13 @@ export default function AdminPage() {
                         acc.email &&
                         user.email.toLowerCase().trim() === acc.email.toLowerCase().trim()
                     );
+                    const resolvedAvatar =
+                      acc.avatar ||
+                      (acc.email.toLowerCase().trim() === 'hungtce181568@fpt.edu.vn'
+                        ? TRUONG_HUNG_K18_AVATAR
+                        : isSuper
+                        ? TRUONG_HUNG_ADMIN_AVATAR
+                        : null);
 
                     return (
                       <div
@@ -2060,11 +2190,12 @@ export default function AdminPage() {
                         {/* User Identity Info */}
                         <div className="flex items-start gap-3.5 min-w-0">
                           <div className="relative group shrink-0">
-                            {acc.avatar ? (
+                            {resolvedAvatar ? (
                               <img
-                                src={acc.avatar}
+                                src={resolvedAvatar}
                                 alt={acc.name}
                                 className="w-11 h-11 rounded-2xl object-cover ring-2 ring-slate-100 shrink-0"
+                                referrerPolicy="no-referrer"
                               />
                             ) : (
                               <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
@@ -3496,8 +3627,9 @@ export default function AdminPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                setAddStaffError('');
                 if (!newStaffEmail || !newStaffName) {
-                  alert('Vui lòng nhập đầy đủ Họ tên và Email nhân viên!');
+                  setAddStaffError('Vui lòng nhập đầy đủ Họ tên và Email nhân viên!');
                   return;
                 }
                 addOrUpdateAccount({
@@ -3508,6 +3640,7 @@ export default function AdminPage() {
                   role: newStaffRole
                 });
                 setShowAddStaffModal(false);
+                setAddStaffError('');
                 setAccountToast(
                   `Đã bổ nhiệm thành công ${newStaffName} (${newStaffEmail}) làm ${
                     newStaffRole === 'admin' ? 'Quản trị viên' : 'Nhân Viên (Staff)'
@@ -3517,6 +3650,12 @@ export default function AdminPage() {
               }}
               className="p-6 space-y-4"
             >
+              {addStaffError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{addStaffError}</span>
+                </div>
+              )}
               <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 space-y-1">
                 <p className="font-bold flex items-center gap-1.5 text-indigo-950">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />

@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, X, Send, Phone, ExternalLink, ArrowRight } from 'lucide-react';
+import { MessageCircle, X, Send, Phone, ExternalLink, ArrowRight, BellRing } from 'lucide-react';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
+import { TRUONG_HUNG_ADMIN_AVATAR, TRUONG_HUNG_K18_AVATAR } from '@/config/auth';
 
 export const WhatsAppFloat: React.FC = () => {
   const pathname = usePathname();
@@ -19,7 +20,15 @@ export const WhatsAppFloat: React.FC = () => {
   const [isProfileSaved, setIsProfileSaved] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sessionConvId, setSessionConvId] = useState('');
+  const [toastMessage, setToastMessage] = useState<{
+    text: string;
+    senderName: string;
+    createdAt: string;
+  } | null>(null);
+  const [unreadFromAdmin, setUnreadFromAdmin] = useState(0);
 
+  const prevMsgLengthRef = useRef<number>(0);
+  const isInitialMountRef = useRef<boolean>(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,8 +79,59 @@ export const WhatsAppFloat: React.FC = () => {
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setUnreadFromAdmin(0);
+      setToastMessage(null);
     }
   }, [myMessages.length, isOpen]);
+
+  // Thông báo tin nhắn mới dạng Toast chuẩn Zalo khi người dùng chưa mở khung chat
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      prevMsgLengthRef.current = myMessages.length;
+      return;
+    }
+
+    if (myMessages.length > prevMsgLengthRef.current) {
+      const latestMsg = myMessages[myMessages.length - 1];
+      if (latestMsg && latestMsg.senderRole === 'admin' && !isOpen) {
+        setUnreadFromAdmin((prev) => prev + 1);
+        setToastMessage({
+          text: latestMsg.text,
+          senderName: latestMsg.senderName || 'Ban Quản Trị UniStay',
+          createdAt: latestMsg.createdAt
+        });
+
+        // Âm thanh chuông báo tin nhắn Zalo mô phỏng Web Audio API
+        try {
+          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioCtx) {
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(659.25, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+          }
+        } catch {}
+      }
+    }
+    prevMsgLengthRef.current = myMessages.length;
+  }, [myMessages, isOpen]);
+
+  // Tự động tắt Toast thông báo sau 7 giây
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   const handleSaveGuestProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,12 +159,15 @@ export const WhatsAppFloat: React.FC = () => {
     const content = (textToSend ?? inputText).trim();
     if (!content || !sessionConvId) return;
 
+    const studentAvatar = user?.avatar || (user?.email === 'hungtce181568@fpt.edu.vn' ? TRUONG_HUNG_K18_AVATAR : undefined);
+
     sendChatMessage({
       conversationId: sessionConvId,
       studentName: `${guestName || user?.name || 'Sinh viên'}${guestPhone ? ` (${guestPhone})` : ''}`,
       studentEmail: user?.email || guestPhone,
       senderRole: 'student',
       senderName: guestName || user?.name || 'Sinh viên',
+      senderAvatar: studentAvatar,
       text: content,
       isReadByAdmin: false
     });
@@ -136,24 +199,28 @@ export const WhatsAppFloat: React.FC = () => {
       {isOpen && (
         <div className="mb-3 w-[calc(100vw-2rem)] sm:w-[370px] max-w-[380px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[520px] animate-in fade-in slide-in-from-bottom-4 duration-200">
           {/* Chat Header */}
-          <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white p-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 text-white p-3.5 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-black text-sm">
-                  {(settings.brandName || 'U').charAt(0)}
-                </div>
-                <span className="w-3 h-3 rounded-full bg-emerald-400 border-2 border-indigo-700 absolute -bottom-0.5 -right-0.5" />
+              <div className="relative shrink-0">
+                <img
+                  src={TRUONG_HUNG_ADMIN_AVATAR}
+                  alt="Admin UniStay"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white/60 shadow-xs"
+                  referrerPolicy="no-referrer"
+                />
+                <span className="w-3 h-3 rounded-full bg-emerald-400 border-2 border-indigo-700 absolute -bottom-0.5 -right-0.5 shadow-2xs" />
               </div>
               <div>
-                <h4 className="text-xs font-bold">Tư Vấn Phòng Trọ – {settings.brandName}</h4>
-                <span className="text-[10px] text-indigo-100 block">
-                  Trực tuyến • Hỗ trợ xem phòng &amp; giữ chỗ
+                <h4 className="text-xs font-bold leading-tight">Trương Hùng (Admin UniStay)</h4>
+                <span className="text-[10px] text-indigo-100 flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-ping" />
+                  Trực tuyến • Tư vấn phòng &amp; cọc
                 </span>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center cursor-pointer"
+              className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center cursor-pointer transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -164,14 +231,14 @@ export const WhatsAppFloat: React.FC = () => {
             <button
               type="button"
               onClick={handleOpenZalo}
-              className="flex-1 py-1.5 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+              className="flex-1 py-1.5 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
             >
               <ExternalLink className="w-3 h-3" />
               <span>Chat qua App Zalo</span>
             </button>
             <a
               href={`tel:${(settings.supportHotline || '0901234567').replace(/[^0-9]/g, '')}`}
-              className="flex-1 py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+              className="flex-1 py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
             >
               <Phone className="w-3 h-3" />
               <span>Gọi {settings.supportHotline}</span>
@@ -211,48 +278,75 @@ export const WhatsAppFloat: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="flex-1 p-3.5 overflow-y-auto space-y-2.5 bg-slate-50/60 min-h-[230px] max-h-[290px] text-xs">
+              <div className="flex-1 p-3.5 overflow-y-auto space-y-3 bg-slate-50/70 min-h-[230px] max-h-[290px] text-xs">
                 {/* Welcome Message */}
                 <div className="flex items-start gap-2">
-                  <div className="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                    {(settings.brandName || 'U').charAt(0)}
-                  </div>
+                  <img
+                    src={TRUONG_HUNG_ADMIN_AVATAR}
+                    alt="Admin"
+                    className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5 border border-slate-200 shadow-2xs"
+                    referrerPolicy="no-referrer"
+                  />
                   <div className="bg-white p-2.5 rounded-2xl rounded-tl-xs border border-slate-200 text-slate-700 shadow-2xs max-w-[82%]">
-                    Chào <strong>{guestName || user?.name}</strong>! Bạn đang tìm phòng trọ gần trường nào hoặc cần hỏi mã phòng nào, nhắn ngay bên dưới nhé!
+                    <span className="text-[10px] font-bold text-indigo-600 block mb-0.5">
+                      Ban Quản Trị UniStay
+                    </span>
+                    Chào <strong>{guestName || user?.name}</strong>! Bạn đang tìm phòng trọ gần trường nào hoặc cần đặt lịch xem phòng, nhắn ngay cho mình nhé!
                   </div>
                 </div>
 
                 {myMessages.map((msg) => {
                   const isMe = msg.senderRole === 'student';
+                  const myAvatar = user?.avatar || (user?.email === 'hungtce181568@fpt.edu.vn' ? TRUONG_HUNG_K18_AVATAR : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80');
+                  const adminAvatar = msg.senderAvatar || TRUONG_HUNG_ADMIN_AVATAR;
+
                   return (
                     <div
                       key={msg.id}
-                      className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                      className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div
-                        className={`px-3 py-2 rounded-2xl max-w-[82%] leading-relaxed ${
-                          isMe
-                            ? 'bg-indigo-600 text-white rounded-br-xs shadow-xs'
-                            : 'bg-white text-slate-800 border border-slate-200 rounded-bl-xs shadow-2xs'
-                        }`}
-                      >
-                        {!isMe && (
-                          <span className="text-[10px] font-bold text-indigo-600 block mb-0.5">
-                            Quản lý {settings.brandName}
-                          </span>
-                        )}
-                        <span>{msg.text}</span>
+                      {!isMe && (
+                        <img
+                          src={adminAvatar}
+                          alt="Admin"
+                          className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 shadow-2xs"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                        <div
+                          className={`px-3 py-2 rounded-2xl leading-relaxed ${
+                            isMe
+                              ? 'bg-indigo-600 text-white rounded-br-xs shadow-xs'
+                              : 'bg-white text-slate-800 border border-slate-200 rounded-bl-xs shadow-2xs'
+                          }`}
+                        >
+                          {!isMe && (
+                            <span className="text-[10px] font-bold text-indigo-600 block mb-0.5">
+                              {msg.senderName || 'Ban Quản Trị UniStay'}
+                            </span>
+                          )}
+                          <span>{msg.text}</span>
+                        </div>
+                        <span className="text-[9px] text-slate-400 mt-0.5 px-1">
+                          {msg.createdAt}
+                        </span>
                       </div>
-                      <span className="text-[9px] text-slate-400 mt-0.5 px-1">
-                        {msg.createdAt}
-                      </span>
+                      {isMe && (
+                        <img
+                          src={myAvatar}
+                          alt="Me"
+                          className="w-7 h-7 rounded-full object-cover shrink-0 border border-indigo-200 shadow-2xs"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
                     </div>
                   );
                 })}
 
                 {myMessages.length === 0 && (
                   <div className="pt-2 space-y-1.5">
-                    <span className="text-[10px] text-slate-400 block">Gợi ý câu hỏi nhanh:</span>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Gợi ý câu hỏi nhanh:</span>
                     {[
                       'Mình cần tìm phòng trọ ở Ninh Kiều gần ĐH Cần Thơ',
                       'Cho mình đặt lịch hẹn chiều nay qua xem phòng nhé',
@@ -262,7 +356,7 @@ export const WhatsAppFloat: React.FC = () => {
                         key={q}
                         type="button"
                         onClick={() => handleSend(q)}
-                        className="block w-full text-left px-2.5 py-1.5 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 rounded-xl border border-indigo-200/70 text-[11px] font-medium transition-colors cursor-pointer"
+                        className="block w-full text-left px-2.5 py-1.5 bg-white hover:bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:border-indigo-300 text-[11px] font-medium transition-colors cursor-pointer shadow-2xs"
                       >
                         💬 {q}
                       </button>
@@ -286,11 +380,11 @@ export const WhatsAppFloat: React.FC = () => {
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder="Nhập tin nhắn hỏi phòng..."
-                  className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-indigo-600"
+                  className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-indigo-600 transition-colors"
                 />
                 <button
                   type="submit"
-                  className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                  className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shrink-0 cursor-pointer transition-colors shadow-xs"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -300,9 +394,57 @@ export const WhatsAppFloat: React.FC = () => {
         </div>
       )}
 
+      {/* Zalo-style Floating Notification Toast */}
+      {toastMessage && !isOpen && (
+        <div
+          onClick={() => {
+            setIsOpen(true);
+            setToastMessage(null);
+          }}
+          className="mb-3 max-w-[340px] w-[calc(100vw-2rem)] sm:w-[320px] bg-white rounded-2xl shadow-2xl border border-indigo-100 p-3 flex items-start gap-3 cursor-pointer hover:border-indigo-300 hover:shadow-indigo-500/15 transition-all animate-in fade-in slide-in-from-bottom-5 duration-300 group relative"
+        >
+          <div className="relative shrink-0">
+            <img
+              src={TRUONG_HUNG_ADMIN_AVATAR}
+              alt="Admin"
+              className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-2xs"
+              referrerPolicy="no-referrer"
+            />
+            <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white absolute -bottom-0.5 -right-0.5" />
+          </div>
+          <div className="flex-1 min-w-0 pr-4">
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-xs font-bold text-slate-900 truncate">
+                {toastMessage.senderName}
+              </span>
+              <span className="text-[9px] text-indigo-600 font-semibold shrink-0">
+                Vừa xong
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 line-clamp-2 leading-snug">
+              {toastMessage.text}
+            </p>
+            <span className="text-[10px] text-indigo-600 font-bold mt-1 inline-flex items-center gap-1 group-hover:underline">
+              <span>Bấm để trả lời</span>
+              <ArrowRight className="w-2.5 h-2.5" />
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setToastMessage(null);
+            }}
+            className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 cursor-pointer transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Bottom Floating Trigger */}
       <div className="flex items-end gap-3">
-        {!isOpen && showTooltip && (
+        {!isOpen && showTooltip && !toastMessage && (
           <div
             onClick={() => setIsOpen(true)}
             className="hidden sm:flex items-center gap-2 bg-white text-slate-800 px-4 py-2.5 rounded-2xl shadow-xl border border-slate-200 text-xs font-semibold cursor-pointer hover:border-indigo-300 transition-colors"
@@ -325,7 +467,13 @@ export const WhatsAppFloat: React.FC = () => {
           className="relative w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 hover:scale-105 transition-all duration-300 cursor-pointer"
           title="Mở hộp chat tư vấn phòng trọ"
         >
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+          {unreadFromAdmin > 0 ? (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1 bg-red-600 text-white text-[11px] font-black rounded-full border-2 border-white flex items-center justify-center shadow-md animate-bounce">
+              {unreadFromAdmin > 9 ? '9+' : unreadFromAdmin}
+            </span>
+          ) : (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+          )}
           {isOpen ? (
             <X className="w-6 h-6 text-white" />
           ) : (

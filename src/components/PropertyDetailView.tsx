@@ -254,7 +254,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                 className="px-4 py-2 bg-white/95 hover:bg-white text-slate-800 rounded-xl font-bold text-xs shadow-xl border border-slate-200 flex items-center gap-1.5 transition-all hover:scale-105 cursor-pointer backdrop-blur-md"
               >
                 <ImageIcon className="w-4 h-4 text-indigo-600" />
-                <span>Xem ảnh ({property.images?.length || 1})</span>
+                <span>Xem ảnh</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+                  {property.images?.length || 1}
+                </span>
               </button>
             </div>
           </div>

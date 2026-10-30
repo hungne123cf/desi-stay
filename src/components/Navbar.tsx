@@ -23,7 +23,7 @@ import {
 export const Navbar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout, loginWithGoogle } = useAuth();
+  const { user, logout, loginWithGoogle, triggerSuspendedModal } = useAuth();
   const { settings, wishlistIds, bookings, accounts } = useProperties();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -42,11 +42,10 @@ export const Navbar: React.FC = () => {
         (a) => a.email.toLowerCase().trim() === cleanEmail && a.isSuspended
       );
       if (isSuspendedInList || isAccountSuspended(cleanEmail)) {
-        logout();
-        alert('Tài khoản của bạn đã bị Quản trị viên tạm khóa. Phiên làm việc đã kết thúc.');
+        triggerSuspendedModal();
       }
     }
-  }, [user, accounts, logout]);
+  }, [user, accounts, triggerSuspendedModal]);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
 

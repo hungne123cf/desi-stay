@@ -21,7 +21,8 @@ import {
   Upload,
   Image as ImageIcon,
   Clock,
-  Star
+  Star,
+  AlertCircle
 } from 'lucide-react';
 
 interface BookingModalProps {
@@ -52,6 +53,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
   const [college, setCollege] = useState(user?.college || property?.nearbyUniversity || '');
   const [moveInDate, setMoveInDate] = useState('');
   const [visitTimeSlot, setVisitTimeSlot] = useState(VISIT_TIME_SLOTS[1]);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     setMoveInDate(new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10));
@@ -99,8 +101,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
 
   const handleProceedToPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     if (!studentName.trim() || !studentContact.trim()) {
-      alert('Vui lòng điền Họ tên và Số điện thoại / Zalo liên hệ.');
+      setFormError('Vui lòng điền đầy đủ Họ tên và Số điện thoại / Zalo để liên hệ.');
       return;
     }
     setStep('payment');
@@ -392,6 +395,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                     : 'Đặt lịch hẹn xem phòng hoàn toàn miễn phí. Chủ trọ sẽ liên hệ qua Zalo/SĐT để đón bạn.'}
                 </span>
               </div>
+
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
 
               <button
                 type="submit"

@@ -185,35 +185,56 @@ export default function MyBookingsPage() {
             <button
               type="button"
               onClick={() => setFilterTab('all')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink flex items-center gap-1.5 ${
                 filterTab === 'all'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              Tất cả ({myBookings.length})
+              <span>Tất cả</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  filterTab === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                }`}
+              >
+                {myBookings.length}
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setFilterTab('paid')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink flex items-center gap-1.5 ${
                 filterTab === 'paid'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              Đã nhận cọc VietQR ({myBookings.filter((b) => b.status === 'token_paid' || b.status === 'confirmed').length})
+              <span>Đã nhận cọc VietQR</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  filterTab === 'paid' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                }`}
+              >
+                {myBookings.filter((b) => b.status === 'token_paid' || b.status === 'confirmed').length}
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setFilterTab('visit')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink flex items-center gap-1.5 ${
                 filterTab === 'visit'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              Hẹn xem phòng ({myBookings.filter((b) => b.paymentMethod === 'pay_on_visit' || b.status === 'pending').length})
+              <span>Hẹn xem phòng</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  filterTab === 'visit' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                }`}
+              >
+                {myBookings.filter((b) => b.paymentMethod === 'pay_on_visit' || b.status === 'pending').length}
+              </span>
             </button>
           </div>
 

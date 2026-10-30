@@ -2,9 +2,17 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '@/types';
-import { DEFAULT_GOOGLE_CLIENT_ID, isEmailAdmin, PREDEFINED_ADMINS, TRUONG_HUNG_REAL_AVATAR } from '@/config/auth';
+import {
+  DEFAULT_GOOGLE_CLIENT_ID,
+  isEmailAdmin,
+  PREDEFINED_ADMINS,
+  TRUONG_HUNG_ADMIN_AVATAR,
+  TRUONG_HUNG_K18_AVATAR,
+  TRUONG_HUNG_REAL_AVATAR
+} from '@/config/auth';
 import { isSupabaseConfigured } from '@/lib/env';
 import { createClient } from '@/lib/supabase/client';
+import { AccountSuspendedModal } from '@/components/AccountSuspendedModal';
 
 export function getAssignedRole(email: string): UserRole {
   if (!email) return 'student';
@@ -116,6 +124,9 @@ interface AuthContextType {
   resetPassword: (email: string, newPass: string) => Promise<void>;
   updateProfile: (updates: Partial<Pick<User, 'name' | 'phone' | 'college' | 'avatar'>>) => Promise<User>;
   logout: () => void;
+  isSuspendedModalOpen: boolean;
+  closeSuspendedModal: () => void;
+  triggerSuspendedModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -125,6 +136,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [googleClientId, setGoogleClientIdState] = useState<string>(DEFAULT_GOOGLE_CLIENT_ID);
   const [knownAccounts, setKnownAccounts] = useState<StoredAccount[]>([]);
+  const [isSuspendedModalOpen, setIsSuspendedModalOpen] = useState(false);
+
+  const closeSuspendedModal = () => {
+    setIsSuspendedModalOpen(false);
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      window.location.href = '/';
+    }
+  };
+
+  const triggerSuspendedModal = () => {
+    try {
+      localStorage.removeItem('unistay_auth_user');
+    } catch {}
+    setUser(null);
+    setIsSuspendedModalOpen(true);
+  };
 
   useEffect(() => {
     try {
@@ -139,16 +166,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const sanitizedKnown = parsedKnown.map((item: StoredAccount) => {
             const itemEmail = item.email?.toLowerCase().trim();
             if (itemEmail === 'truongvantuan43344@gmail.com') {
-              return { ...item, avatar: TRUONG_HUNG_REAL_AVATAR };
+              return { ...item, avatar: TRUONG_HUNG_ADMIN_AVATAR };
             }
-            if (
-              item.avatar &&
-              (item.avatar === TRUONG_HUNG_REAL_AVATAR ||
-                item.avatar.includes('ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT') ||
-                item.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I') ||
-                item.avatar.includes('unsplash') ||
-                item.avatar.includes('photo-1534528741775'))
-            ) {
+            if (itemEmail === 'hungtce181568@fpt.edu.vn') {
+              return { ...item, avatar: TRUONG_HUNG_K18_AVATAR };
+            }
+            if (item.avatar && (item.avatar.includes('unsplash') || item.avatar.includes('photo-1534528741775'))) {
               return { ...item, avatar: undefined };
             }
             return item;
@@ -174,17 +197,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           parsed.role = getAssignedRole(parsed.email);
           if (userEmail === 'truongvantuan43344@gmail.com') {
-            parsed.avatar = TRUONG_HUNG_REAL_AVATAR;
+            parsed.avatar = TRUONG_HUNG_ADMIN_AVATAR;
+          } else if (userEmail === 'hungtce181568@fpt.edu.vn') {
+            parsed.avatar = TRUONG_HUNG_K18_AVATAR;
           } else {
-            // Không bao giờ để avatar của Admin bị rò rỉ sang tài khoản sinh viên/khách thuê
-            if (
-              parsed.avatar &&
-              (parsed.avatar === TRUONG_HUNG_REAL_AVATAR ||
-                parsed.avatar.includes('ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT') ||
-                parsed.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I') ||
-                parsed.avatar.includes('unsplash') ||
-                parsed.avatar.includes('photo-1534528741775'))
-            ) {
+            if (parsed.avatar && (parsed.avatar.includes('unsplash') || parsed.avatar.includes('photo-1534528741775'))) {
               parsed.avatar = undefined;
             }
           }
@@ -256,15 +273,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       let cleanAvatar: string | undefined = account.avatar || undefined;
       if (cleanEmail === 'truongvantuan43344@gmail.com') {
-        cleanAvatar = TRUONG_HUNG_REAL_AVATAR;
+        cleanAvatar = TRUONG_HUNG_ADMIN_AVATAR;
+      } else if (cleanEmail === 'hungtce181568@fpt.edu.vn') {
+        cleanAvatar = TRUONG_HUNG_K18_AVATAR;
       } else {
         if (
           cleanAvatar &&
-          (cleanAvatar === TRUONG_HUNG_REAL_AVATAR ||
-            cleanAvatar.includes('ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT') ||
-            cleanAvatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I') ||
-            cleanAvatar.includes('unsplash') ||
-            cleanAvatar.includes('photo-1534528741775'))
+          (cleanAvatar.includes('unsplash') || cleanAvatar.includes('photo-1534528741775'))
         ) {
           cleanAvatar = undefined;
         }
@@ -333,10 +348,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             localStorage.removeItem('unistay_auth_user');
           } catch {}
-          setTimeout(() => {
-            alert('Tài khoản của bạn đã bị Quản trị viên tạm khóa. Phiên làm việc đã kết thúc.');
-            window.location.href = '/';
-          }, 50);
+          setIsSuspendedModalOpen(true);
           return null;
         }
         return curr;
@@ -406,10 +418,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
               localStorage.removeItem('unistay_auth_user');
             } catch {}
-            setTimeout(() => {
-              alert('Tài khoản của bạn đã bị Quản trị viên tạm khóa. Phiên làm việc đã kết thúc.');
-              window.location.href = '/';
-            }, 50);
+            setIsSuspendedModalOpen(true);
             return null;
           }
           return curr;
@@ -767,10 +776,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         resetPassword,
         updateProfile,
-        logout
+        logout,
+        isSuspendedModalOpen,
+        closeSuspendedModal,
+        triggerSuspendedModal
       }}
     >
       {children}
+      <AccountSuspendedModal
+        isOpen={isSuspendedModalOpen}
+        onClose={closeSuspendedModal}
+      />
     </AuthContext.Provider>
   );
 };

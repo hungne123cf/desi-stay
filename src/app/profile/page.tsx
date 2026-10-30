@@ -52,7 +52,7 @@ function ProfileContent() {
   const initialTab: ProfileTab = ['info', 'wishlist', 'bookings'].includes(rawTab) ? rawTab : 'info';
 
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
-  const { user, isLoading, updateProfile, resetPassword, logout } = useAuth();
+  const { user, isLoading, updateProfile, resetPassword, logout, triggerSuspendedModal } = useAuth();
   const {
     properties,
     bookings,
@@ -106,9 +106,7 @@ function ProfileContent() {
 
   useEffect(() => {
     if (user?.email && isAccountSuspended(user.email)) {
-      logout();
-      alert('Tài khoản của bạn đã bị Quản trị viên tạm khóa. Phiên làm việc đã kết thúc.');
-      router.replace('/');
+      triggerSuspendedModal();
       return;
     }
     if (user) {
@@ -738,9 +736,12 @@ function ProfileContent() {
                 <button
                   type="button"
                   onClick={() => clearWishlist()}
-                  className="px-4 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold text-xs rounded-xl transition-colors cursor-pointer self-start sm:self-auto"
+                  className="px-4 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-bold text-xs rounded-xl transition-colors cursor-pointer self-start sm:self-auto flex items-center gap-1.5"
                 >
-                  Xóa tất cả ({wishlistProperties.length})
+                  <span>Xóa tất cả</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
+                    {wishlistProperties.length}
+                  </span>
                 </button>
               )}
             </div>

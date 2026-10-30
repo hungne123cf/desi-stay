@@ -17,6 +17,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAuth, StoredAccount, isAccountSuspended } from '@/context/AuthContext';
+import { TRUONG_HUNG_ADMIN_AVATAR, TRUONG_HUNG_K18_AVATAR } from '@/config/auth';
 import { UserRole } from '@/types';
 
 interface Props {
@@ -82,10 +83,19 @@ export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, on
     }
     setIsSubmitting(true);
     try {
+      const cleanEmail = account.email.toLowerCase().trim();
+      const effectiveAvatar =
+        account.avatar ||
+        (cleanEmail === 'hungtce181568@fpt.edu.vn'
+          ? TRUONG_HUNG_K18_AVATAR
+          : cleanEmail === 'truongvantuan43344@gmail.com'
+          ? TRUONG_HUNG_ADMIN_AVATAR
+          : undefined);
+
       const user = await loginWithGoogleAccount({
         email: account.email,
         name: account.name,
-        avatar: account.avatar
+        avatar: effectiveAvatar
       });
       onSuccess(user.role);
       onClose();
@@ -348,21 +358,32 @@ export const GoogleAccountChooserModal: React.FC<Props> = ({ isOpen, onClose, on
                           onClick={() => handleSelectAccount(account)}
                           className="flex-1 flex items-center gap-3.5 text-left min-w-0 cursor-pointer"
                         >
-                          {account.avatar ? (
-                            <img
-                              src={account.avatar}
-                              alt={account.name}
-                              className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-slate-200"
-                            />
-                          ) : (
-                            <div
-                              className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${getAvatarColor(
-                                account.email
-                              )}`}
-                            >
-                              {account.name[0]?.toUpperCase() || 'U'}
-                            </div>
-                          )}
+                          {(() => {
+                            const cleanEmail = account.email.toLowerCase().trim();
+                            const displayAvatar =
+                              account.avatar ||
+                              (cleanEmail === 'hungtce181568@fpt.edu.vn'
+                                ? TRUONG_HUNG_K18_AVATAR
+                                : cleanEmail === 'truongvantuan43344@gmail.com'
+                                ? TRUONG_HUNG_ADMIN_AVATAR
+                                : null);
+
+                            return displayAvatar ? (
+                              <img
+                                src={displayAvatar}
+                                alt={account.name}
+                                className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-slate-200"
+                              />
+                            ) : (
+                              <div
+                                className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${getAvatarColor(
+                                  account.email
+                                )}`}
+                              >
+                                {account.name[0]?.toUpperCase() || 'U'}
+                              </div>
+                            );
+                          })()}
 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">

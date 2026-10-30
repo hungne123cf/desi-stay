@@ -259,9 +259,12 @@ export default function HomePage() {
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer flex items-center gap-1.5"
               >
-                Xóa bộ lọc &amp; Xem tất cả ({properties.length} phòng)
+                <span>Xóa bộ lọc &amp; Xem tất cả phòng</span>
+                <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-black">
+                  {properties.length}
+                </span>
               </button>
             )}
           </div>

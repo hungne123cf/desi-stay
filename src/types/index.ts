@@ -131,6 +131,7 @@ export interface ChatMessage {
   studentEmail?: string;
   senderRole: 'student' | 'admin' | 'staff';
   senderName: string;
+  senderAvatar?: string;
   text: string;
   createdAt: string;
   isReadByAdmin?: boolean;

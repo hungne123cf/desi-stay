@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Property, Booking, CurrencyCode, SiteSettings, ChatMessage, PropertyReview, UserAccount, UserRole } from '@/types';
 import { siteConfig } from '@/config/site';
-import { DEFAULT_ACCOUNTS, TRUONG_HUNG_REAL_AVATAR } from '@/config/auth';
+import { DEFAULT_ACCOUNTS, TRUONG_HUNG_ADMIN_AVATAR, TRUONG_HUNG_K18_AVATAR, TRUONG_HUNG_REAL_AVATAR } from '@/config/auth';
 
 export interface ReviewEligibility {
   hasPurchased: boolean;
@@ -369,22 +369,22 @@ function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): Prope
 
 function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
   const cleanEmail = acc.email?.toLowerCase().trim();
-  if (
-    cleanEmail === 'truongvantuan43344@gmail.com' &&
-    (!acc.avatar || acc.avatar.includes('photo-1534528741775') || acc.avatar.includes('unsplash') || acc.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I'))
-  ) {
+  if (cleanEmail === 'truongvantuan43344@gmail.com') {
     return {
       ...acc,
-      avatar: TRUONG_HUNG_REAL_AVATAR
+      avatar: TRUONG_HUNG_ADMIN_AVATAR
     };
   }
-  // Loại bỏ hoàn toàn ảnh Super Admin bị rò rỉ sang các tài khoản khác và ảnh stock Unsplash
+  if (cleanEmail === 'hungtce181568@fpt.edu.vn') {
+    return {
+      ...acc,
+      avatar: TRUONG_HUNG_K18_AVATAR
+    };
+  }
+  // Loại bỏ hoàn toàn ảnh stock Unsplash giả cho các tài khoản
   if (
     acc.avatar &&
-    (acc.avatar === TRUONG_HUNG_REAL_AVATAR ||
-      acc.avatar.includes('ACg8ocLkwpBVjQWQrLm4AT7bBEJYVC2LnbmKztX_PWiRRchhmM_FhTfT') ||
-      acc.avatar.includes('ACg8ocLcJeUqcDC3Ka0yx4uDj5bjHvCuaOX-4di4830y2-VhEkoYR7I') ||
-      acc.avatar.includes('unsplash.com') ||
+    (acc.avatar.includes('unsplash.com') ||
       acc.avatar.includes('photo-1573496359142') ||
       acc.avatar.includes('photo-1534528741775'))
   ) {
@@ -1487,7 +1487,6 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!cleanEmail) return;
 
     if (cleanEmail === 'truongvantuan43344@gmail.com' && newRole !== 'admin') {
-      alert('Không thể hạ quyền Quản trị viên tối cao (Super Admin)!');
       return;
     }
 
@@ -1602,7 +1601,6 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const toggleAccountSuspension = (email: string) => {
     const cleanEmail = email.toLowerCase().trim();
     if (cleanEmail === 'truongvantuan43344@gmail.com' || cleanEmail === 'admin@unistay.com') {
-      alert('Không thể khóa tài khoản Quản trị viên cấp cao!');
       return;
     }
 
@@ -1647,7 +1645,6 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const permanentDeleteAccount = (email: string) => {
     const cleanEmail = email.toLowerCase().trim();
     if (cleanEmail === 'truongvantuan43344@gmail.com' || cleanEmail === 'admin@unistay.com') {
-      alert('Không thể xóa tài khoản Quản trị viên cấp cao!');
       return;
     }
     markTombstone('account', cleanEmail, 'permanent');
