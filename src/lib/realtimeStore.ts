@@ -199,7 +199,7 @@ function mergeAccountsServer(
 
   if (Array.isArray(incoming)) {
     incoming.forEach((a) => {
-      if (a && a.email && !tombSet.has(a.email.toLowerCase().trim())) {
+      if (a && a.email) {
         const key = a.email.toLowerCase().trim();
         const existing = map.get(key);
         if (!existing) {
@@ -289,7 +289,14 @@ export function updateRealtimeState(partial: Partial<RealtimeState>): RealtimeSt
       new Set([...(current.tombstones?.bookings || []), ...(partial.tombstones?.bookings || [])])
     ),
     accounts: Array.from(
-      new Set([...(current.tombstones?.accounts || []), ...(partial.tombstones?.accounts || [])])
+      new Set(
+        [...(current.tombstones?.accounts || []), ...(partial.tombstones?.accounts || [])].filter(
+          (e) =>
+            !(partial.accounts || []).some(
+              (a) => a && a.email && a.email.toLowerCase().trim() === e.toLowerCase().trim()
+            )
+        )
+      )
     )
   };
 

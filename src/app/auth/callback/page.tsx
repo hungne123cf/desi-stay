@@ -18,6 +18,18 @@ export default function AuthCallbackPage() {
       try {
         const cleanEmail = payload.email.toLowerCase().trim();
 
+        // Xóa cờ xóa vĩnh viễn cũ nếu tài khoản Google này đăng nhập lại
+        try {
+          const rawPerm = localStorage.getItem('unistay_tombstone_permanent_deleted');
+          if (rawPerm) {
+            const parsed = JSON.parse(rawPerm);
+            if (Array.isArray(parsed) && parsed.some((e: string) => e?.toLowerCase().trim() === cleanEmail)) {
+              const next = parsed.filter((e: string) => e?.toLowerCase().trim() !== cleanEmail);
+              localStorage.setItem('unistay_tombstone_permanent_deleted', JSON.stringify(next));
+            }
+          }
+        } catch {}
+
         if (isAccountSuspended(cleanEmail)) {
           setError('Tài khoản này đã bị Quản trị viên tạm khóa. Không thể đăng nhập vào UniStay!');
           try {

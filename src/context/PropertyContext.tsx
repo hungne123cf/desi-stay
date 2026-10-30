@@ -147,6 +147,17 @@ function isPermanentlyDeleted(id: string): boolean {
   return permSet.has(cleanId);
 }
 
+function clearPermanentDelete(id: string) {
+  if (!id) return;
+  const cleanId = id.trim().toLowerCase();
+  recentlyPermanentlyDeleted.delete(cleanId);
+  const permSet = getPersistentSet(KEY_PERMANENT_DELETED);
+  if (permSet.has(cleanId)) {
+    permSet.delete(cleanId);
+    savePersistentSet(KEY_PERMANENT_DELETED, permSet);
+  }
+}
+
 function markTombstone(
   type: 'prop' | 'booking' | 'review' | 'account',
   id: string,
@@ -743,6 +754,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (p.settings) setSettings(p.settings);
         } else if (event.data?.type === 'ACCOUNT_UPSERTED' && event.data?.account) {
           const acc = sanitizeAccountAvatar(event.data.account);
+          clearPermanentDelete(acc.email);
           setAccounts((prev) => {
             const merged = mergeAccounts(prev, [acc]);
             try {
@@ -1539,6 +1551,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addOrUpdateAccount = (acc: Partial<UserAccount> & { email: string; name?: string }) => {
     const cleanEmail = acc.email.toLowerCase().trim();
     if (!cleanEmail) return;
+    clearPermanentDelete(cleanEmail);
 
     let targetRole: UserRole = acc.role || 'staff';
 

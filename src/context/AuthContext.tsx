@@ -52,13 +52,6 @@ export function isAccountSuspended(email: string): boolean {
         return true;
       }
     }
-    const rawPermanent = localStorage.getItem('unistay_tombstone_permanent_deleted');
-    if (rawPermanent) {
-      const parsed = JSON.parse(rawPermanent);
-      if (Array.isArray(parsed) && parsed.some((e: string) => e?.toLowerCase().trim() === clean)) {
-        return true;
-      }
-    }
     const rawAccounts = localStorage.getItem('unistay_real_accounts_v4');
     if (rawAccounts) {
       const accounts = JSON.parse(rawAccounts);
@@ -256,6 +249,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
 
       const cleanEmail = account.email.toLowerCase().trim();
+
+      // Khi người dùng đăng nhập bằng tài khoản Google, tự động xóa cờ xóa vĩnh viễn cũ (nếu có)
+      try {
+        const rawPerm = localStorage.getItem('unistay_tombstone_permanent_deleted');
+        if (rawPerm) {
+          const parsed = JSON.parse(rawPerm);
+          if (Array.isArray(parsed) && parsed.some((e: string) => e?.toLowerCase().trim() === cleanEmail)) {
+            const next = parsed.filter((e: string) => e?.toLowerCase().trim() !== cleanEmail);
+            localStorage.setItem('unistay_tombstone_permanent_deleted', JSON.stringify(next));
+          }
+        }
+      } catch {}
 
       // Kiểm tra tài khoản có bị Quản trị viên tạm khóa hay không
       if (isAccountSuspended(cleanEmail)) {
