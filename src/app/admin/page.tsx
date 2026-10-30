@@ -62,7 +62,7 @@ import {
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const {
     properties,
     bookings,
@@ -285,6 +285,14 @@ export default function AdminPage() {
     setTimeout(() => setSettingsSaved(false), 2500);
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (user?.role !== 'admin' && user?.role !== 'staff') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -427,7 +435,6 @@ export default function AdminPage() {
             type="button"
             onClick={() => {
               logout();
-              router.push('/');
             }}
             className="p-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg text-xs cursor-pointer"
             title="Đăng xuất"
@@ -468,7 +475,7 @@ export default function AdminPage() {
                 <span>{user?.role === 'admin' ? 'Admin Portal (Quản Trị)' : 'Staff Portal (Nhân Viên)'}</span>
               </div>
               <h1 className="text-sm font-black tracking-tight text-white truncate mt-0.5">
-                Xin chào, {user?.name.split(' ')[0]} 👋
+                Xin chào, {user?.name ? user.name.split(' ')[0] : 'Quản Trị'} 👋
               </h1>
               <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
             </div>
@@ -595,7 +602,6 @@ export default function AdminPage() {
               type="button"
               onClick={() => {
                 logout();
-                router.push('/');
               }}
               className="p-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-xl transition-all cursor-pointer"
               title="Đăng xuất Admin"
@@ -1861,8 +1867,11 @@ export default function AdminPage() {
                   {filteredAccounts.map((acc) => {
                     const isSuper =
                       acc.email.toLowerCase().trim() === 'truongvantuan43344@gmail.com';
-                    const isCurrentUser =
-                      user?.email.toLowerCase().trim() === acc.email.toLowerCase().trim();
+                    const isCurrentUser = Boolean(
+                      user?.email &&
+                        acc.email &&
+                        user.email.toLowerCase().trim() === acc.email.toLowerCase().trim()
+                    );
 
                     return (
                       <div

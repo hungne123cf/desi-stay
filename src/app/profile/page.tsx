@@ -224,7 +224,6 @@ export default function ProfilePage() {
                 type="button"
                 onClick={() => {
                   logout();
-                  router.push('/');
                 }}
                 className="p-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-xl transition-all cursor-pointer"
                 title="Đăng xuất"

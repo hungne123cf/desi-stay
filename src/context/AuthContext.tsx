@@ -558,7 +558,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('unistay_auth_user');
+    try {
+      localStorage.removeItem('unistay_auth_user');
+    } catch {}
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
   };
 
   return (
