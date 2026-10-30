@@ -76,32 +76,12 @@ const DEFAULT_SETTINGS: SiteSettings = {
   holdHours: 48
 };
 
-function isRealAdminProperty(p: Property): boolean {
-  if (!p || !p.id) return false;
-  if (
-    p.id.startsWith('prop-vn-') ||
-    p.id.startsWith('prop-in-') ||
-    p.id.startsWith('prop-eu-') ||
-    p.id === 'prop-1793248830043' ||
-    (p.code === 'CT-102' && p.title === '2')
-  ) {
-    return false;
-  }
-  return true;
+function isValidProperty(p: Property): boolean {
+  return Boolean(p && p.id && p.title);
 }
 
-function isRealUserBooking(b: Booking): boolean {
-  if (!b || !b.id) return false;
-  if (
-    b.id === 'lead-1' ||
-    b.id === 'lead-2' ||
-    b.id === 'lead-3' ||
-    b.id === 'book-1793248971531' ||
-    b.propertyCode === 'CT-102'
-  ) {
-    return false;
-  }
-  return true;
+function isValidBooking(b: Booking): boolean {
+  return Boolean(b && b.id);
 }
 
 // Cơ chế khóa bảo vệ chống xung đột Real-time (Optimistic Mutation Lock & Persistent Tombstones)
@@ -530,7 +510,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (savedProps) {
         const parsed = JSON.parse(savedProps);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setProperties(parsed.filter(isRealAdminProperty));
+          setProperties(parsed.filter(isValidProperty));
         }
       }
     } catch {}
@@ -602,10 +582,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
 
         const serverProps: Property[] = Array.isArray(serverState.properties)
-          ? serverState.properties.filter(isRealAdminProperty)
+          ? serverState.properties.filter(isValidProperty)
           : [];
         const serverBookings: Booking[] = Array.isArray(serverState.bookings)
-          ? serverState.bookings.filter(isRealUserBooking)
+          ? serverState.bookings.filter(isValidBooking)
           : [];
         const serverMessages: ChatMessage[] = Array.isArray(serverState.messages)
           ? serverState.messages
@@ -617,8 +597,29 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ? serverState.accounts
           : DEFAULT_ACCOUNTS;
 
-        const finalProps = serverProps.map((p) => {
-          const pReviews = serverReviews.filter(
+        // Đọc lại localStorage ở thời điểm này để tránh ghi đè dữ liệu cục bộ mới hơn
+        let localProps: Property[] = [];
+        let localReviews: PropertyReview[] = [];
+        let localBookings: Booking[] = [];
+        let localMessages: ChatMessage[] = [];
+        try {
+          const lp = localStorage.getItem('unistay_real_properties_v4');
+          if (lp) localProps = (JSON.parse(lp) as Property[]).filter(isValidProperty);
+          const lr = localStorage.getItem('unistay_real_reviews_v4');
+          if (lr) localReviews = JSON.parse(lr);
+          const lb = localStorage.getItem('unistay_real_bookings_v4');
+          if (lb) localBookings = (JSON.parse(lb) as Booking[]).filter(isValidBooking);
+          const lm = localStorage.getItem('unistay_real_messages_v4');
+          if (lm) localMessages = JSON.parse(lm);
+        } catch {}
+
+        const mergedReviews = mergeReviews(localReviews, serverReviews);
+        const mergedPropsRaw = mergeProperties(localProps, serverProps);
+        const mergedBookings = mergeBookings(localBookings, serverBookings);
+        const mergedMessages = mergeMessages(localMessages, serverMessages);
+
+        const finalProps = mergedPropsRaw.map((p) => {
+          const pReviews = mergedReviews.filter(
             (r) => !r.isDeleted && (r.propertyId === p.id || r.propertyCode === p.code)
           );
           if (pReviews.length === 0) {
@@ -629,10 +630,11 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           );
           return { ...p, rating: avg, reviewsCount: pReviews.length };
         });
-        setProperties((prev) => mergeProperties(prev, finalProps));
-        setBookings((prev) => mergeBookings(prev, serverBookings));
-        setMessages((prev) => mergeMessages(prev, serverMessages));
-        setReviews((prev) => mergeReviews(prev, serverReviews));
+
+        setProperties(finalProps);
+        setBookings(mergedBookings);
+        setMessages(mergedMessages);
+        setReviews(mergedReviews);
         setAccounts((prev) => {
           const merged = mergeAccounts(prev, serverAccounts);
           try {
@@ -644,10 +646,23 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         try {
           localStorage.setItem('unistay_real_properties_v4', JSON.stringify(finalProps));
-          localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(serverBookings));
-          localStorage.setItem('unistay_real_messages_v4', JSON.stringify(serverMessages));
-          localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(serverReviews));
+          localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(mergedBookings));
+          localStorage.setItem('unistay_real_messages_v4', JSON.stringify(mergedMessages));
+          localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(mergedReviews));
         } catch {}
+
+        // ĐỒNG BỘ 2 CHIỀU: Nếu máy người dùng có phòng hoặc đánh giá chưa có trên server (do vừa khởi động lại serverless), tự động đẩy lên server
+        const hasNewProps = finalProps.some((p) => !serverProps.some((sp) => sp.id === p.id));
+        const hasNewReviews = mergedReviews.some((r) => !serverReviews.some((sr) => sr.id === r.id));
+        const hasNewBookings = mergedBookings.some((b) => !serverBookings.some((sb) => sb.id === b.id));
+
+        if (hasNewProps || hasNewReviews || hasNewBookings) {
+          syncToServer({
+            properties: finalProps,
+            bookings: mergedBookings,
+            reviews: mergedReviews
+          });
+        }
       })
       .catch(() => {});
 
@@ -734,7 +749,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           try {
             const data = JSON.parse(event.data);
             if (Array.isArray(data.properties) && data.properties.length > 0) {
-              const cleanProps = data.properties.filter(isRealAdminProperty);
+              const cleanProps = data.properties.filter(isValidProperty);
               setProperties((prev) => {
                 const merged = mergeProperties(prev, cleanProps);
                 try {
@@ -744,7 +759,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               });
             }
             if (Array.isArray(data.bookings) && data.bookings.length > 0) {
-              const cleanBookings = data.bookings.filter(isRealUserBooking);
+              const cleanBookings = data.bookings.filter(isValidBooking);
               setBookings((prev) => {
                 const merged = mergeBookings(prev, cleanBookings);
                 try {
@@ -826,7 +841,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
 
           if (Array.isArray(data.properties)) {
-            const cleanProps = data.properties.filter(isRealAdminProperty);
+            const cleanProps = data.properties.filter(isValidProperty);
             setProperties((prev) => {
               const merged = mergeProperties(prev, cleanProps);
               try {
@@ -836,7 +851,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             });
           }
           if (Array.isArray(data.bookings)) {
-            const cleanBookings = data.bookings.filter(isRealUserBooking);
+            const cleanBookings = data.bookings.filter(isValidBooking);
             setBookings((prev) => {
               const merged = mergeBookings(prev, cleanBookings);
               try {

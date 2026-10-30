@@ -28,6 +28,11 @@ export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -100,7 +105,7 @@ export const Navbar: React.FC = () => {
               <a href="#benefits" className="hover:text-indigo-600 transition-colors">
                 Tiện ích &amp; An ninh
               </a>
-              {(user?.role === 'admin' || user?.role === 'staff') && (
+              {isMounted && (user?.role === 'admin' || user?.role === 'staff') && (
                 <Link
                   href="/admin"
                   className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-full border border-indigo-200 transition-colors"
@@ -114,7 +119,7 @@ export const Navbar: React.FC = () => {
             {/* Right Action buttons */}
             <div className="hidden md:flex items-center gap-2.5">
               {/* User Profile Dropdown or Login Button */}
-              {user ? (
+              {isMounted && user ? (
                 <div className="relative" ref={userDropdownRef}>
                   <button
                     type="button"
@@ -301,7 +306,7 @@ export const Navbar: React.FC = () => {
             >
               Tiện ích &amp; An ninh
             </a>
-            {(user?.role === 'admin' || user?.role === 'staff') && (
+            {isMounted && (user?.role === 'admin' || user?.role === 'staff') && (
               <Link
                 href="/admin"
                 onClick={() => setMobileMenuOpen(false)}
@@ -311,7 +316,7 @@ export const Navbar: React.FC = () => {
                 <span>{user.role === 'admin' ? 'Admin' : 'Nhân Viên'}</span>
               </Link>
             )}
-            {user ? (
+            {isMounted && user ? (
               <div className="pt-2 space-y-2">
                 <div className="flex items-center gap-3 py-1 px-1">
                   {user.avatar ? (

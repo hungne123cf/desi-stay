@@ -41,7 +41,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
 
 const DEFAULT_TOMBSTONES: RealtimeTombstones = {
   properties: [],
-  reviews: ['rev-ctu-101-seed'],
+  reviews: [],
   bookings: [],
   accounts: []
 };
@@ -65,25 +65,6 @@ function getListeners(): Set<Listener> {
   return globalThis.__unistayListeners;
 }
 
-function isSamplePropertyId(id: string): boolean {
-  return (
-    id.startsWith('prop-vn-') ||
-    id.startsWith('prop-in-') ||
-    id.startsWith('prop-eu-') ||
-    id === 'prop-1793248830043' ||
-    id === 'prop-sample'
-  );
-}
-
-function isSampleBookingId(id: string): boolean {
-  return (
-    id === 'lead-1' ||
-    id === 'lead-2' ||
-    id === 'lead-3' ||
-    id === 'book-1793248971531'
-  );
-}
-
 function mergePropertiesServer(
   current: Property[],
   incoming?: Property[],
@@ -93,14 +74,14 @@ function mergePropertiesServer(
   const map = new Map<string, Property>();
 
   (current || []).forEach((p) => {
-    if (p && p.id && !tombSet.has(p.id.toLowerCase().trim()) && !isSamplePropertyId(p.id)) {
+    if (p && p.id && !tombSet.has(p.id.toLowerCase().trim())) {
       map.set(p.id, p);
     }
   });
 
   if (Array.isArray(incoming)) {
     incoming.forEach((p) => {
-      if (p && p.id && !tombSet.has(p.id.toLowerCase().trim()) && !isSamplePropertyId(p.id)) {
+      if (p && p.id && !tombSet.has(p.id.toLowerCase().trim())) {
         const existing = map.get(p.id);
         if (!existing) {
           map.set(p.id, p);
@@ -132,14 +113,14 @@ function mergeBookingsServer(
   const map = new Map<string, Booking>();
 
   (current || []).forEach((b) => {
-    if (b && b.id && !tombSet.has(b.id.toLowerCase().trim()) && !isSampleBookingId(b.id)) {
+    if (b && b.id && !tombSet.has(b.id.toLowerCase().trim())) {
       map.set(b.id, b);
     }
   });
 
   if (Array.isArray(incoming)) {
     incoming.forEach((b) => {
-      if (b && b.id && !tombSet.has(b.id.toLowerCase().trim()) && !isSampleBookingId(b.id)) {
+      if (b && b.id && !tombSet.has(b.id.toLowerCase().trim())) {
         const existing = map.get(b.id);
         map.set(b.id, existing ? { ...existing, ...b } : b);
       }
