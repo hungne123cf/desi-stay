@@ -7,6 +7,7 @@ import { PropertyProvider } from '@/context/PropertyContext';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { WhatsAppFloat } from '@/components/WhatsAppFloat';
+import { ChunkErrorRecovery } from '@/components/ChunkErrorRecovery';
 
 const inter = Inter({
   subsets: ['latin', 'vietnamese'],
@@ -65,6 +66,7 @@ export default function RootLayout({
   return (
     <html lang="vi" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-white text-slate-900 selection:bg-indigo-600 selection:text-white">
+        <ChunkErrorRecovery />
         <AuthProvider>
           <PropertyProvider>
             <Suspense fallback={<div className="h-20 bg-white border-b border-slate-200/80" />}>

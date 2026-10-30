@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
@@ -60,17 +60,28 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState<string>('');
 
-  const property = properties.find((p) => p.id === propertyId);
+  const property = properties.find(
+    (p) => p.id === propertyId || p.code === propertyId || p.slug === propertyId
+  );
   const saved = property ? isWishlisted(property.id) : false;
 
-  const propertyActualReviews = reviews.filter(
-    (r) => property && !r.isDeleted && (r.propertyId === property.id || r.propertyCode === property.code)
-  );
-  const propertyReviewsCount = propertyActualReviews.length;
+  const propertyReviews = useMemo(() => {
+    if (!property) return [];
+    return reviews.filter(
+      (r) =>
+        !r.isDeleted &&
+        (r.propertyId === property.id ||
+          (property.code && r.propertyCode === property.code) ||
+          (property.code && r.propertyId === property.code) ||
+          (property.slug && r.propertyId === property.slug))
+    );
+  }, [property, reviews]);
+
+  const propertyReviewsCount = propertyReviews.length;
   const propertyRating =
     propertyReviewsCount > 0
       ? Number(
-          (propertyActualReviews.reduce((sum, r) => sum + r.rating, 0) / propertyReviewsCount).toFixed(1)
+          (propertyReviews.reduce((sum, r) => sum + r.rating, 0) / propertyReviewsCount).toFixed(1)
         )
       : property?.reviewsCount && property.reviewsCount > 0
       ? property.rating
@@ -450,9 +461,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
 
             {/* Rating & Comments (Đánh giá & Bình luận của Sinh viên) */}
             {(() => {
-              const propertyReviews = reviews.filter(
-                (r) => r.propertyId === property.id || r.propertyCode === property.code
-              );
               const eligibility = getReviewEligibility(property.id, property.code, user);
 
               const ratingLabels: Record<number, string> = {
@@ -505,11 +513,18 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                   {/* Header thống kê đánh giá */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <MessageSquare className="w-5 h-5 text-indigo-600" />
-                        <span>Đánh Giá &amp; Bình Luận Thực Tế ({propertyReviews.length})</span>
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                          <MessageSquare className="w-4 h-4" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                          Đánh Giá &amp; Bình Luận
+                        </h3>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+                          {propertyReviewsCount}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1 pl-10.5">
                         100% nhận xét xác thực từ sinh viên đã đặt phòng (Tối đa 1 lượt đánh giá / 1 lần đặt phòng)
                       </p>
                     </div>
@@ -533,7 +548,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
                         </div>
                         <span className="text-[11px] font-semibold text-slate-600">
                           {propertyReviewsCount > 0
-                            ? `${propertyReviewsCount} nhận xét xác thực`
+                            ? `${propertyReviewsCount} nhận xét từ sinh viên`
                             : 'Chưa có đánh giá nào từ người thuê'}
                         </span>
                       </div>

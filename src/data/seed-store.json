@@ -44,14 +44,30 @@
       "landlordContact": "0901234567",
       "id": "prop-1793242710688",
       "code": "CT-101",
-      "rating": 0,
-      "reviewsCount": 0,
+      "rating": 5,
+      "reviewsCount": 1,
       "createdAt": "2026-10-29"
     }
   ],
   "bookings": [],
   "messages": [],
-  "reviews": [],
+  "reviews": [
+    {
+      "id": "rev-ctu-101-seed",
+      "bookingId": "BK-SEED-CTU",
+      "propertyId": "prop-1793242710688",
+      "propertyCode": "CT-101",
+      "propertyTitle": "Căn hộ sinh viên cao cấp",
+      "userName": "Truong Hung (K18 CT)",
+      "userEmail": "hungtce181568@fpt.edu.vn",
+      "userCollege": "ĐH CT",
+      "rating": 5,
+      "comment": "Chủ trọ / Quản lý thân thiện, hỗ trợ nhiệt tình",
+      "adminReply": "thankyou",
+      "repliedAt": "2026-10-30T12:39:00.000Z",
+      "createdAt": "12:39 • 30/10/2026"
+    }
+  ],
   "accounts": [
     {
       "id": "acc-admin-1",

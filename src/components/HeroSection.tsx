@@ -233,7 +233,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               className="w-full sm:w-auto h-12 px-7 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-2xl shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer shrink-0"
             >
               <Search className="w-4 h-4" />
-              <span>Tìm Phòng ({totalListingsCount})</span>
+              <span>Tìm Phòng</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs font-bold">
+                {totalListingsCount}
+              </span>
             </button>
           </div>
 

@@ -104,50 +104,156 @@ function isRealUserBooking(b: Booking): boolean {
   return true;
 }
 
-// Cơ chế khóa bảo vệ chống xung đột Real-time (Optimistic Mutation Lock)
-// Giúp ngăn ngừa việc polling ngầm ghi đè dữ liệu cũ khi người dùng vừa bấm Khôi phục hoặc Xóa mềm
+// Cơ chế khóa bảo vệ chống xung đột Real-time (Optimistic Mutation Lock & Persistent Tombstones)
+// Ngăn ngừa triệt để hiện tượng dữ liệu nhảy lên nhảy xuống (flapping) giữa xóa và tồn tại
 const recentLocalMutations = new Map<string, number>();
 const recentlyPermanentlyDeleted = new Map<string, number>();
 
+function getPersistentSet(key: string): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function savePersistentSet(key: string, set: Set<string>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(Array.from(set)));
+  } catch {}
+}
+
+const KEY_DELETED_PROPS = 'unistay_tombstone_deleted_props';
+const KEY_ARCHIVED_BOOKINGS = 'unistay_tombstone_archived_bookings';
+const KEY_DELETED_REVIEWS = 'unistay_tombstone_deleted_reviews';
+const KEY_SUSPENDED_ACCOUNTS = 'unistay_tombstone_suspended_accounts';
+const KEY_PERMANENT_DELETED = 'unistay_tombstone_permanent_deleted';
+const KEY_ADMIN_REPLIES = 'unistay_tombstone_admin_replies';
+
 function recordLocalMutation(id: string) {
-  if (id) recentLocalMutations.set(id, Date.now());
+  if (id) recentLocalMutations.set(id.trim().toLowerCase(), Date.now());
 }
 
 function isRecentlyMutated(id: string): boolean {
   if (!id) return false;
-  const t = recentLocalMutations.get(id);
+  const cleanId = id.trim().toLowerCase();
+  const t = recentLocalMutations.get(cleanId);
   if (!t) return false;
-  if (Date.now() - t < 6000) return true; // Trong vòng 6 giây vừa thao tác, giữ nguyên trạng thái mới nhất của client
-  recentLocalMutations.delete(id);
+  if (Date.now() - t < 12000) return true; // Giữ 12s sau khi người dùng vừa thao tác
+  recentLocalMutations.delete(cleanId);
   return false;
 }
 
 function recordPermanentDelete(id: string) {
-  if (id) recentlyPermanentlyDeleted.set(id, Date.now());
+  if (id) {
+    const cleanId = id.trim().toLowerCase();
+    recentlyPermanentlyDeleted.set(cleanId, Date.now());
+    const permSet = getPersistentSet(KEY_PERMANENT_DELETED);
+    permSet.add(cleanId);
+    savePersistentSet(KEY_PERMANENT_DELETED, permSet);
+  }
 }
 
-function isRecentlyPermanentlyDeleted(id: string): boolean {
+function isPermanentlyDeleted(id: string): boolean {
   if (!id) return false;
-  const t = recentlyPermanentlyDeleted.get(id);
-  if (!t) return false;
-  if (Date.now() - t < 10000) return true; // Trong 10 giây sau khi xóa vĩnh viễn, không cho server hồi sinh lại
-  recentlyPermanentlyDeleted.delete(id);
-  return false;
+  const cleanId = id.trim().toLowerCase();
+  if (recentlyPermanentlyDeleted.has(cleanId)) return true;
+  const permSet = getPersistentSet(KEY_PERMANENT_DELETED);
+  return permSet.has(cleanId);
+}
+
+function markTombstone(
+  type: 'prop' | 'booking' | 'review' | 'account',
+  id: string,
+  action: 'delete' | 'restore' | 'permanent'
+) {
+  if (!id) return;
+  const cleanId = id.trim().toLowerCase();
+
+  if (action === 'permanent') {
+    recordPermanentDelete(cleanId);
+    return;
+  }
+
+  recordLocalMutation(cleanId);
+
+  let key = '';
+  if (type === 'prop') key = KEY_DELETED_PROPS;
+  else if (type === 'booking') key = KEY_ARCHIVED_BOOKINGS;
+  else if (type === 'review') key = KEY_DELETED_REVIEWS;
+  else if (type === 'account') key = KEY_SUSPENDED_ACCOUNTS;
+
+  if (!key) return;
+  const set = getPersistentSet(key);
+  if (action === 'delete') {
+    set.add(cleanId);
+  } else {
+    set.delete(cleanId);
+  }
+  savePersistentSet(key, set);
+}
+
+function isTombstonedDeleted(
+  type: 'prop' | 'booking' | 'review' | 'account',
+  id: string
+): boolean {
+  if (!id) return false;
+  const cleanId = id.trim().toLowerCase();
+  let key = '';
+  if (type === 'prop') key = KEY_DELETED_PROPS;
+  else if (type === 'booking') key = KEY_ARCHIVED_BOOKINGS;
+  else if (type === 'review') key = KEY_DELETED_REVIEWS;
+  else if (type === 'account') key = KEY_SUSPENDED_ACCOUNTS;
+  if (!key) return false;
+  return getPersistentSet(key).has(cleanId);
+}
+
+function saveAdminReplyTombstone(reviewId: string, reply: string) {
+  if (typeof window === 'undefined' || !reviewId) return;
+  try {
+    const raw = localStorage.getItem(KEY_ADMIN_REPLIES);
+    const map = raw ? JSON.parse(raw) : {};
+    map[reviewId] = reply;
+    localStorage.setItem(KEY_ADMIN_REPLIES, JSON.stringify(map));
+  } catch {}
+}
+
+function getAdminReplyTombstone(reviewId: string): string | undefined {
+  if (typeof window === 'undefined' || !reviewId) return undefined;
+  try {
+    const raw = localStorage.getItem(KEY_ADMIN_REPLIES);
+    if (!raw) return undefined;
+    const map = JSON.parse(raw);
+    return map[reviewId];
+  } catch {
+    return undefined;
+  }
 }
 
 function mergeProperties(prev: Property[], incoming: Property[]): Property[] {
   if (!incoming || incoming.length === 0) return prev;
   const map = new Map<string, Property>();
   prev.forEach((p) => {
-    if (p && p.id && !isRecentlyPermanentlyDeleted(p.id)) {
+    if (p && p.id && !isPermanentlyDeleted(p.id)) {
       map.set(p.id, p);
     }
   });
   incoming.forEach((p) => {
-    if (p && p.id && !isRecentlyPermanentlyDeleted(p.id)) {
+    if (p && p.id && !isPermanentlyDeleted(p.id)) {
       const existing = map.get(p.id);
+      const isDeletedTombstone = isTombstonedDeleted('prop', p.id);
+      const effectiveDeleted = isDeletedTombstone || (existing ? Boolean(existing.isDeleted) : Boolean(p.isDeleted));
+
       if (!existing) {
-        map.set(p.id, p);
+        map.set(p.id, {
+          ...p,
+          isDeleted: effectiveDeleted
+        });
       } else {
         if (isRecentlyMutated(p.id)) {
           // Ưu tiên trạng thái vừa thao tác (khôi phục/xóa mềm) trên client, không để server polling ghi đè ngược lại
@@ -161,9 +267,16 @@ function mergeProperties(prev: Property[], incoming: Property[]): Property[] {
           const prevTime = existing.updatedAt || 0;
           const incomingTime = p.updatedAt || 0;
           if (prevTime > incomingTime) {
-            map.set(p.id, existing);
+            map.set(p.id, {
+              ...existing,
+              isDeleted: effectiveDeleted
+            });
           } else {
-            map.set(p.id, { ...existing, ...p });
+            map.set(p.id, {
+              ...existing,
+              ...p,
+              isDeleted: effectiveDeleted
+            });
           }
         }
       }
@@ -191,19 +304,35 @@ function mergeBookings(prev: Booking[], incoming: Booking[]): Booking[] {
   if (!incoming || incoming.length === 0) return prev;
   const map = new Map<string, Booking>();
   prev.forEach((b) => {
-    if (b && b.id) map.set(b.id, b);
+    if (b && b.id && !isPermanentlyDeleted(b.id)) {
+      map.set(b.id, b);
+    }
   });
   incoming.forEach((b) => {
-    if (b && b.id) {
+    if (b && b.id && !isPermanentlyDeleted(b.id)) {
       const existing = map.get(b.id);
-      if (existing && isRecentlyMutated(b.id)) {
+      const isArchivedTombstone = isTombstonedDeleted('booking', b.id);
+      const effectiveArchived = isArchivedTombstone || (existing ? Boolean(existing.isArchived) : Boolean(b.isArchived));
+
+      if (!existing) {
         map.set(b.id, {
           ...b,
-          isArchived: existing.isArchived,
-          archivedAt: existing.archivedAt
+          isArchived: effectiveArchived
         });
       } else {
-        map.set(b.id, existing ? { ...existing, ...b } : b);
+        if (isRecentlyMutated(b.id)) {
+          map.set(b.id, {
+            ...b,
+            isArchived: existing.isArchived,
+            archivedAt: existing.archivedAt
+          });
+        } else {
+          map.set(b.id, {
+            ...existing,
+            ...b,
+            isArchived: effectiveArchived
+          });
+        }
       }
     }
   });
@@ -214,10 +343,42 @@ function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): Prope
   if (!incoming || incoming.length === 0) return prev;
   const map = new Map<string, PropertyReview>();
   prev.forEach((r) => {
-    if (r && r.id) map.set(r.id, r);
+    if (r && r.id && !isPermanentlyDeleted(r.id)) {
+      map.set(r.id, r);
+    }
   });
   incoming.forEach((r) => {
-    if (r && r.id) map.set(r.id, r);
+    if (r && r.id && !isPermanentlyDeleted(r.id)) {
+      const existing = map.get(r.id);
+      const isDeletedTombstone = isTombstonedDeleted('review', r.id);
+      const savedReply = getAdminReplyTombstone(r.id);
+      const effectiveAdminReply = r.adminReply || existing?.adminReply || savedReply;
+      const effectiveDeleted = isDeletedTombstone || (existing ? Boolean(existing.isDeleted) : Boolean(r.isDeleted));
+
+      if (!existing) {
+        map.set(r.id, {
+          ...r,
+          isDeleted: effectiveDeleted,
+          adminReply: effectiveAdminReply
+        });
+      } else {
+        if (isRecentlyMutated(r.id)) {
+          map.set(r.id, {
+            ...r,
+            isDeleted: existing.isDeleted,
+            deletedAt: existing.deletedAt,
+            adminReply: existing.adminReply || effectiveAdminReply
+          });
+        } else {
+          map.set(r.id, {
+            ...existing,
+            ...r,
+            isDeleted: effectiveDeleted,
+            adminReply: effectiveAdminReply
+          });
+        }
+      }
+    }
   });
   return Array.from(map.values());
 }
@@ -226,22 +387,36 @@ function mergeAccounts(prev: UserAccount[], incoming: UserAccount[]): UserAccoun
   if (!incoming || incoming.length === 0) return prev;
   const map = new Map<string, UserAccount>();
   prev.forEach((a) => {
-    if (a && a.email && !isRecentlyPermanentlyDeleted(a.email)) {
+    if (a && a.email && !isPermanentlyDeleted(a.email)) {
       map.set(a.email.toLowerCase().trim(), a);
     }
   });
   incoming.forEach((a) => {
-    if (a && a.email && !isRecentlyPermanentlyDeleted(a.email)) {
+    if (a && a.email && !isPermanentlyDeleted(a.email)) {
       const key = a.email.toLowerCase().trim();
       const existing = map.get(key);
-      if (existing && isRecentlyMutated(key)) {
+      const isSuspendedTombstone = isTombstonedDeleted('account', key);
+      const effectiveSuspended = isSuspendedTombstone || (existing ? Boolean(existing.isSuspended) : Boolean(a.isSuspended));
+
+      if (!existing) {
         map.set(key, {
           ...a,
-          isSuspended: existing.isSuspended,
-          suspendedAt: existing.suspendedAt
+          isSuspended: effectiveSuspended
         });
       } else {
-        map.set(key, existing ? { ...existing, ...a } : a);
+        if (isRecentlyMutated(key)) {
+          map.set(key, {
+            ...a,
+            isSuspended: existing.isSuspended,
+            suspendedAt: existing.suspendedAt
+          });
+        } else {
+          map.set(key, {
+            ...existing,
+            ...a,
+            isSuspended: effectiveSuspended
+          });
+        }
       }
     }
   });
@@ -460,8 +635,13 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const data = JSON.parse(event.data);
             if (Array.isArray(data.properties) && data.properties.length > 0) {
               const cleanProps = data.properties.filter(isRealAdminProperty);
-              setProperties((prev) => mergeProperties(prev, cleanProps));
-              localStorage.setItem('unistay_real_properties_v4', JSON.stringify(cleanProps));
+              setProperties((prev) => {
+                const merged = mergeProperties(prev, cleanProps);
+                try {
+                  localStorage.setItem('unistay_real_properties_v4', JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
             }
             if (Array.isArray(data.bookings) && data.bookings.length > 0) {
               const cleanBookings = data.bookings.filter(isRealUserBooking);
@@ -530,20 +710,50 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (!isMounted || !data) return;
           if (Array.isArray(data.properties) && data.properties.length > 0) {
             const cleanProps = data.properties.filter(isRealAdminProperty);
-            setProperties((prev) => mergeProperties(prev, cleanProps));
+            setProperties((prev) => {
+              const merged = mergeProperties(prev, cleanProps);
+              try {
+                localStorage.setItem('unistay_real_properties_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
           if (Array.isArray(data.bookings) && data.bookings.length > 0) {
             const cleanBookings = data.bookings.filter(isRealUserBooking);
-            setBookings((prev) => mergeBookings(prev, cleanBookings));
+            setBookings((prev) => {
+              const merged = mergeBookings(prev, cleanBookings);
+              try {
+                localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
           if (Array.isArray(data.messages)) {
-            setMessages((prev) => mergeMessages(prev, data.messages));
+            setMessages((prev) => {
+              const merged = mergeMessages(prev, data.messages);
+              try {
+                localStorage.setItem('unistay_real_messages_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
           if (Array.isArray(data.reviews)) {
-            setReviews((prev) => mergeReviews(prev, data.reviews));
+            setReviews((prev) => {
+              const merged = mergeReviews(prev, data.reviews);
+              try {
+                localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
           if (Array.isArray(data.accounts)) {
-            setAccounts((prev) => mergeAccounts(prev, data.accounts));
+            setAccounts((prev) => {
+              const merged = mergeAccounts(prev, data.accounts);
+              try {
+                localStorage.setItem('unistay_real_accounts_v4', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
           if (data.settings) setSettings(data.settings);
         })
@@ -617,7 +827,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const deleteProperty = (id: string) => {
     // Xóa mềm: đánh dấu isDeleted = true để có thể khôi phục từ thùng rác
-    recordLocalMutation(id);
+    markTombstone('prop', id, 'delete');
     setProperties((prev) => {
       const updated = prev.map((p) =>
         p.id === id ? { ...p, isDeleted: true, deletedAt: new Date().toISOString(), updatedAt: Date.now() } : p
@@ -632,7 +842,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const restoreProperty = (id: string) => {
     // Khôi phục phòng trọ từ thùng rác về trạng thái hoạt động bình thường
-    recordLocalMutation(id);
+    markTombstone('prop', id, 'restore');
     setProperties((prev) => {
       const updated = prev.map((p) =>
         p.id === id ? { ...p, isDeleted: false, deletedAt: undefined, updatedAt: Date.now() } : p
@@ -647,7 +857,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const permanentDeleteProperty = (id: string) => {
     // Xóa vĩnh viễn (xóa cứng) khỏi toàn bộ hệ thống
-    recordPermanentDelete(id);
+    markTombstone('prop', id, 'permanent');
     setProperties((prev) => {
       const updated = prev.filter((p) => p.id !== id);
       try {
@@ -697,6 +907,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const archiveBooking = (id: string) => {
     // Xóa mềm / Lưu trữ đơn cọc: ẩn khỏi bảng duyệt nhưng giữ nguyên dữ liệu kế toán
+    markTombstone('booking', id, 'delete');
     setBookings((prev) => {
       const updated = prev.map((b) =>
         b.id === id ? { ...b, isArchived: true, archivedAt: new Date().toISOString() } : b
@@ -711,6 +922,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const restoreBooking = (id: string) => {
     // Khôi phục đơn cọc về lại danh sách duyệt bình thường
+    markTombstone('booking', id, 'restore');
     setBookings((prev) => {
       const updated = prev.map((b) =>
         b.id === id ? { ...b, isArchived: false, archivedAt: undefined } : b
@@ -795,7 +1007,25 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const recalculatePropertyRating = (propertyId: string, allReviews: PropertyReview[]) => {
-    const propReviews = allReviews.filter((r) => r.propertyId === propertyId && !r.isDeleted);
+    let matchingProperty: Property | undefined;
+    setProperties((prevProps) => {
+      matchingProperty = prevProps.find(
+        (p) => p.id === propertyId || p.code === propertyId || p.slug === propertyId
+      );
+      return prevProps;
+    });
+
+    const propReviews = allReviews.filter((r) => {
+      if (r.isDeleted) return false;
+      if (r.propertyId === propertyId) return true;
+      if (matchingProperty) {
+        if (matchingProperty.code && (r.propertyCode === matchingProperty.code || r.propertyId === matchingProperty.code)) return true;
+        if (matchingProperty.slug && r.propertyId === matchingProperty.slug) return true;
+        if (matchingProperty.id && r.propertyId === matchingProperty.id) return true;
+      }
+      return false;
+    });
+
     const count = propReviews.length;
     const avg =
       count > 0
@@ -806,7 +1036,9 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setProperties((prevProps) => {
       const updatedProps = prevProps.map((p) =>
-        p.id === propertyId ? { ...p, rating: avg, reviewsCount: count } : p
+        p.id === propertyId || (matchingProperty && p.id === matchingProperty.id)
+          ? { ...p, rating: avg, reviewsCount: count, updatedAt: Date.now() }
+          : p
       );
       try {
         localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updatedProps));
@@ -840,9 +1072,11 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const replyToReview = (reviewId: string, adminReply: string) => {
+    saveAdminReplyTombstone(reviewId, adminReply);
+    recordLocalMutation(reviewId);
     setReviews((prev) => {
       const updated = prev.map((r) =>
-        r.id === reviewId ? { ...r, adminReply } : r
+        r.id === reviewId ? { ...r, adminReply, repliedAt: new Date().toISOString() } : r
       );
       try {
         localStorage.setItem('unistay_real_reviews_v4', JSON.stringify(updated));
@@ -854,6 +1088,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const deleteReview = (reviewId: string) => {
     // Xóa mềm đánh giá (ẩn khỏi trang người dùng)
+    markTombstone('review', reviewId, 'delete');
     setReviews((prev) => {
       const updated = prev.map((r) =>
         r.id === reviewId ? { ...r, isDeleted: true, deletedAt: new Date().toISOString() } : r
@@ -873,6 +1108,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const restoreReview = (reviewId: string) => {
     // Khôi phục đánh giá bị ẩn
+    markTombstone('review', reviewId, 'restore');
     setReviews((prev) => {
       const updated = prev.map((r) =>
         r.id === reviewId ? { ...r, isDeleted: false, deletedAt: undefined } : r
@@ -892,6 +1128,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const permanentDeleteReview = (reviewId: string) => {
     // Xóa vĩnh viễn đánh giá
+    markTombstone('review', reviewId, 'permanent');
     setReviews((prev) => {
       const target = prev.find((r) => r.id === reviewId);
       const updated = prev.filter((r) => r.id !== reviewId);
@@ -1183,12 +1420,16 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     setAccounts((prev) => {
+      const target = prev.find((a) => a.email.toLowerCase().trim() === cleanEmail);
+      const nextSuspended = target ? !target.isSuspended : true;
+      markTombstone('account', cleanEmail, nextSuspended ? 'delete' : 'restore');
+
       const updated = prev.map((a) =>
         a.email.toLowerCase().trim() === cleanEmail
           ? {
               ...a,
-              isSuspended: !a.isSuspended,
-              suspendedAt: !a.isSuspended ? new Date().toISOString() : undefined
+              isSuspended: nextSuspended,
+              suspendedAt: nextSuspended ? new Date().toISOString() : undefined
             }
           : a
       );
@@ -1211,6 +1452,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       alert('Không thể xóa tài khoản Quản trị viên cấp cao!');
       return;
     }
+    markTombstone('account', cleanEmail, 'permanent');
 
     setAccounts((prev) => {
       const updated = prev.filter((a) => a.email.toLowerCase().trim() !== cleanEmail);

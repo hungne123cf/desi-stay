@@ -166,12 +166,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
             <>
               <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
               <span>{propertyRating}</span>
-              <span className="text-indigo-600 font-semibold">({propertyReviewsCount})</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-100/90 text-amber-900 font-bold">
+                {propertyReviewsCount}
+              </span>
             </>
           ) : (
             <>
               <Star className="w-3.5 h-3.5 text-slate-300" />
-              <span className="text-slate-500 font-semibold text-[11px]">Mới đăng (0)</span>
+              <span className="text-slate-500 font-semibold text-[11px]">Mới đăng</span>
             </>
           )}
         </Link>

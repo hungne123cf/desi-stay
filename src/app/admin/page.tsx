@@ -95,6 +95,11 @@ export default function AdminPage() {
     permanentDeleteAccount
   } = useProperties();
 
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'listings' | 'leads' | 'chat' | 'reviews' | 'accounts' | 'settings' | 'trash'>('listings');
   const [trashSubTab, setTrashSubTab] = useState<'properties' | 'bookings' | 'accounts' | 'reviews'>('properties');
   const [trashToast, setTrashToast] = useState<string | null>(null);
@@ -301,7 +306,7 @@ export default function AdminPage() {
     setTimeout(() => setSettingsSaved(false), 2500);
   };
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
@@ -2219,7 +2224,10 @@ export default function AdminPage() {
                   }`}
                 >
                   <Building className="w-3.5 h-3.5" />
-                  <span>Phòng Trọ ({deletedProperties.length})</span>
+                  <span>Phòng Trọ</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
+                    {deletedProperties.length}
+                  </span>
                 </button>
 
                 <button
@@ -2232,7 +2240,10 @@ export default function AdminPage() {
                   }`}
                 >
                   <Receipt className="w-3.5 h-3.5" />
-                  <span>Đơn Cọc ({archivedBookings.length})</span>
+                  <span>Đơn Cọc</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                    {archivedBookings.length}
+                  </span>
                 </button>
 
                 <button
@@ -2245,7 +2256,10 @@ export default function AdminPage() {
                   }`}
                 >
                   <Users className="w-3.5 h-3.5" />
-                  <span>Tài Khoản Khóa ({suspendedAccounts.length})</span>
+                  <span>Tài Khoản Khóa</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                    {suspendedAccounts.length}
+                  </span>
                 </button>
 
                 <button
@@ -2258,7 +2272,10 @@ export default function AdminPage() {
                   }`}
                 >
                   <Star className="w-3.5 h-3.5" />
-                  <span>Đánh Giá Ẩn ({deletedReviews.length})</span>
+                  <span>Đánh Giá Ẩn</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700">
+                    {deletedReviews.length}
+                  </span>
                 </button>
               </div>
             </div>

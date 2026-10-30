@@ -13,6 +13,23 @@ export default function AdminError({
 }) {
   useEffect(() => {
     console.error('Admin Portal Error caught:', error);
+    const msg = error?.message || '';
+    if (
+      msg.includes('ChunkLoadError') ||
+      msg.includes('Loading chunk') ||
+      msg.includes('Failed to fetch') ||
+      error?.name === 'ChunkLoadError'
+    ) {
+      if (typeof window !== 'undefined') {
+        const reloadKey = 'unistay_admin_auto_reload_last';
+        const lastReload = sessionStorage.getItem(reloadKey);
+        const now = Date.now();
+        if (!lastReload || now - Number(lastReload) > 10000) {
+          sessionStorage.setItem(reloadKey, String(now));
+          window.location.reload();
+        }
+      }
+    }
   }, [error]);
 
   const handleHardReload = () => {
