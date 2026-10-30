@@ -2167,20 +2167,19 @@ export default function AdminPage() {
               ) : (
                 <div className="divide-y divide-slate-100">
                   {filteredAccounts.map((acc) => {
-                    const isSuper =
-                      acc.email.toLowerCase().trim() === 'truongvantuan43344@gmail.com';
+                    const cleanEmail = acc.email.toLowerCase().trim();
+                    const isSuper = cleanEmail === 'truongvantuan43344@gmail.com';
                     const isCurrentUser = Boolean(
                       user?.email &&
                         acc.email &&
-                        user.email.toLowerCase().trim() === acc.email.toLowerCase().trim()
+                        user.email.toLowerCase().trim() === cleanEmail
                     );
                     const resolvedAvatar =
-                      acc.avatar ||
-                      (acc.email.toLowerCase().trim() === 'hungtce181568@fpt.edu.vn'
-                        ? TRUONG_HUNG_K18_AVATAR
-                        : isSuper
+                      cleanEmail === 'truongvantuan43344@gmail.com'
                         ? TRUONG_HUNG_ADMIN_AVATAR
-                        : null);
+                        : cleanEmail === 'hungtce181568@fpt.edu.vn'
+                        ? TRUONG_HUNG_K18_AVATAR
+                        : acc.avatar;
 
                     return (
                       <div

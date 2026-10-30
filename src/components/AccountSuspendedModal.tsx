@@ -78,3 +78,4 @@ export const AccountSuspendedModal: React.FC<Props> = ({
     </div>
   );
 };
+
