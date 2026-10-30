@@ -2,7 +2,7 @@ import { UserAccount } from '@/types';
 
 export const DEFAULT_GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-  '397249070493-tdjj1fnblridf17atv36jat90vju5n0v.apps.googleusercontent.com';
+  '397249070493-nobrh851jga00tk81tfqdc74ghuc2m0i.apps.googleusercontent.com';
 
 // Avatar thật từ Google của tài khoản Sinh viên: Truong Hung (K18 CT) - hungtce181568@fpt.edu.vn
 export const TRUONG_HUNG_K18_AVATAR =
