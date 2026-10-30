@@ -32,6 +32,20 @@ export const metadata: Metadata = {
     'unistay việt nam'
   ],
   authors: [{ name: 'UniStay Vietnam (desi-stay)' }],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1
+    }
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined
+  },
   openGraph: {
     title: 'UniStay Việt Nam (desi-stay) | Phòng Trọ & Căn Hộ Sinh Viên',
     description:
