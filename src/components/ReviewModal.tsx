@@ -61,15 +61,20 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSubmittedSuccess, setIsSubmittedSuccess] = useState<boolean>(false);
 
+  // Dùng ref ghi nhớ trạng thái mở để CHỈ khởi tạo lại form 1 lần duy nhất lúc mở modal lên
+  // Tuyệt đối không được reset nội dung khi các sự kiện SSE/Realtime nền hoặc re-render chạy định kỳ
+  const prevIsOpenRef = React.useRef(false);
+
   useEffect(() => {
-    if (isOpen && booking) {
-      setReviewerName(user?.name || booking.studentName || '');
-      setReviewerCollege(user?.college || booking.college || property?.nearbyUniversity || '');
+    if (isOpen && !prevIsOpenRef.current) {
+      setReviewerName(user?.name || booking?.studentName || '');
+      setReviewerCollege(user?.college || booking?.college || property?.nearbyUniversity || '');
       setRating(5);
       setCommentText('');
       setIsSubmittedSuccess(false);
     }
-  }, [isOpen, booking, user, property]);
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
 
   if (!isOpen || !property) return null;
 
@@ -225,9 +230,14 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                     key={suggestion}
                     type="button"
                     onClick={() =>
-                      setCommentText((prev) =>
-                        prev ? `${prev}. ${suggestion}` : suggestion
-                      )
+                      setCommentText((prev) => {
+                        const trimmed = prev.trim();
+                        if (!trimmed) return suggestion;
+                        if (trimmed.endsWith('.') || trimmed.endsWith('!') || trimmed.endsWith('?')) {
+                          return `${trimmed} ${suggestion}`;
+                        }
+                        return `${trimmed}. ${suggestion}`;
+                      })
                     }
                     className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 text-xs font-medium transition-all shadow-2xs hover:border-indigo-300 cursor-pointer"
                   >
