@@ -52,6 +52,10 @@ interface PropertyContextType {
   deleteAccount: (email: string) => void;
   toggleAccountSuspension: (email: string) => void;
   permanentDeleteAccount: (email: string) => void;
+  wishlistIds: string[];
+  toggleWishlist: (propertyId: string) => void;
+  isWishlisted: (propertyId: string) => boolean;
+  clearWishlist: () => void;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -253,6 +257,39 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [myBookingIds, setMyBookingIds] = useState<string[]>([]);
   const [currency, setCurrencyState] = useState<CurrencyCode>('VND');
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
+  const [wishlistIds, setWishlistIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const savedWishlist = localStorage.getItem('unistay_wishlist_ids');
+      if (savedWishlist) {
+        const parsed = JSON.parse(savedWishlist);
+        if (Array.isArray(parsed)) setWishlistIds(parsed);
+      }
+    } catch {}
+  }, []);
+
+  const toggleWishlist = (propertyId: string) => {
+    setWishlistIds((prev) => {
+      const exists = prev.includes(propertyId);
+      const updated = exists ? prev.filter((id) => id !== propertyId) : [...prev, propertyId];
+      try {
+        localStorage.setItem('unistay_wishlist_ids', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const isWishlisted = (propertyId: string): boolean => {
+    return wishlistIds.includes(propertyId);
+  };
+
+  const clearWishlist = () => {
+    setWishlistIds([]);
+    try {
+      localStorage.removeItem('unistay_wishlist_ids');
+    } catch {}
+  };
 
   useEffect(() => {
     try {
@@ -1227,7 +1264,11 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addOrUpdateAccount,
         deleteAccount,
         toggleAccountSuspension,
-        permanentDeleteAccount
+        permanentDeleteAccount,
+        wishlistIds,
+        toggleWishlist,
+        isWishlisted,
+        clearWishlist
       }}
     >
       {children}

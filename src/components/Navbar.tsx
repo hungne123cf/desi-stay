@@ -16,14 +16,15 @@ import {
   ChevronDown,
   RefreshCw,
   MapPin,
-  Receipt
+  Receipt,
+  Heart
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout, loginWithGoogle } = useAuth();
-  const { settings } = useProperties();
+  const { settings, wishlistIds } = useProperties();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
@@ -111,7 +112,22 @@ export const Navbar: React.FC = () => {
             </nav>
 
             {/* Right Action buttons */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2.5">
+              {/* Wishlist Quick Button */}
+              <a
+                href="/#listings"
+                className="relative px-3 py-2 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-200/90 hover:border-rose-200 text-slate-700 hover:text-rose-600 transition-all flex items-center gap-1.5 cursor-pointer group"
+                title="Danh sách phòng trọ bạn đã thả tim lưu lại"
+              >
+                <Heart className={`w-4 h-4 transition-transform group-hover:scale-110 ${wishlistIds.length > 0 ? 'fill-rose-500 text-rose-500' : 'text-slate-500'}`} />
+                <span className="text-xs font-bold">Đã lưu</span>
+                {wishlistIds.length > 0 && (
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white leading-none">
+                    {wishlistIds.length}
+                  </span>
+                )}
+              </a>
+
               {/* User Profile Dropdown or Login Button */}
               {user ? (
                 <div className="relative" ref={userDropdownRef}>

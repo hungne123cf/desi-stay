@@ -14,7 +14,9 @@ import {
   GraduationCap,
   DoorOpen,
   ArrowUpDown,
-  X
+  X,
+  Heart,
+  SlidersHorizontal
 } from 'lucide-react';
 
 // Hàm bỏ dấu tiếng Việt giúp tìm kiếm không dấu vẫn ra kết quả chính xác
@@ -28,7 +30,7 @@ function removeVietnameseAccents(str: string): string {
 }
 
 export default function HomePage() {
-  const { properties } = useProperties();
+  const { properties, wishlistIds } = useProperties();
   const [selectedPropertyForBooking, setSelectedPropertyForBooking] = useState<Property | null>(null);
 
   const [filters, setFilters] = useState<MultiMarketFilters>({
@@ -40,7 +42,8 @@ export default function HomePage() {
     gender: '',
     priceRange: 'all',
     sortBy: 'newest',
-    zeroBrokerageOnly: false
+    zeroBrokerageOnly: false,
+    wishlistOnly: false
   });
 
   const filteredProperties = useMemo(() => {
@@ -50,6 +53,11 @@ export default function HomePage() {
     const matched = properties.filter((item) => {
       // 0. Bỏ qua các phòng đã bị xóa mềm (đang trong thùng rác)
       if (item.isDeleted) return false;
+
+      // 0.5. Lọc theo danh sách yêu thích (Wishlist)
+      if (filters.wishlistOnly && !wishlistIds.includes(item.id)) {
+        return false;
+      }
 
       // 1. Lọc theo từ khóa tìm kiếm (Tên phòng, địa chỉ, quận/huyện, trường ĐH, mã phòng)
       if (queryNorm) {
@@ -151,7 +159,8 @@ export default function HomePage() {
       filters.roomType ||
       filters.gender ||
       filters.priceRange !== 'all' ||
-      filters.zeroBrokerageOnly
+      filters.zeroBrokerageOnly ||
+      Boolean(filters.wishlistOnly)
   );
 
   return (
@@ -175,12 +184,18 @@ export default function HomePage() {
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Danh Sách Phòng Trọ Chính Chủ Đã Xác Thực
             </h2>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex flex-wrap items-center gap-2 mt-1">
               <p className="text-xs sm:text-sm text-slate-500">
                 Đang hiển thị{' '}
                 <span className="font-bold text-indigo-600">{filteredProperties.length}</span> /{' '}
                 {properties.length} phòng trọ tại Việt Nam
               </p>
+              {filters.wishlistOnly && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                  <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
+                  <span>Đang xem phòng đã lưu</span>
+                </span>
+              )}
               {hasActiveFilters && (
                 <button
                   onClick={resetFilters}

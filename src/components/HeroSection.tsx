@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Search, MapPin, GraduationCap, Sparkles, Building2, Navigation, X } from 'lucide-react';
+import { Search, MapPin, GraduationCap, Sparkles, Building2, Navigation, X, Heart, Zap } from 'lucide-react';
 import { VIETNAM_LOCATIONS } from '@/data/locations';
 import { useProperties } from '@/context/PropertyContext';
 
@@ -18,6 +18,7 @@ export interface MultiMarketFilters {
   priceRange: PriceRangeOption;
   sortBy: SortOption;
   zeroBrokerageOnly: boolean;
+  wishlistOnly?: boolean;
 }
 
 interface HeroSectionProps {
@@ -33,7 +34,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onSearch,
   totalListingsCount
 }) => {
-  const { properties } = useProperties();
+  const { properties, wishlistIds } = useProperties();
 
   // Danh sách tất cả Tỉnh/Thành phố Việt Nam
   const allCities = useMemo(() => {
@@ -127,6 +128,75 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <p className="mt-4 text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
             Hệ thống phòng trọ, căn hộ Studio và Ký túc xá đã xác thực quanh các trường Đại học lớn tại Cần Thơ, TP.HCM, Hà Nội, Đà Nẵng và toàn quốc.
           </p>
+
+          {/* Quick Trending Filter Tags (1-Tap Fast Filters) */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            {/* Wishlist Fast Filter Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                setFilters((prev) => ({
+                  ...prev,
+                  wishlistOnly: !prev.wishlistOnly
+                }));
+                onSearch();
+              }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                filters.wishlistOnly
+                  ? 'bg-rose-600 text-white shadow-rose-500/25 ring-2 ring-rose-400'
+                  : 'bg-white hover:bg-rose-50 text-slate-700 border border-slate-200 hover:border-rose-300'
+              }`}
+            >
+              <Heart className={`w-3.5 h-3.5 ${filters.wishlistOnly ? 'fill-white' : 'text-rose-500'}`} />
+              <span>Phòng Đã Lưu</span>
+              {wishlistIds.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  filters.wishlistOnly ? 'bg-white text-rose-700' : 'bg-rose-100 text-rose-700'
+                }`}>
+                  {wishlistIds.length}
+                </span>
+              )}
+            </button>
+
+            {/* University Fast Filters */}
+            {[
+              { label: '🎓 ĐH Cần Thơ (CTU)', uni: 'ĐH Cần Thơ (CTU - Khu II Đường 3/2)', city: 'Cần Thơ' },
+              { label: '🏫 ĐH FPT Cần Thơ', uni: 'ĐH FPT Cần Thơ (Khu đô thị An Bình)', city: 'Cần Thơ' },
+              { label: '🏥 ĐH Y Dược Cần Thơ', uni: 'ĐH Y Dược Cần Thơ (Đường Nguyễn Văn Cừ)', city: 'Cần Thơ' },
+              { label: '⚡ Dưới 2.5 Triệu', price: 'under_2.5m' as const },
+              { label: '🏢 Căn hộ Studio', room: 'studio' }
+            ].map((chip, idx) => {
+              const isActive =
+                (chip.uni && filters.university === chip.uni) ||
+                (chip.price && filters.priceRange === chip.price) ||
+                (chip.room && filters.roomType === chip.room);
+
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setFilters((prev) => ({
+                      ...prev,
+                      city: chip.city || prev.city,
+                      university: chip.uni ? (prev.university === chip.uni ? '' : chip.uni) : prev.university,
+                      priceRange: chip.price ? (prev.priceRange === chip.price ? 'all' : chip.price) : prev.priceRange,
+                      roomType: chip.room ? (prev.roomType === chip.room ? '' : chip.room) : prev.roomType,
+                      wishlistOnly: false
+                    }));
+                    onSearch();
+                  }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/25'
+                      : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Search & Filter Container */}
