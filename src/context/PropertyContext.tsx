@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Property, Booking, CurrencyCode, SiteSettings, ChatMessage, PropertyReview, UserAccount, UserRole } from '@/types';
 import { siteConfig } from '@/config/site';
 import { DEFAULT_ACCOUNTS, TRUONG_HUNG_ADMIN_AVATAR, TRUONG_HUNG_K18_AVATAR, TRUONG_HUNG_REAL_AVATAR } from '@/config/auth';
+import { useAuth } from '@/context/AuthContext';
 
 export interface ReviewEligibility {
   hasPurchased: boolean;
@@ -53,7 +54,7 @@ interface PropertyContextType {
   toggleAccountSuspension: (email: string) => void;
   permanentDeleteAccount: (email: string) => void;
   wishlistIds: string[];
-  toggleWishlist: (propertyId: string) => void;
+  toggleWishlist: (propertyId: string) => boolean;
   isWishlisted: (propertyId: string) => boolean;
   clearWishlist: () => void;
 }
@@ -462,41 +463,72 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reviews, setReviews] = useState<PropertyReview[]>([]);
   const [accounts, setAccounts] = useState<UserAccount[]>(DEFAULT_ACCOUNTS);
+  const { user } = useAuth();
   const [myBookingIds, setMyBookingIds] = useState<string[]>([]);
   const [currency, setCurrencyState] = useState<CurrencyCode>('VND');
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
 
+  // Tải và đồng bộ danh sách Yêu Thích RIÊNG BIỆT cho từng tài khoản (Account-scoped)
   useEffect(() => {
+    // 1. Dọn sạch key dùng chung cũ (nếu còn sót lại trong trình duyệt) để không bị rò rỉ chéo giữa các tài khoản
     try {
-      const savedWishlist = localStorage.getItem('unistay_wishlist_ids');
-      if (savedWishlist) {
-        const parsed = JSON.parse(savedWishlist);
-        if (Array.isArray(parsed)) setWishlistIds(parsed);
-      }
+      localStorage.removeItem('unistay_wishlist_ids');
     } catch {}
-  }, []);
 
-  const toggleWishlist = (propertyId: string) => {
+    const cleanEmail = user?.email?.toLowerCase().trim();
+    if (!cleanEmail) {
+      // Khi chưa đăng nhập (khách / guest): danh sách yêu thích luôn là rỗng
+      setWishlistIds([]);
+      return;
+    }
+
+    const key = `unistay_wishlist_${cleanEmail}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setWishlistIds(Array.isArray(parsed) ? parsed : []);
+      } else {
+        setWishlistIds([]);
+      }
+    } catch {
+      setWishlistIds([]);
+    }
+  }, [user?.email]);
+
+  const toggleWishlist = (propertyId: string): boolean => {
+    const cleanEmail = user?.email?.toLowerCase().trim();
+    if (!cleanEmail) {
+      // Người dùng chưa đăng nhập -> không lưu vào bất kỳ tài khoản nào
+      return false;
+    }
+
+    const key = `unistay_wishlist_${cleanEmail}`;
     setWishlistIds((prev) => {
       const exists = prev.includes(propertyId);
       const updated = exists ? prev.filter((id) => id !== propertyId) : [...prev, propertyId];
       try {
-        localStorage.setItem('unistay_wishlist_ids', JSON.stringify(updated));
+        localStorage.setItem(key, JSON.stringify(updated));
       } catch {}
       return updated;
     });
+    return true;
   };
 
   const isWishlisted = (propertyId: string): boolean => {
+    if (!user?.email) return false;
     return wishlistIds.includes(propertyId);
   };
 
   const clearWishlist = () => {
     setWishlistIds([]);
-    try {
-      localStorage.removeItem('unistay_wishlist_ids');
-    } catch {}
+    const cleanEmail = user?.email?.toLowerCase().trim();
+    if (cleanEmail) {
+      try {
+        localStorage.removeItem(`unistay_wishlist_${cleanEmail}`);
+      } catch {}
+    }
   };
 
   useEffect(() => {

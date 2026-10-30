@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, MapPin, GraduationCap, Sparkles, Building2, Navigation, X, Heart, Zap } from 'lucide-react';
 import { VIETNAM_LOCATIONS } from '@/data/locations';
 import { useProperties } from '@/context/PropertyContext';
+import { useAuth } from '@/context/AuthContext';
 
 export type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'rating_desc';
 export type PriceRangeOption = 'all' | 'under_2.5m' | '2.5m_to_3.5m' | 'above_3.5m';
@@ -35,6 +37,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   totalListingsCount
 }) => {
   const { properties, wishlistIds } = useProperties();
+  const { user } = useAuth();
+  const router = useRouter();
 
   // Danh sách tất cả Tỉnh/Thành phố Việt Nam
   const allCities = useMemo(() => {
@@ -135,6 +139,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <button
               type="button"
               onClick={() => {
+                if (!user) {
+                  if (
+                    confirm(
+                      'Bạn cần đăng nhập để xem danh sách phòng Yêu Thích của riêng bạn. Đến trang Đăng Nhập ngay?'
+                    )
+                  ) {
+                    router.push('/auth/login');
+                  }
+                  return;
+                }
                 setFilters((prev) => ({
                   ...prev,
                   wishlistOnly: !prev.wishlistOnly
@@ -149,7 +163,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             >
               <Heart className={`w-3.5 h-3.5 ${filters.wishlistOnly ? 'fill-white' : 'text-rose-500'}`} />
               <span>Yêu Thích</span>
-              {wishlistIds.length > 0 && (
+              {user && wishlistIds.length > 0 && (
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                   filters.wishlistOnly ? 'bg-white text-rose-700' : 'bg-rose-100 text-rose-700'
                 }`}>

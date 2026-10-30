@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
 import { BookingModal } from '@/components/BookingModal';
@@ -45,6 +46,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
     isWishlisted
   } = useProperties();
   const { user } = useAuth();
+  const router = useRouter();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -166,7 +168,19 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
         <div className="flex items-center gap-2">
           {property && (
             <button
-              onClick={() => toggleWishlist(property.id)}
+              onClick={() => {
+                if (!user) {
+                  if (
+                    confirm(
+                      'Bạn cần đăng nhập để lưu phòng vào danh sách Yêu Thích của riêng bạn. Đến trang Đăng Nhập ngay?'
+                    )
+                  ) {
+                    router.push('/auth/login');
+                  }
+                  return;
+                }
+                toggleWishlist(property.id);
+              }}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border font-bold text-xs transition-all cursor-pointer ${
                 saved
                   ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-xs'

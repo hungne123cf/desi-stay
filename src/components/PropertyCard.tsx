@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Property } from '@/types';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
@@ -35,6 +36,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
     isWishlisted
   } = useProperties();
   const { user } = useAuth();
+  const router = useRouter();
   const [activeImgIndex, setActiveImgIndex] = useState(0);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
@@ -138,6 +140,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (!user) {
+              if (
+                confirm(
+                  'Bạn cần đăng nhập để lưu phòng vào danh sách Yêu Thích của riêng bạn. Đến trang Đăng Nhập ngay?'
+                )
+              ) {
+                router.push('/auth/login');
+              }
+              return;
+            }
             toggleWishlist(property.id);
           }}
           className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-white/90 hover:bg-white backdrop-blur-md shadow-md border border-white/60 flex items-center justify-center transition-all active:scale-75 cursor-pointer group/heart"

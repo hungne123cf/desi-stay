@@ -259,19 +259,6 @@ export const Navbar: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  {wishlistIds.length > 0 && (
-                    <Link
-                      href="/profile?tab=wishlist"
-                      className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                      title="Xem danh sách yêu thích"
-                    >
-                      <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
-                      <span>Yêu Thích</span>
-                      <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-black">
-                        {wishlistIds.length}
-                      </span>
-                    </Link>
-                  )}
                   <Link
                     href="/auth/login"
                     className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all"
@@ -410,21 +397,6 @@ export const Navbar: React.FC = () => {
               </div>
             ) : (
               <div className="pt-2 space-y-2">
-                {wishlistIds.length > 0 && (
-                  <Link
-                    href="/profile?tab=wishlist"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="w-full py-2 px-3 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
-                      <span>Yêu Thích</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white">
-                      {wishlistIds.length}
-                    </span>
-                  </Link>
-                )}
                 <Link
                   href="/auth/login"
                   onClick={() => setMobileMenuOpen(false)}
