@@ -149,7 +149,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
           {/* Main Large Image */}
           <div className="md:col-span-2 aspect-[16/10] relative overflow-hidden rounded-2xl bg-slate-100">
             <img
-              src={property.images[activeImageIndex] || property.images[0]}
+              src={property.images?.[activeImageIndex] || property.images?.[0] || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'}
               alt={property.title}
               className="w-full h-full object-cover"
             />
@@ -168,7 +168,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({ property
 
           {/* Side Thumbnail List */}
           <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto">
-            {property.images.map((img, idx) => (
+            {property.images && property.images.map((img, idx) => (
               <button
                 key={idx}
                 onClick={() => setActiveImageIndex(idx)}

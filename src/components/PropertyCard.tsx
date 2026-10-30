@@ -86,7 +86,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
       <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
         <Link href={`/properties/${property.id}`} className="block w-full h-full">
           <img
-            src={property.images[activeImgIndex] || property.images[0]}
+            src={property.images?.[activeImgIndex] || property.images?.[0] || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'}
             alt={property.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer"
           />
@@ -132,7 +132,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
         </Link>
 
         {/* Dots */}
-        {property.images.length > 1 && (
+        {property.images && property.images.length > 1 && (
           <div className="absolute bottom-3 left-3 flex gap-1 z-10">
             {property.images.slice(0, 4).map((_, idx) => (
               <button

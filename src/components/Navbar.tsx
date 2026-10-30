@@ -41,7 +41,7 @@ export const Navbar: React.FC = () => {
     if (res.requiresModal) {
       setShowAccountSwitcher(true);
     } else if (res.user?.role === 'admin') {
-      router.push('/admin');
+      window.location.href = '/admin';
     }
   };
 
@@ -337,8 +337,8 @@ export const Navbar: React.FC = () => {
         isOpen={showAccountSwitcher}
         onClose={() => setShowAccountSwitcher(false)}
         onSuccess={(role) => {
-          if (role === 'admin') {
-            router.push('/admin');
+          if (role === 'admin' || role === 'staff') {
+            window.location.href = '/admin';
           }
         }}
       />

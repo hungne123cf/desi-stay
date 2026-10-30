@@ -29,11 +29,8 @@ export default function RegisterPage() {
   const [showGoogleChooser, setShowGoogleChooser] = useState(false);
 
   const handleRedirect = (role: UserRole) => {
-    if (role === 'admin' || role === 'staff') {
-      router.push('/admin');
-    } else {
-      router.push('/');
-    }
+    const dest = role === 'admin' || role === 'staff' ? '/admin' : '/';
+    window.location.href = dest;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

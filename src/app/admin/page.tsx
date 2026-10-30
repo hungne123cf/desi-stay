@@ -203,13 +203,13 @@ export default function AdminPage() {
     }
   };
 
-  const totalRevenueUSD = bookings
-    .filter((b) => b.status === 'token_paid' || b.status === 'confirmed')
-    .reduce((sum, b) => sum + b.tokenAmountUSD, 0);
+  const totalRevenueUSD = (bookings || [])
+    .filter((b) => b && (b.status === 'token_paid' || b.status === 'confirmed'))
+    .reduce((sum, b) => sum + (Number(b?.tokenAmountUSD) || 0), 0);
 
-  const pendingRevenueUSD = bookings
-    .filter((b) => b.status === 'pending')
-    .reduce((sum, b) => sum + b.tokenAmountUSD, 0);
+  const pendingRevenueUSD = (bookings || [])
+    .filter((b) => b && b.status === 'pending')
+    .reduce((sum, b) => sum + (Number(b?.tokenAmountUSD) || 0), 0);
 
   const handleCreateProperty = (e: React.FormEvent) => {
     e.preventDefault();
@@ -339,19 +339,19 @@ export default function AdminPage() {
     );
   }
 
-  const unreadChatCount = messages.filter(
-    (m) => m.senderRole === 'student' && !m.isReadByAdmin
+  const unreadChatCount = (messages || []).filter(
+    (m) => m && m.senderRole === 'student' && !m.isReadByAdmin
   ).length;
-  const pendingBookingsCount = bookings.filter((b) => b.status === 'pending' && !b.isArchived).length;
+  const pendingBookingsCount = (bookings || []).filter((b) => b && b.status === 'pending' && !b.isArchived).length;
 
-  const activeProperties = properties.filter((p) => !p.isDeleted);
-  const deletedProperties = properties.filter((p) => p.isDeleted);
-  const activeBookings = bookings.filter((b) => !b.isArchived);
-  const archivedBookings = bookings.filter((b) => b.isArchived);
-  const activeAccounts = accounts.filter((a) => !a.isSuspended);
-  const suspendedAccounts = accounts.filter((a) => a.isSuspended);
-  const activeReviews = reviews.filter((r) => !r.isDeleted);
-  const deletedReviews = reviews.filter((r) => r.isDeleted);
+  const activeProperties = (properties || []).filter((p) => p && !p.isDeleted);
+  const deletedProperties = (properties || []).filter((p) => p && p.isDeleted);
+  const activeBookings = (bookings || []).filter((b) => b && !b.isArchived);
+  const archivedBookings = (bookings || []).filter((b) => b && b.isArchived);
+  const activeAccounts = (accounts || []).filter((a) => a && !a.isSuspended);
+  const suspendedAccounts = (accounts || []).filter((a) => a && a.isSuspended);
+  const activeReviews = (reviews || []).filter((r) => r && !r.isDeleted);
+  const deletedReviews = (reviews || []).filter((r) => r && r.isDeleted);
   const totalTrashCount =
     deletedProperties.length +
     archivedBookings.length +
@@ -433,14 +433,19 @@ export default function AdminPage() {
     }
   ];
 
-  const filteredAccounts = accounts.filter((acc) => {
+  const filteredAccounts = (accounts || []).filter((acc) => {
+    if (!acc) return false;
     const query = accountSearchQuery.toLowerCase().trim();
+    const name = acc.name || '';
+    const email = acc.email || '';
+    const phone = acc.phone || '';
+    const college = acc.college || '';
     const matchesQuery =
       !query ||
-      acc.name.toLowerCase().includes(query) ||
-      acc.email.toLowerCase().includes(query) ||
-      (acc.phone && acc.phone.includes(query)) ||
-      (acc.college && acc.college.toLowerCase().includes(query));
+      name.toLowerCase().includes(query) ||
+      email.toLowerCase().includes(query) ||
+      phone.includes(query) ||
+      college.toLowerCase().includes(query);
     const matchesFilter =
       accountRoleFilter === 'all' ? true : acc.role === accountRoleFilter;
     return matchesQuery && matchesFilter;
@@ -797,7 +802,7 @@ export default function AdminPage() {
                               className="flex items-center gap-3 text-left group cursor-pointer"
                             >
                               <img
-                                src={prop.images[0]}
+                                src={prop.images?.[0] || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'}
                                 alt=""
                                 className="w-12 h-10 object-cover rounded-xl shrink-0 border border-slate-200 group-hover:ring-2 group-hover:ring-indigo-500/40 transition-all"
                               />
@@ -1991,7 +1996,7 @@ export default function AdminPage() {
                             />
                           ) : (
                             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
-                              {acc.name ? acc.name[0]?.toUpperCase() : 'U'}
+                              {acc?.name ? acc.name.charAt(0).toUpperCase() : 'U'}
                             </div>
                           )}
 
@@ -2288,7 +2293,7 @@ export default function AdminPage() {
                             <td className="p-4">
                               <div className="flex items-center gap-3">
                                 <img
-                                  src={prop.images[0]}
+                                  src={prop.images?.[0] || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'}
                                   alt=""
                                   className="w-14 h-11 object-cover rounded-xl border border-slate-200 grayscale opacity-75"
                                 />
@@ -2458,7 +2463,7 @@ export default function AdminPage() {
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-11 h-11 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm flex items-center justify-center shrink-0">
-                            {acc.name ? acc.name[0]?.toUpperCase() : 'U'}
+                            {acc?.name ? acc.name.charAt(0).toUpperCase() : 'U'}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
@@ -2530,7 +2535,7 @@ export default function AdminPage() {
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-sm text-slate-900">{rev.userName}</span>
                             <span className="text-amber-500 font-bold text-xs">
-                              {'★'.repeat(rev.rating)}
+                              {'★'.repeat(Math.max(1, Math.min(5, Math.floor(rev?.rating || 5))))}
                             </span>
                             <span className="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded font-bold border border-rose-200">
                               Đang bị ẩn
@@ -3027,7 +3032,7 @@ export default function AdminPage() {
               {/* Ảnh lớn */}
               <div className="aspect-[16/9] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
                 <img
-                  src={selectedDetailProp.images[0]}
+                  src={selectedDetailProp.images?.[0] || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'}
                   alt={selectedDetailProp.title}
                   className="w-full h-full object-cover"
                 />
@@ -3186,7 +3191,7 @@ export default function AdminPage() {
 
             <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-3">
               <img
-                src={propertyToDelete.images[0]}
+                src={propertyToDelete.images?.[0] || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80'}
                 alt={propertyToDelete.title}
                 className="w-14 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
               />
