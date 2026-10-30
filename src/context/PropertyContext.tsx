@@ -380,6 +380,10 @@ function mergeReviews(prev: PropertyReview[], incoming: PropertyReview[]): Prope
 
 function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
   const cleanEmail = acc.email?.toLowerCase().trim();
+  // Nếu tài khoản đã có link ảnh thật từ Google hoặc ảnh tải lên, giữ nguyên 100%
+  if (acc.avatar && acc.avatar.startsWith('http') && !acc.avatar.includes('unsplash.com')) {
+    return acc;
+  }
   if (cleanEmail === 'truongvantuan43344@gmail.com') {
     return {
       ...acc,
@@ -390,18 +394,6 @@ function sanitizeAccountAvatar(acc: UserAccount): UserAccount {
     return {
       ...acc,
       avatar: TRUONG_HUNG_K18_AVATAR
-    };
-  }
-  // Loại bỏ hoàn toàn ảnh stock Unsplash giả cho các tài khoản
-  if (
-    acc.avatar &&
-    (acc.avatar.includes('unsplash.com') ||
-      acc.avatar.includes('photo-1573496359142') ||
-      acc.avatar.includes('photo-1534528741775'))
-  ) {
-    return {
-      ...acc,
-      avatar: null
     };
   }
   return acc;

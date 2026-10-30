@@ -276,17 +276,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .replace(/[._-]/g, ' ')
           .replace(/\b\w/g, (l) => l.toUpperCase());
 
+      // 100% Ưu tiên lấy Avatar thật từ Google do id_token hoặc UserInfo API trả về
       let cleanAvatar: string | undefined = account.avatar || undefined;
-      if (cleanEmail === 'truongvantuan43344@gmail.com') {
-        cleanAvatar = TRUONG_HUNG_ADMIN_AVATAR;
-      } else if (cleanEmail === 'hungtce181568@fpt.edu.vn') {
-        cleanAvatar = TRUONG_HUNG_K18_AVATAR;
-      } else {
-        if (
-          cleanAvatar &&
-          (cleanAvatar.includes('unsplash') || cleanAvatar.includes('photo-1534528741775'))
-        ) {
-          cleanAvatar = undefined;
+
+      // Chỉ sử dụng ảnh dự phòng mặc định nếu tài khoản Google chưa hề được tải ảnh lên
+      if (!cleanAvatar) {
+        if (cleanEmail === 'truongvantuan43344@gmail.com') {
+          cleanAvatar = TRUONG_HUNG_ADMIN_AVATAR;
+        } else if (cleanEmail === 'hungtce181568@fpt.edu.vn') {
+          cleanAvatar = TRUONG_HUNG_K18_AVATAR;
         }
       }
 
