@@ -30,7 +30,12 @@ interface PropertyContextType {
   restoreProperty: (id: string) => void;
   permanentDeleteProperty: (id: string) => void;
   addBooking: (booking: Omit<Booking, 'id' | 'reference' | 'createdAt'>) => string;
-  updateBookingStatus: (id: string, status: Booking['status']) => void;
+  updateBookingStatus: (
+    id: string,
+    status: Booking['status'],
+    options?: { autoCancelConflicts?: boolean; adminNotes?: string }
+  ) => void;
+  togglePropertySoldOut: (id: string, isSoldOut?: boolean) => void;
   archiveBooking: (id: string) => void;
   restoreBooking: (id: string) => void;
   updateSettings: (newSettings: Partial<SiteSettings>) => void;
@@ -1254,13 +1259,105 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return ref;
   };
 
-  const updateBookingStatus = (id: string, status: Booking['status']) => {
+  const updateBookingStatus = (
+    id: string,
+    status: Booking['status'],
+    options?: { autoCancelConflicts?: boolean; adminNotes?: string }
+  ) => {
+    let affectedPropId = '';
+    let affectedPropCode = '';
+
     setBookings((prev) => {
-      const updated = prev.map((b) => (b.id === id ? { ...b, status } : b));
+      const target = prev.find((b) => b.id === id);
+      if (target) {
+        affectedPropId = target.propertyId;
+        affectedPropCode = target.propertyCode;
+      }
+
+      const updated = prev.map((b) => {
+        if (b.id === id) {
+          return {
+            ...b,
+            status,
+            ...(options?.adminNotes !== undefined ? { adminNotes: options.adminNotes } : {})
+          };
+        }
+        // Nếu chốt giữ phòng và bật autoCancelConflicts: tự động chuyển các đơn pending/cọc khác của cùng phòng sang cancelled
+        if (
+          status === 'confirmed' &&
+          options?.autoCancelConflicts &&
+          target &&
+          !b.isArchived &&
+          (b.status === 'pending' || b.status === 'token_paid') &&
+          (b.propertyId === target.propertyId || (target.propertyCode && b.propertyCode === target.propertyCode))
+        ) {
+          return {
+            ...b,
+            status: 'cancelled' as const,
+            adminNotes: `Hệ thống tự động hủy: Phòng đã được chốt giữ chỗ cho khách khác (Đơn #${target.reference}).`
+          };
+        }
+        return b;
+      });
+
       try {
         localStorage.setItem('unistay_real_bookings_v4', JSON.stringify(updated));
       } catch {}
       syncToServer({ bookings: updated });
+      return updated;
+    });
+
+    // Cập nhật tình trạng Hết phòng / Còn phòng của Property tương ứng
+    if (affectedPropId || affectedPropCode) {
+      setProperties((prev) => {
+        const updated = prev.map((p) => {
+          if (p.id === affectedPropId || (affectedPropCode && p.code === affectedPropCode)) {
+            if (status === 'confirmed') {
+              return {
+                ...p,
+                isSoldOut: true,
+                availableBeds: 0,
+                updatedAt: Date.now()
+              };
+            } else if (status === 'cancelled' || status === 'pending') {
+              return {
+                ...p,
+                isSoldOut: false,
+                availableBeds: p.availableBeds === 0 ? 1 : p.availableBeds,
+                updatedAt: Date.now()
+              };
+            }
+          }
+          return p;
+        });
+
+        try {
+          localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
+        } catch {}
+        syncToServer({ properties: updated });
+        return updated;
+      });
+    }
+  };
+
+  const togglePropertySoldOut = (id: string, isSoldOut?: boolean) => {
+    setProperties((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === id) {
+          const nextVal = isSoldOut !== undefined ? isSoldOut : !p.isSoldOut;
+          return {
+            ...p,
+            isSoldOut: nextVal,
+            availableBeds: nextVal ? 0 : (p.availableBeds === 0 ? 1 : p.availableBeds),
+            updatedAt: Date.now()
+          };
+        }
+        return p;
+      });
+      try {
+        localStorage.setItem('unistay_real_properties_v4', JSON.stringify(updated));
+      } catch {}
+      syncToServer({ properties: updated });
       return updated;
     });
   };
@@ -1930,6 +2027,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         permanentDeleteProperty,
         addBooking,
         updateBookingStatus,
+        togglePropertySoldOut,
         archiveBooking,
         restoreBooking,
         updateSettings,

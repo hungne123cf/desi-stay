@@ -7,6 +7,7 @@ import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
 import { buildVietQrUrl } from '@/data/vietnamBanks';
 import { uploadOrCompressImage } from '@/lib/supabase/storage';
+import { isPropertySoldOut } from '@/lib/availability';
 import {
   X,
   ShieldCheck,
@@ -37,8 +38,10 @@ const VISIT_TIME_SLOTS = [
 ];
 
 export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose }) => {
-  const { addBooking, formatPrice, settings } = useProperties();
+  const { addBooking, formatPrice, settings, bookings } = useProperties();
   const { user } = useAuth();
+
+  const isSoldOut = property ? isPropertySoldOut(property, bookings) : false;
 
   const [step, setStep] = useState<'details' | 'payment' | 'success'>('details');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('vietqr_bank');
@@ -179,7 +182,32 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
 
         {/* Modal Body */}
         <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
-          {!user ? (
+          {isSoldOut ? (
+            <div className="py-6 text-center flex flex-col items-center justify-center space-y-4">
+              <div className="w-16 h-16 rounded-3xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shadow-inner">
+                <Lock className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-1.5 max-w-md">
+                <h3 className="text-lg sm:text-xl font-black text-slate-900">
+                  Phòng này đã hết chỗ (Đã có người thuê)
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  Rất tiếc, căn phòng{' '}
+                  <strong className="text-rose-600 font-bold">{property.title} ({property.code})</strong>{' '}
+                  đã được Ban Quản Lý chốt giữ phòng thành công. Hệ thống tạm ngưng nhận thêm cọc cho căn phòng này.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full max-w-sm py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all cursor-pointer"
+              >
+                Đóng &amp; Xem các phòng còn trống
+              </button>
+            </div>
+          ) : !user ? (
             <div className="py-4 text-center flex flex-col items-center justify-center space-y-5">
               <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
                 <ShieldCheck className="w-8 h-8" />
@@ -369,12 +397,43 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
                         onChange={(e) => setVisitTimeSlot(e.target.value)}
                         className="w-full px-3 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-600 outline-none"
                       >
-                        {VISIT_TIME_SLOTS.map((slot) => (
-                          <option key={slot} value={slot}>
-                            {slot}
-                          </option>
-                        ))}
+                        {VISIT_TIME_SLOTS.map((slot) => {
+                          const isSlotTaken = (bookings || []).some(
+                            (b) =>
+                              !b.isArchived &&
+                              b.status !== 'cancelled' &&
+                              (b.propertyId === property?.id || (property?.code && b.propertyCode === property.code)) &&
+                              b.moveInDate === moveInDate &&
+                              b.visitTimeSlot === slot
+                          );
+                          return (
+                            <option key={slot} value={slot}>
+                              {slot} {isSlotTaken ? '⚠️ (Đã có khách hẹn)' : ''}
+                            </option>
+                          );
+                        })}
                       </select>
+                      {(() => {
+                        const isSlotTaken = (bookings || []).some(
+                          (b) =>
+                            !b.isArchived &&
+                            b.status !== 'cancelled' &&
+                            (b.propertyId === property?.id || (property?.code && b.propertyCode === property.code)) &&
+                            b.moveInDate === moveInDate &&
+                            b.visitTimeSlot === visitTimeSlot
+                        );
+                        if (isSlotTaken) {
+                          return (
+                            <p className="text-[11px] text-amber-800 bg-amber-50 p-2 rounded-xl border border-amber-200 mt-1.5 flex items-center gap-1.5 leading-snug">
+                              <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span>
+                                Khung giờ này ngày {moveInDate} đã có 1 lượt hẹn. Bạn vẫn có thể gửi hẹn hoặc chọn khung giờ khác để chủ nhà tiếp chu đáo nhất!
+                              </span>
+                            </p>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   ) : (
                     <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-center">

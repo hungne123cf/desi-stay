@@ -6,6 +6,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { BookingModal } from '@/components/BookingModal';
 import { useProperties } from '@/context/PropertyContext';
 import { Property } from '@/types';
+import { isPropertySoldOut } from '@/lib/availability';
 import {
   ShieldCheck,
   HeartHandshake,
@@ -30,7 +31,7 @@ function removeVietnameseAccents(str: string): string {
 }
 
 export default function HomePage() {
-  const { properties, wishlistIds } = useProperties();
+  const { properties, wishlistIds, bookings } = useProperties();
   const [selectedPropertyForBooking, setSelectedPropertyForBooking] = useState<Property | null>(null);
 
   const [filters, setFilters] = useState<MultiMarketFilters>({
@@ -114,8 +115,14 @@ export default function HomePage() {
       return true;
     });
 
-    // 8. Sắp xếp kết quả (Sort Filter)
+    // 8. Sắp xếp kết quả: Luôn xếp phòng CÒN TRỐNG lên trước, phòng ĐÃ HẾT HÀNG (đã đặt chốt) xếp xuống cuối
     return [...matched].sort((a, b) => {
+      const aSoldOut = isPropertySoldOut(a, bookings);
+      const bSoldOut = isPropertySoldOut(b, bookings);
+      if (aSoldOut !== bSoldOut) {
+        return aSoldOut ? 1 : -1;
+      }
+
       if (filters.sortBy === 'price_asc') {
         return a.pricePerMonthUSD - b.pricePerMonthUSD;
       }
@@ -135,7 +142,7 @@ export default function HomePage() {
       if (bCustomTime) return 1;
       return b.createdAt.localeCompare(a.createdAt);
     });
-  }, [properties, filters]);
+  }, [properties, filters, bookings]);
 
   const resetFilters = () => {
     setFilters({

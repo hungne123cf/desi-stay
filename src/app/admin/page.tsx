@@ -19,6 +19,7 @@ import {
 } from '@/data/vietnamBanks';
 import { TRUONG_HUNG_ADMIN_AVATAR, TRUONG_HUNG_K18_AVATAR } from '@/config/auth';
 import { uploadOrCompressImage } from '@/lib/supabase/storage';
+import { getPropertyAvailabilityStats } from '@/lib/availability';
 import {
   ShieldCheck,
   Building,
@@ -80,6 +81,7 @@ export default function AdminPage() {
     restoreProperty,
     permanentDeleteProperty,
     updateBookingStatus,
+    togglePropertySoldOut,
     archiveBooking,
     restoreBooking,
     updateSettings,
@@ -776,13 +778,14 @@ export default function AdminPage() {
                       <th className="p-4">Loại phòng</th>
                       <th className="p-4">Giá thuê / tháng</th>
                       <th className="p-4">Cọc giữ phòng</th>
+                      <th className="p-4">Tình trạng phòng</th>
                       <th className="p-4 text-right">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {activeProperties.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="p-12 text-center text-slate-500">
+                        <td colSpan={8} className="p-12 text-center text-slate-500">
                           <Building className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                           <p className="font-bold text-slate-700 text-sm">Chưa có phòng trọ nào đang mở cho thuê</p>
                           <p className="text-xs text-slate-400 mt-1 mb-4">
@@ -835,6 +838,78 @@ export default function AdminPage() {
                           </td>
                           <td className="p-4 font-bold text-indigo-600">
                             {formatPrice(prop.tokenDepositUSD, 'VND')}
+                          </td>
+                          <td className="p-4">
+                            {(() => {
+                              const stats = getPropertyAvailabilityStats(prop, bookings);
+                              if (stats.isSoldOut) {
+                                return (
+                                  <div className="space-y-1">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl text-[11px] font-black bg-rose-50 text-rose-700 border border-rose-200">
+                                      🔴 Hết phòng (Đã chốt)
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        togglePropertySoldOut(prop.id, false);
+                                        setTrashToast(`Đã mở lại phòng ${prop.code}! Phòng đã chuyển sang trạng thái Còn trống.`);
+                                        setTimeout(() => setTrashToast(null), 3500);
+                                      }}
+                                      className="text-[10px] text-indigo-600 hover:underline block font-semibold cursor-pointer"
+                                    >
+                                      Mở phòng lại ↺
+                                    </button>
+                                  </div>
+                                );
+                              }
+                              if (stats.isHeld48h) {
+                                return (
+                                  <div className="space-y-1">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                                      ⚡ Có {stats.paidDepositsCount} khách cọc
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              if (stats.pendingVisitsCount > 0) {
+                                return (
+                                  <div className="space-y-1">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                      👥 {stats.pendingVisitsCount} khách hẹn xem
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        togglePropertySoldOut(prop.id, true);
+                                        setTrashToast(`Đã đánh dấu hết phòng cho ${prop.code}!`);
+                                        setTimeout(() => setTrashToast(null), 3500);
+                                      }}
+                                      className="text-[10px] text-slate-400 hover:text-rose-600 hover:underline block font-medium cursor-pointer"
+                                    >
+                                      Đánh dấu hết phòng
+                                    </button>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="space-y-1">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    🟢 Còn trống ({prop.availableBeds || 1} chỗ)
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      togglePropertySoldOut(prop.id, true);
+                                      setTrashToast(`Đã đánh dấu hết phòng cho ${prop.code}!`);
+                                      setTimeout(() => setTrashToast(null), 3500);
+                                    }}
+                                    className="text-[10px] text-slate-400 hover:text-rose-600 hover:underline block font-medium cursor-pointer"
+                                  >
+                                    Đánh dấu hết phòng
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="p-4 text-right">
                             <div className="inline-flex items-center justify-end gap-1.5">
@@ -935,12 +1010,42 @@ export default function AdminPage() {
                             <span className="text-[10px] text-slate-400">{lead.college}</span>
                           </td>
                           <td className="p-4">
-                            <span className="font-bold text-indigo-700 font-mono bg-indigo-50 px-2 py-1 rounded-lg">
-                              {lead.propertyCode}
-                            </span>
-                            <span className="text-[10px] text-slate-500 block truncate max-w-[160px] mt-1">
-                              {lead.propertyTitle}
-                            </span>
+                            <div className="flex flex-col items-start gap-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-indigo-700 font-mono bg-indigo-50 px-2 py-0.5 rounded-lg text-xs">
+                                  {lead.propertyCode}
+                                </span>
+                                {(() => {
+                                  const sameRoomBookings = (bookings || []).filter(
+                                    (b) =>
+                                      !b.isArchived &&
+                                      (b.propertyId === lead.propertyId || (lead.propertyCode && b.propertyCode === lead.propertyCode))
+                                  );
+                                  const confirmedOther = sameRoomBookings.find((b) => b.id !== lead.id && b.status === 'confirmed');
+                                  if (confirmedOther) {
+                                    return (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                        🔒 Đã chốt cho khách khác
+                                      </span>
+                                    );
+                                  }
+                                  if (sameRoomBookings.length > 1) {
+                                    return (
+                                      <span
+                                        className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300"
+                                        title={`Phòng này đang có ${sameRoomBookings.length} khách cùng đặt`}
+                                      >
+                                        ⚠️ {sameRoomBookings.length} khách cùng đặt
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                              <span className="text-[10px] text-slate-500 block truncate max-w-[160px]">
+                                {lead.propertyTitle}
+                              </span>
+                            </div>
                           </td>
                           <td className="p-4 text-slate-700 font-medium">
                             <span className="font-bold block">{lead.moveInDate}</span>
@@ -985,12 +1090,30 @@ export default function AdminPage() {
                           <td className="p-4">
                             <select
                               value={lead.status}
-                              onChange={(e) =>
-                                updateBookingStatus(
-                                  lead.id,
-                                  e.target.value as 'pending' | 'token_paid' | 'confirmed' | 'cancelled'
-                                )
-                              }
+                              onChange={(e) => {
+                                const nextStatus = e.target.value as 'pending' | 'token_paid' | 'confirmed' | 'cancelled';
+                                if (nextStatus === 'confirmed') {
+                                  const conflictingBookings = (bookings || []).filter(
+                                    (b) =>
+                                      b.id !== lead.id &&
+                                      !b.isArchived &&
+                                      (b.status === 'pending' || b.status === 'token_paid') &&
+                                      (b.propertyId === lead.propertyId || (lead.propertyCode && b.propertyCode === lead.propertyCode))
+                                  );
+                                  if (conflictingBookings.length > 0) {
+                                    const confirmCancelOthers = window.confirm(
+                                      `Phòng ${lead.propertyCode || lead.propertyTitle} hiện đang có ${conflictingBookings.length} đơn khác của khách khác đang chờ.\n\nBạn có muốn tự động CHỐT GIỮ PHÒNG cho khách ${lead.studentName}, xếp phòng này vào trạng thái HẾT HÀNG, và tự động chuyển ${conflictingBookings.length} đơn còn lại sang 'Đã hủy' không?`
+                                    );
+                                    if (confirmCancelOthers) {
+                                      updateBookingStatus(lead.id, 'confirmed', { autoCancelConflicts: true });
+                                      setTrashToast(`Đã chốt giữ phòng cho ${lead.studentName}! Phòng đã chuyển sang HẾT HÀNG và tự động hủy ${conflictingBookings.length} đơn trùng.`);
+                                      setTimeout(() => setTrashToast(null), 4000);
+                                      return;
+                                    }
+                                  }
+                                }
+                                updateBookingStatus(lead.id, nextStatus);
+                              }}
                               className={`px-2.5 py-1.5 border rounded-xl text-xs font-bold focus:outline-none cursor-pointer ${
                                 lead.status === 'confirmed' || lead.status === 'token_paid'
                                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -1010,11 +1133,31 @@ export default function AdminPage() {
                               {lead.status === 'pending' && (
                                 <button
                                   type="button"
-                                  onClick={() => updateBookingStatus(lead.id, 'confirmed')}
+                                  onClick={() => {
+                                    const conflictingBookings = (bookings || []).filter(
+                                      (b) =>
+                                        b.id !== lead.id &&
+                                        !b.isArchived &&
+                                        (b.status === 'pending' || b.status === 'token_paid') &&
+                                        (b.propertyId === lead.propertyId || (lead.propertyCode && b.propertyCode === lead.propertyCode))
+                                    );
+                                    if (conflictingBookings.length > 0) {
+                                      const confirmCancelOthers = window.confirm(
+                                        `Phòng ${lead.propertyCode || lead.propertyTitle} hiện có ${conflictingBookings.length} đơn khác của khách khác.\n\nBạn có muốn chốt phòng cho ${lead.studentName}, xếp phòng vào HẾT HÀNG và tự động hủy các đơn còn lại không?`
+                                      );
+                                      if (confirmCancelOthers) {
+                                        updateBookingStatus(lead.id, 'confirmed', { autoCancelConflicts: true });
+                                        setTrashToast(`Đã chốt phòng cho ${lead.studentName} & chuyển phòng sang HẾT HÀNG!`);
+                                        setTimeout(() => setTrashToast(null), 4000);
+                                        return;
+                                      }
+                                    }
+                                    updateBookingStatus(lead.id, 'confirmed', { autoCancelConflicts: true });
+                                  }}
                                   className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-[11px] cursor-pointer"
-                                  title="Duyệt nhanh đơn này"
+                                  title="Duyệt chốt phòng và xử lý trùng đơn"
                                 >
-                                  Duyệt ngay
+                                  Duyệt chốt
                                 </button>
                               )}
                               <a
@@ -3586,7 +3729,27 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    updateBookingStatus(selectedReceiptLead.id, 'confirmed');
+                    const conflictingBookings = (bookings || []).filter(
+                      (b) =>
+                        b.id !== selectedReceiptLead.id &&
+                        !b.isArchived &&
+                        (b.status === 'pending' || b.status === 'token_paid') &&
+                        (b.propertyId === selectedReceiptLead.propertyId ||
+                          (selectedReceiptLead.propertyCode && b.propertyCode === selectedReceiptLead.propertyCode))
+                    );
+                    if (conflictingBookings.length > 0) {
+                      const confirmCancelOthers = window.confirm(
+                        `Phòng ${selectedReceiptLead.propertyCode || selectedReceiptLead.propertyTitle} đang có ${conflictingBookings.length} đơn khác đang chờ.\n\nBạn có muốn chốt phòng cho ${selectedReceiptLead.studentName}, xếp phòng vào HẾT HÀNG và tự động hủy các đơn trùng không?`
+                      );
+                      if (confirmCancelOthers) {
+                        updateBookingStatus(selectedReceiptLead.id, 'confirmed', { autoCancelConflicts: true });
+                        setTrashToast(`Đã chốt giữ phòng cho ${selectedReceiptLead.studentName}! Phòng đã chuyển sang HẾT HÀNG.`);
+                        setTimeout(() => setTrashToast(null), 4000);
+                        setSelectedReceiptLead(null);
+                        return;
+                      }
+                    }
+                    updateBookingStatus(selectedReceiptLead.id, 'confirmed', { autoCancelConflicts: true });
                     setSelectedReceiptLead(null);
                   }}
                   className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md inline-flex items-center gap-1.5 cursor-pointer"

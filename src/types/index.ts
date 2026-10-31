@@ -33,6 +33,7 @@ export interface Property {
   isVerified: boolean;
   isZeroBrokerage: boolean;
   isPublished: boolean;
+  isSoldOut?: boolean;
   landlordName: string;
   landlordContact: string;
   rating: number;

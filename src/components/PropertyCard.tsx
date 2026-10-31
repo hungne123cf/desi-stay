@@ -7,6 +7,7 @@ import { Property } from '@/types';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
 import { ReviewModal } from '@/components/ReviewModal';
+import { getPropertyAvailabilityStats } from '@/lib/availability';
 import {
   MapPin,
   GraduationCap,
@@ -18,7 +19,8 @@ import {
   Eye,
   Heart,
   Sparkles,
-  Zap
+  Zap,
+  Lock
 } from 'lucide-react';
 
 interface PropertyCardProps {
@@ -31,6 +33,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
     formatPrice,
     settings,
     reviews,
+    bookings,
     getReviewEligibility,
     toggleWishlist,
     isWishlisted
@@ -39,6 +42,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
   const router = useRouter();
   const [activeImgIndex, setActiveImgIndex] = useState(0);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  const availability = getPropertyAvailabilityStats(property, bookings);
 
   const saved = isWishlisted(property.id);
 
@@ -119,7 +124,23 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
         </Link>
 
         {/* Floating Badges Top Left */}
-        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10 pointer-events-none">
+        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-20 pointer-events-none">
+          {availability.isSoldOut ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-rose-600 text-white shadow-lg shadow-rose-600/40">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              🔴 HẾT PHÒNG
+            </span>
+          ) : availability.isHeld48h ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 shadow-md">
+              <Zap className="w-3 h-3 fill-slate-950" />
+              ⚡ Đang Giữ Chỗ 48h
+            </span>
+          ) : availability.pendingVisitsCount > 0 ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/95 backdrop-blur-md text-slate-950 shadow-md border border-amber-300">
+              👥 {availability.pendingVisitsCount} người hẹn xem
+            </span>
+          ) : null}
+
           {property.isZeroBrokerage && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20">
               <Sparkles className="w-3 h-3" />
@@ -133,6 +154,15 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
             </span>
           )}
         </div>
+
+        {/* Lớp phủ khi phòng đã hết hàng */}
+        {availability.isSoldOut && (
+          <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[1px] flex items-center justify-center z-10 pointer-events-none">
+            <span className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 text-white font-black text-xs tracking-wider uppercase border border-white/20 shadow-xl">
+              ĐÃ CÓ NGƯỜI THUÊ
+            </span>
+          </div>
+        )}
 
         {/* Heart Wishlist Button Top Right */}
         <button
@@ -303,23 +333,35 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onBookNow 
               className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/90 rounded-xl transition-all cursor-pointer active:scale-98"
             >
               <Phone className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Nhắn Zalo</span>
+              <span>{availability.isSoldOut ? 'Hỏi Phòng Khác' : 'Nhắn Zalo'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (onBookNow) {
-                  onBookNow(property);
-                } else if (typeof window !== 'undefined') {
-                  window.location.href = `/properties/${property.id}`;
-                }
-              }}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/25 transition-all cursor-pointer active:scale-98"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>Giữ Chỗ</span>
-            </button>
+            {availability.isSoldOut ? (
+              <button
+                type="button"
+                disabled
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-bold text-slate-400 bg-slate-100 border border-slate-200 rounded-xl cursor-not-allowed"
+                title="Phòng này đã có khách chốt giữ chỗ"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Hết Phòng</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onBookNow) {
+                    onBookNow(property);
+                  } else if (typeof window !== 'undefined') {
+                    window.location.href = `/properties/${property.id}`;
+                  }
+                }}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/25 transition-all cursor-pointer active:scale-98"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Giữ Chỗ</span>
+              </button>
+            )}
           </div>
 
           <Link
