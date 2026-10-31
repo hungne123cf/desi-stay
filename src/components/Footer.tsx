@@ -149,9 +149,9 @@ export const Footer: React.FC = () => {
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <p>© 2026 UniStay Việt Nam – Hệ thống Phòng trọ Sinh viên Cần Thơ &amp; Toàn Quốc.</p>
           <div className="flex items-center gap-6">
-            <Link href="/admin" className="hover:text-indigo-400 transition-colors font-medium">
+            <a href="/admin" className="hover:text-indigo-400 transition-colors font-medium cursor-pointer">
               Trang Admin
-            </Link>
+            </a>
             <span className="hover:text-slate-400">Quy định đặt cọc</span>
             <span className="hover:text-slate-400">Chính sách bảo mật</span>
             <span className="hover:text-slate-400">Cam kết hoàn tiền 100%</span>

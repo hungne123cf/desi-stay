@@ -121,13 +121,13 @@ export const Navbar: React.FC = () => {
                 Tiện ích &amp; An ninh
               </a>
               {isMounted && (user?.role === 'admin' || user?.role === 'staff') && (
-                <Link
+                <a
                   href="/admin"
-                  className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-full border border-indigo-200 transition-colors"
+                  className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-full border border-indigo-200 transition-colors cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4 text-indigo-600" />
                   <span>{user.role === 'admin' ? 'Admin' : 'Nhân Viên'}</span>
-                </Link>
+                </a>
               )}
             </nav>
 
@@ -226,14 +226,14 @@ export const Navbar: React.FC = () => {
                       </Link>
 
                       {user.role === 'admin' && (
-                        <Link
+                        <a
                           href="/admin"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2.5 transition-colors"
+                          className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
                           <ShieldCheck className="w-4 h-4 text-indigo-600" />
                           <span>Trang Admin</span>
-                        </Link>
+                        </a>
                       )}
 
                       <button
@@ -309,14 +309,14 @@ export const Navbar: React.FC = () => {
               Tiện ích &amp; An ninh
             </a>
             {isMounted && (user?.role === 'admin' || user?.role === 'staff') && (
-              <Link
+              <a
                 href="/admin"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-sm font-bold text-indigo-700 border-b border-slate-100 flex items-center gap-1.5"
+                className="block py-2 text-sm font-bold text-indigo-700 border-b border-slate-100 flex items-center gap-1.5 cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4 text-indigo-600" />
                 <span>{user.role === 'admin' ? 'Admin' : 'Nhân Viên'}</span>
-              </Link>
+              </a>
             )}
             {isMounted && user ? (
               <div className="pt-2 space-y-2">

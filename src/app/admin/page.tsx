@@ -476,13 +476,13 @@ export default function AdminPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
+          <a
             href="/"
-            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg text-slate-200 flex items-center gap-1"
+            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg text-slate-200 flex items-center gap-1 cursor-pointer"
           >
             <ExternalLink className="w-3 h-3" />
             <span>Trang Khách</span>
-          </Link>
+          </a>
           <button
             type="button"
             onClick={() => {
@@ -531,13 +531,13 @@ export default function AdminPage() {
               </h1>
               <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
             </div>
-            <Link
+            <a
               href="/"
               title="Mở trang chủ User"
-              className="p-2 rounded-xl bg-slate-700/70 hover:bg-indigo-600 text-slate-200 hover:text-white transition-colors shrink-0"
+              className="p-2 rounded-xl bg-slate-700/70 hover:bg-indigo-600 text-slate-200 hover:text-white transition-colors shrink-0 cursor-pointer"
             >
               <ExternalLink className="w-4 h-4" />
-            </Link>
+            </a>
           </div>
 
           {/* Primary Add Property CTA */}
@@ -643,13 +643,13 @@ export default function AdminPage() {
           </button>
 
           <div className="flex items-center gap-2">
-            <Link
+            <a
               href="/"
-              className="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-colors"
+              className="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Trang Khách</span>
-            </Link>
+            </a>
             <button
               type="button"
               onClick={() => {
@@ -758,12 +758,12 @@ export default function AdminPage() {
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>Đã đăng phòng trọ mới thành công!</span>
                 </div>
-                <Link
+                <a
                   href="/"
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shrink-0 transition-colors"
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shrink-0 transition-colors cursor-pointer"
                 >
                   Xem trên trang User ↗
-                </Link>
+                </a>
               </div>
             )}
 
