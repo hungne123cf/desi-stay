@@ -117,33 +117,31 @@ function ProfileContent() {
     }
   }, [user, logout, router]);
 
-  // Lấy các mã đơn thuộc về tài khoản người dùng hiện tại (Account ID)
-  let savedLocalBookingIds: string[] = [];
+  // Dọn sạch key dùng chung cũ trong trình duyệt
   try {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('unistay_my_booking_ids');
-      if (user?.id && user.id !== 'guest') {
-        const raw = localStorage.getItem(`unistay_my_booking_ids_${user.id}`);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) savedLocalBookingIds = parsed;
-        }
-      }
     }
   } catch {}
 
+  const cleanUserEmail = user?.email ? user.email.toLowerCase().trim() : '';
+
   const myBookings = (bookings || []).filter((b) => {
-    if (!b || !user || (!user.id && !user.email)) return false;
-    const byAccountLocal =
-      savedLocalBookingIds.includes(b.id) || (b.reference ? savedLocalBookingIds.includes(b.reference) : false);
-    const byUserId = Boolean(user.id && user.id !== 'guest' && b.userId === user.id);
-    const byEmail = Boolean(
-      user.email &&
-        b.studentEmail &&
-        b.studentEmail.toLowerCase().trim() === user.email.toLowerCase().trim()
+    if (!b || !user || (!user.id && !cleanUserEmail)) return false;
+    const bookingEmail = b.studentEmail ? b.studentEmail.toLowerCase().trim() : '';
+
+    // 1. Phải khớp chính xác email của tài khoản đang đăng nhập
+    const matchesEmail = Boolean(cleanUserEmail && bookingEmail && bookingEmail === cleanUserEmail);
+
+    // 2. Hoặc khớp chính xác userId (accountId) VÀ email không thuộc về một người dùng khác
+    const matchesUserId = Boolean(
+      user.id &&
+        user.id !== 'guest' &&
+        b.userId === user.id &&
+        (!bookingEmail || bookingEmail === cleanUserEmail)
     );
 
-    return byAccountLocal || byUserId || byEmail;
+    return matchesEmail || matchesUserId;
   });
 
   // Danh sách phòng trọ đã lưu yêu thích

@@ -49,15 +49,18 @@ export const Navbar: React.FC = () => {
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
+  const cleanUserEmail = user?.email ? user.email.toLowerCase().trim() : '';
   const myBookingsCount = (bookings || []).filter((b) => {
-    if (!b || !user || (!user.id && !user.email)) return false;
-    const byUserId = Boolean(user.id && user.id !== 'guest' && b.userId === user.id);
-    const byEmail = Boolean(
-      user.email &&
-        b.studentEmail &&
-        b.studentEmail.toLowerCase().trim() === user.email.toLowerCase().trim()
+    if (!b || !user || (!user.id && !cleanUserEmail)) return false;
+    const bookingEmail = b.studentEmail ? b.studentEmail.toLowerCase().trim() : '';
+    const matchesEmail = Boolean(cleanUserEmail && bookingEmail && bookingEmail === cleanUserEmail);
+    const matchesUserId = Boolean(
+      user.id &&
+        user.id !== 'guest' &&
+        b.userId === user.id &&
+        (!bookingEmail || bookingEmail === cleanUserEmail)
     );
-    return byUserId || byEmail;
+    return matchesEmail || matchesUserId;
   }).length;
 
   if (pathname?.startsWith('/admin')) {

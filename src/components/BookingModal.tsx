@@ -118,13 +118,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({ property, onClose })
 
     const isVietQR = selectedMethod === 'vietqr_bank';
 
+    const cleanStudentEmail = (studentEmail.trim() || user?.email || 'sinhvien@unistay.vn').toLowerCase();
+    const cleanUserEmail = user?.email?.toLowerCase().trim();
+    const isMatchingUser = Boolean(user?.id && cleanUserEmail && cleanStudentEmail === cleanUserEmail);
+    const bookingUserId = isMatchingUser ? user!.id : 'guest';
+
     const ref = addBooking({
       propertyId: property.id,
       propertyTitle: property.title,
       propertyCode: property.code,
-      userId: user?.id || 'guest',
+      userId: bookingUserId,
       studentName: studentName.trim(),
-      studentEmail: studentEmail.trim() || 'sinhvien@unistay.vn',
+      studentEmail: cleanStudentEmail,
       studentContact: studentContact.trim(),
       college: college.trim() || property.nearbyUniversity,
       moveInDate,

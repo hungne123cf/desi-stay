@@ -1226,7 +1226,13 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addBooking = (bookingData: Omit<Booking, 'id' | 'reference' | 'createdAt'>): string => {
     const ref = `BK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const accountId = user?.id || bookingData.userId || 'guest';
+    const bookingEmail = bookingData.studentEmail?.toLowerCase().trim();
+    const userEmail = user?.email?.toLowerCase().trim();
+    const isMatchingUser = Boolean(
+      user?.id && user.id !== 'guest' && userEmail && bookingEmail && bookingEmail === userEmail
+    );
+    const accountId = isMatchingUser && user?.id ? user.id : (bookingData.userId !== 'guest' && bookingData.userId ? bookingData.userId : 'guest');
+
     const newBooking: Booking = {
       ...bookingData,
       userId: accountId,
@@ -1248,7 +1254,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       localStorage.removeItem('unistay_my_booking_ids');
     } catch {}
 
-    if (accountId && accountId !== 'guest') {
+    if (isMatchingUser && accountId && accountId !== 'guest') {
       try {
         const userBookingKey = `unistay_my_booking_ids_${accountId}`;
         const existing = JSON.parse(localStorage.getItem(userBookingKey) || '[]');
@@ -1628,21 +1634,22 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
     }
 
+    const cleanUserEmail = user.email ? user.email.toLowerCase().trim() : '';
+
     const userBookings = bookings.filter((b) => {
       const matchesProperty = b.propertyId === propertyId || b.propertyCode === propertyCode;
       if (!matchesProperty || b.status === 'cancelled') return false;
 
-      const byUserId = Boolean(user.id && user.id !== 'guest' && b.userId === user.id);
-      const byEmail = Boolean(
-        user.email &&
-          b.studentEmail &&
-          b.studentEmail.toLowerCase().trim() === user.email.toLowerCase().trim()
-      );
-      const byAccountLocal = Boolean(
-        user.id && (myBookingIds.includes(b.id) || (b.reference ? myBookingIds.includes(b.reference) : false))
+      const bookingEmail = b.studentEmail ? b.studentEmail.toLowerCase().trim() : '';
+      const matchesEmail = Boolean(cleanUserEmail && bookingEmail && bookingEmail === cleanUserEmail);
+      const matchesUserId = Boolean(
+        user.id &&
+          user.id !== 'guest' &&
+          b.userId === user.id &&
+          (!bookingEmail || bookingEmail === cleanUserEmail)
       );
 
-      return byUserId || byEmail || byAccountLocal;
+      return matchesEmail || matchesUserId;
     });
 
     const totalPurchases = userBookings.length;
