@@ -39,34 +39,33 @@ export default function MyBookingsPage() {
     eligibility: ReturnType<typeof getReviewEligibility>;
   } | null>(null);
 
-  // Lấy các mã đơn thuộc về trình duyệt hoặc tài khoản người dùng hiện tại
+  // Lấy các mã đơn thuộc về tài khoản người dùng hiện tại (Account ID)
   let savedLocalIds: string[] = [];
   try {
-    const raw = localStorage.getItem('unistay_my_booking_ids');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) savedLocalIds = parsed;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('unistay_my_booking_ids');
+      if (user?.id && user.id !== 'guest') {
+        const raw = localStorage.getItem(`unistay_my_booking_ids_${user.id}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) savedLocalIds = parsed;
+        }
+      }
     }
   } catch {}
 
-  const cleanUserPhone = user?.phone ? user.phone.replace(/[^0-9]/g, '') : '';
-
   const myBookings = bookings.filter((b) => {
-    const byLocalBrowser =
+    if (!b || !user || (!user.id && !user.email)) return false;
+    const byAccountLocal =
       savedLocalIds.includes(b.id) || (b.reference ? savedLocalIds.includes(b.reference) : false);
-    const byUserId = Boolean(user?.id && user.id !== 'guest' && b.userId === user.id);
+    const byUserId = Boolean(user.id && user.id !== 'guest' && b.userId === user.id);
     const byEmail = Boolean(
-      user?.email && b.studentEmail && b.studentEmail.toLowerCase() === user.email.toLowerCase()
-    );
-    const byPhone = Boolean(
-      cleanUserPhone.length >= 8 &&
-        b.studentContact.replace(/[^0-9]/g, '') === cleanUserPhone
-    );
-    const byName = Boolean(
-      user?.name && b.studentName.trim().toLowerCase() === user.name.trim().toLowerCase()
+      user.email &&
+        b.studentEmail &&
+        b.studentEmail.toLowerCase().trim() === user.email.toLowerCase().trim()
     );
 
-    return byLocalBrowser || byUserId || byEmail || byPhone || byName;
+    return byAccountLocal || byUserId || byEmail;
   });
 
   const filteredBookings = myBookings.filter((b) => {

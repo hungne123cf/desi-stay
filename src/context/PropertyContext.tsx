@@ -470,56 +470,71 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
   const [allWishlists, setAllWishlists] = useState<Record<string, string[]>>({});
 
-  // Tải và đồng bộ danh sách Yêu Thích RIÊNG BIỆT cho từng tài khoản (Account-scoped & Server-synced)
+  // Tải và đồng bộ danh sách Yêu Thích RIÊNG BIỆT theo Account ID (AccountId-scoped & Server-synced)
   useEffect(() => {
-    // 1. Dọn sạch key dùng chung cũ (nếu còn sót lại trong trình duyệt) để không bị rò rỉ chéo giữa các tài khoản
+    // 1. Dọn sạch key dùng chung cũ trong trình duyệt để không bị rò rỉ chéo giữa các tài khoản
     try {
       localStorage.removeItem('unistay_wishlist_ids');
+      localStorage.removeItem('unistay_my_booking_ids');
     } catch {}
 
+    const accountId = user?.id?.trim();
     const cleanEmail = user?.email?.toLowerCase().trim();
-    if (!cleanEmail) {
+
+    if (!accountId && !cleanEmail) {
       // Khi chưa đăng nhập (khách / guest): danh sách yêu thích luôn là rỗng
       setWishlistIds([]);
       return;
     }
 
-    const key = `unistay_wishlist_${cleanEmail}`;
+    const accountKey = accountId ? `unistay_wishlist_${accountId}` : `unistay_wishlist_${cleanEmail}`;
+    const emailKey = cleanEmail ? `unistay_wishlist_${cleanEmail}` : '';
+
     try {
-      const raw = localStorage.getItem(key);
+      let raw = localStorage.getItem(accountKey);
+      if (!raw && emailKey) {
+        raw = localStorage.getItem(emailKey);
+      }
+
       if (raw !== null) {
         const parsed = JSON.parse(raw);
         setWishlistIds(Array.isArray(parsed) ? parsed : []);
-      } else if (allWishlists[cleanEmail] !== undefined) {
-        setWishlistIds(allWishlists[cleanEmail]);
-        try {
-          localStorage.setItem(key, JSON.stringify(allWishlists[cleanEmail]));
-        } catch {}
-      } else if (cleanEmail === 'hungtce181568@fpt.edu.vn') {
-        const defaultK18 = ['prop-1793242710688'];
-        setWishlistIds(defaultK18);
-        try {
-          localStorage.setItem(key, JSON.stringify(defaultK18));
-        } catch {}
       } else {
-        setWishlistIds([]);
+        const serverList =
+          (accountId ? allWishlists[accountId] : undefined) ??
+          (cleanEmail ? allWishlists[cleanEmail] : undefined);
+        if (Array.isArray(serverList)) {
+          setWishlistIds(serverList);
+          try {
+            localStorage.setItem(accountKey, JSON.stringify(serverList));
+          } catch {}
+        } else if (accountId === 'acc-student-k18' || cleanEmail === 'hungtce181568@fpt.edu.vn') {
+          const defaultK18 = ['prop-1793242710688'];
+          setWishlistIds(defaultK18);
+          try {
+            localStorage.setItem(accountKey, JSON.stringify(defaultK18));
+          } catch {}
+        } else {
+          setWishlistIds([]);
+        }
       }
     } catch {
       setWishlistIds([]);
     }
-  }, [user?.email, allWishlists]);
+  }, [user?.id, user?.email, allWishlists]);
 
   const toggleWishlist = (propertyId: string): boolean => {
+    const accountId = user?.id?.trim();
     const cleanEmail = user?.email?.toLowerCase().trim();
-    if (!cleanEmail) {
+    if (!accountId && !cleanEmail) {
       // Người dùng chưa đăng nhập -> không lưu vào bất kỳ tài khoản nào
       return false;
     }
 
-    const key = `unistay_wishlist_${cleanEmail}`;
+    const accountKey = accountId ? `unistay_wishlist_${accountId}` : `unistay_wishlist_${cleanEmail}`;
     let currentList: string[] = [];
     try {
-      const raw = localStorage.getItem(key);
+      const raw = localStorage.getItem(accountKey);
       if (raw !== null) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) currentList = parsed;
@@ -534,52 +549,89 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const updated = exists ? currentList.filter((id) => id !== propertyId) : [...currentList, propertyId];
 
     setWishlistIds(updated);
-    setAllWishlists((prev) => ({ ...prev, [cleanEmail]: updated }));
+    setAllWishlists((prev) => {
+      const next = { ...prev };
+      if (accountId) next[accountId] = updated;
+      if (cleanEmail) next[cleanEmail] = updated;
+      return next;
+    });
 
     try {
-      localStorage.setItem(key, JSON.stringify(updated));
+      localStorage.setItem(accountKey, JSON.stringify(updated));
+      if (cleanEmail && accountKey !== `unistay_wishlist_${cleanEmail}`) {
+        localStorage.setItem(`unistay_wishlist_${cleanEmail}`, JSON.stringify(updated));
+      }
     } catch {}
 
+    const payloadWishlists: Record<string, string[]> = {};
+    if (accountId) payloadWishlists[accountId] = updated;
+    if (cleanEmail) payloadWishlists[cleanEmail] = updated;
+
     void syncToServer({
-      wishlists: {
-        [cleanEmail]: updated
-      }
+      wishlists: payloadWishlists
     });
 
     return true;
   };
 
   const isWishlisted = (propertyId: string): boolean => {
-    if (!user?.email) return false;
+    if (!user?.id && !user?.email) return false;
     return wishlistIds.includes(propertyId);
   };
 
   const clearWishlist = () => {
+    const accountId = user?.id?.trim();
     const cleanEmail = user?.email?.toLowerCase().trim();
-    if (!cleanEmail) return;
+    if (!accountId && !cleanEmail) return;
 
-    const key = `unistay_wishlist_${cleanEmail}`;
+    const accountKey = accountId ? `unistay_wishlist_${accountId}` : `unistay_wishlist_${cleanEmail}`;
     setWishlistIds([]);
-    setAllWishlists((prev) => ({ ...prev, [cleanEmail]: [] }));
+    setAllWishlists((prev) => {
+      const next = { ...prev };
+      if (accountId) next[accountId] = [];
+      if (cleanEmail) next[cleanEmail] = [];
+      return next;
+    });
 
     try {
-      localStorage.setItem(key, JSON.stringify([]));
+      localStorage.setItem(accountKey, JSON.stringify([]));
+      if (cleanEmail && accountKey !== `unistay_wishlist_${cleanEmail}`) {
+        localStorage.setItem(`unistay_wishlist_${cleanEmail}`, JSON.stringify([]));
+      }
     } catch {}
 
+    const payloadWishlists: Record<string, string[]> = {};
+    if (accountId) payloadWishlists[accountId] = [];
+    if (cleanEmail) payloadWishlists[cleanEmail] = [];
+
     void syncToServer({
-      wishlists: {
-        [cleanEmail]: []
-      }
+      wishlists: payloadWishlists
     });
   };
 
+  // Tải danh sách booking IDs riêng biệt theo Account ID của người dùng hiện tại
   useEffect(() => {
+    if (!user?.id || user.id === 'guest') {
+      setMyBookingIds([]);
+      return;
+    }
     try {
-      const savedIds = localStorage.getItem('unistay_my_booking_ids');
+      const userBookingKey = `unistay_my_booking_ids_${user.id}`;
+      const savedIds = localStorage.getItem(userBookingKey);
       if (savedIds) {
         const parsed = JSON.parse(savedIds);
         if (Array.isArray(parsed)) setMyBookingIds(parsed);
+      } else {
+        setMyBookingIds([]);
       }
+    } catch {
+      setMyBookingIds([]);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    try {
+      localStorage.removeItem('unistay_my_booking_ids');
       const savedMessages = localStorage.getItem('unistay_real_messages_v4');
       if (savedMessages) {
         const parsed = JSON.parse(savedMessages);
@@ -1035,10 +1087,23 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (Array.isArray(parsed)) setBookings((prev) => mergeBookings(prev, parsed));
         } catch {}
       }
-      const cleanEmail = user?.email?.toLowerCase().trim();
-      if (cleanEmail && e.key === `unistay_wishlist_${cleanEmail}` && e.newValue) {
+      let activeAccountId = '';
+      let activeEmail = '';
+      try {
+        const u = localStorage.getItem('unistay_user');
+        if (u) {
+          const parsedU = JSON.parse(u);
+          activeAccountId = parsedU?.id || '';
+          activeEmail = (parsedU?.email || '').toLowerCase().trim();
+        }
+      } catch {}
+
+      if (
+        (activeAccountId && e.key === `unistay_wishlist_${activeAccountId}`) ||
+        (activeEmail && e.key === `unistay_wishlist_${activeEmail}`)
+      ) {
         try {
-          const parsed = JSON.parse(e.newValue);
+          const parsed = JSON.parse(e.newValue || '[]');
           if (Array.isArray(parsed)) setWishlistIds(parsed);
         } catch {}
       }
@@ -1156,8 +1221,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addBooking = (bookingData: Omit<Booking, 'id' | 'reference' | 'createdAt'>): string => {
     const ref = `BK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const accountId = user?.id || bookingData.userId || 'guest';
     const newBooking: Booking = {
       ...bookingData,
+      userId: accountId,
       id: `book-${Date.now()}`,
       reference: ref,
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
@@ -1170,13 +1237,20 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       syncToServer({ bookings: updated });
       return updated;
     });
-    setMyBookingIds((prev) => {
-      const updatedIds = Array.from(new Set([newBooking.id, ref, ...prev]));
+
+    // Dọn sạch key dùng chung cũ trong browser để ngăn chặn rò rỉ đơn hàng sang tài khoản khác
+    try {
+      localStorage.removeItem('unistay_my_booking_ids');
+    } catch {}
+
+    if (accountId && accountId !== 'guest') {
       try {
-        localStorage.setItem('unistay_my_booking_ids', JSON.stringify(updatedIds));
+        const userBookingKey = `unistay_my_booking_ids_${accountId}`;
+        const existing = JSON.parse(localStorage.getItem(userBookingKey) || '[]');
+        const updatedIds = Array.from(new Set([newBooking.id, ref, ...(Array.isArray(existing) ? existing : [])]));
+        localStorage.setItem(userBookingKey, JSON.stringify(updatedIds));
       } catch {}
-      return updatedIds;
-    });
+    }
     return ref;
   };
 
@@ -1447,29 +1521,31 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     propertyCode: string,
     user?: { id?: string; email?: string; phone?: string | null; name?: string } | null
   ): ReviewEligibility => {
-    const cleanUserPhone = user?.phone ? user.phone.replace(/[^0-9]/g, '') : '';
+    if (!user || (!user.id && !user.email)) {
+      return {
+        hasPurchased: false,
+        totalPurchases: 0,
+        usedReviews: 0,
+        remainingReviews: 0,
+        nextBookingToReview: null
+      };
+    }
 
     const userBookings = bookings.filter((b) => {
       const matchesProperty = b.propertyId === propertyId || b.propertyCode === propertyCode;
       if (!matchesProperty || b.status === 'cancelled') return false;
 
-      const byLocalBrowser =
-        myBookingIds.includes(b.id) || (b.reference ? myBookingIds.includes(b.reference) : false);
-      const byUserId = Boolean(user?.id && user.id !== 'guest' && b.userId === user.id);
+      const byUserId = Boolean(user.id && user.id !== 'guest' && b.userId === user.id);
       const byEmail = Boolean(
-        user?.email &&
+        user.email &&
           b.studentEmail &&
-          b.studentEmail.toLowerCase() === user.email.toLowerCase()
+          b.studentEmail.toLowerCase().trim() === user.email.toLowerCase().trim()
       );
-      const byPhone = Boolean(
-        cleanUserPhone.length >= 8 &&
-          b.studentContact.replace(/[^0-9]/g, '') === cleanUserPhone
-      );
-      const byName = Boolean(
-        user?.name && b.studentName.trim().toLowerCase() === user.name.trim().toLowerCase()
+      const byAccountLocal = Boolean(
+        user.id && (myBookingIds.includes(b.id) || (b.reference ? myBookingIds.includes(b.reference) : false))
       );
 
-      return byLocalBrowser || byUserId || byEmail || byPhone || byName;
+      return byUserId || byEmail || byAccountLocal;
     });
 
     const totalPurchases = userBookings.length;

@@ -50,9 +50,13 @@ export const Navbar: React.FC = () => {
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
   const myBookingsCount = (bookings || []).filter((b) => {
-    if (!b) return false;
-    const byUserId = Boolean(user?.id && user.id !== 'guest' && b.userId === user.id);
-    const byEmail = Boolean(user?.email && b.studentEmail?.toLowerCase() === user.email.toLowerCase());
+    if (!b || !user || (!user.id && !user.email)) return false;
+    const byUserId = Boolean(user.id && user.id !== 'guest' && b.userId === user.id);
+    const byEmail = Boolean(
+      user.email &&
+        b.studentEmail &&
+        b.studentEmail.toLowerCase().trim() === user.email.toLowerCase().trim()
+    );
     return byUserId || byEmail;
   }).length;
 

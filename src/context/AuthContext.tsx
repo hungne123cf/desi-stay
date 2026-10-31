@@ -221,9 +221,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           parsed.role = getAssignedRole(parsed.email);
           if (userEmail === 'truongvantuan43344@gmail.com') {
+            parsed.id = 'acc-admin-1';
             parsed.avatar = TRUONG_HUNG_ADMIN_AVATAR;
           } else if (userEmail === 'hungtce181568@fpt.edu.vn') {
+            parsed.id = 'acc-student-k18';
             parsed.avatar = TRUONG_HUNG_K18_AVATAR;
+          } else if (userEmail === 'admin@unistay.com') {
+            parsed.id = 'acc-admin-2';
+          } else if (!parsed.id || parsed.id.startsWith('usr-g-')) {
+            parsed.id = `acc-${userEmail.replace(/[^a-zA-Z0-9]/g, '')}`;
           } else {
             if (parsed.avatar && (parsed.avatar.includes('unsplash') || parsed.avatar.includes('photo-1534528741775'))) {
               parsed.avatar = undefined;
@@ -319,8 +325,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
+      let resolvedAccountId = '';
+      if (cleanEmail === 'truongvantuan43344@gmail.com') {
+        resolvedAccountId = 'acc-admin-1';
+      } else if (cleanEmail === 'hungtce181568@fpt.edu.vn') {
+        resolvedAccountId = 'acc-student-k18';
+      } else if (cleanEmail === 'admin@unistay.com') {
+        resolvedAccountId = 'acc-admin-2';
+      } else {
+        try {
+          const rawAccounts = localStorage.getItem('unistay_real_accounts_v4');
+          if (rawAccounts) {
+            const list = JSON.parse(rawAccounts);
+            const found = list.find((a: any) => a?.email?.toLowerCase().trim() === cleanEmail);
+            if (found?.id) resolvedAccountId = found.id;
+          }
+        } catch {}
+      }
+      if (!resolvedAccountId) {
+        resolvedAccountId = `acc-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`;
+      }
+
       const loggedUser: User = {
-        id: `usr-g-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
+        id: resolvedAccountId,
         name: displayName,
         email: cleanEmail,
         avatar: cleanAvatar,
@@ -614,8 +641,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         throw new Error('Email hoặc mật khẩu không chính xác.');
       }
+      let resolvedAdminId = 'acc-admin-1';
+      if (cleanEmail === 'admin@unistay.com') resolvedAdminId = 'acc-admin-2';
       const adminUser: User = {
-        id: `usr-admin-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
+        id: resolvedAdminId,
         name: predefined.name,
         email: predefined.email,
         avatar: predefined.avatar,
@@ -645,8 +674,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const role = getAssignedRole(matchedRegistered.email);
+    let resolvedEmailId = '';
+    if (cleanEmail === 'hungtce181568@fpt.edu.vn') resolvedEmailId = 'acc-student-k18';
+    else if (cleanEmail === 'truongvantuan43344@gmail.com') resolvedEmailId = 'acc-admin-1';
+    else if (cleanEmail === 'admin@unistay.com') resolvedEmailId = 'acc-admin-2';
+    else resolvedEmailId = `acc-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`;
+
     const loggedUser: User = {
-      id: `usr-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
+      id: resolvedEmailId,
       name: matchedRegistered.name,
       email: matchedRegistered.email,
       avatar: matchedRegistered.avatar,
@@ -709,7 +744,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('unistay_registered_users', JSON.stringify(registeredList));
 
     const newUser: User = {
-      id: `usr-${Date.now()}`,
+      id: `acc-${Date.now()}`,
       name: cleanName,
       email: cleanEmail,
       role

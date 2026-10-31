@@ -117,36 +117,33 @@ function ProfileContent() {
     }
   }, [user, logout, router]);
 
-  // Lấy các mã đơn thuộc về trình duyệt hoặc tài khoản người dùng
+  // Lấy các mã đơn thuộc về tài khoản người dùng hiện tại (Account ID)
   let savedLocalBookingIds: string[] = [];
   try {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('unistay_my_booking_ids') : null;
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) savedLocalBookingIds = parsed;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('unistay_my_booking_ids');
+      if (user?.id && user.id !== 'guest') {
+        const raw = localStorage.getItem(`unistay_my_booking_ids_${user.id}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) savedLocalBookingIds = parsed;
+        }
+      }
     }
   } catch {}
 
-  const cleanUserPhone = user?.phone ? user.phone.replace(/[^0-9]/g, '') : '';
-
   const myBookings = (bookings || []).filter((b) => {
-    if (!b) return false;
-    const byLocalBrowser =
+    if (!b || !user || (!user.id && !user.email)) return false;
+    const byAccountLocal =
       savedLocalBookingIds.includes(b.id) || (b.reference ? savedLocalBookingIds.includes(b.reference) : false);
-    const byUserId = Boolean(user?.id && user.id !== 'guest' && b.userId === user.id);
+    const byUserId = Boolean(user.id && user.id !== 'guest' && b.userId === user.id);
     const byEmail = Boolean(
-      user?.email && b.studentEmail && b.studentEmail.toLowerCase() === user.email.toLowerCase()
-    );
-    const byPhone = Boolean(
-      cleanUserPhone.length >= 8 &&
-        b.studentContact &&
-        b.studentContact.replace(/[^0-9]/g, '') === cleanUserPhone
-    );
-    const byName = Boolean(
-      user?.name && b.studentName && b.studentName.trim().toLowerCase() === user.name.trim().toLowerCase()
+      user.email &&
+        b.studentEmail &&
+        b.studentEmail.toLowerCase().trim() === user.email.toLowerCase().trim()
     );
 
-    return byLocalBrowser || byUserId || byEmail || byPhone || byName;
+    return byAccountLocal || byUserId || byEmail;
   });
 
   // Danh sách phòng trọ đã lưu yêu thích

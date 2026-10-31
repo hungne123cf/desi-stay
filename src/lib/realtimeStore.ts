@@ -48,7 +48,9 @@ const DEFAULT_TOMBSTONES: RealtimeTombstones = {
 };
 
 export const DEFAULT_WISHLISTS: Record<string, string[]> = {
+  'acc-student-k18': ['prop-1793242710688'],
   'hungtce181568@fpt.edu.vn': ['prop-1793242710688'],
+  'acc-admin-1': [],
   'truongvantuan43344@gmail.com': []
 };
 
