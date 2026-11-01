@@ -312,43 +312,6 @@ export default function AdminPage() {
     setTimeout(() => setSettingsSaved(false), 2500);
   };
 
-  if (!isMounted || isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (user?.role !== 'admin' && user?.role !== 'staff') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white max-w-md w-full p-8 rounded-3xl border border-slate-200 shadow-xl text-center space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
-            <Lock className="w-8 h-8" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Yêu cầu quyền Admin</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Khu vực này dành riêng cho Quản trị viên và Nhân viên hệ thống.
-            </p>
-          </div>
-          <Link
-            href="/auth/login"
-            className="w-full block py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition-all text-center"
-          >
-            Đăng nhập tài khoản
-          </Link>
-          <div>
-            <Link href="/" className="text-xs text-slate-400 hover:text-slate-600">
-              Quay lại trang xem phòng trọ
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const unreadChatCount = (messages || []).filter(
     (m) => m && m.senderRole === 'student' && !m.isReadByAdmin
   ).length;
@@ -505,6 +468,44 @@ export default function AdminPage() {
     const start = (safeAccountsPage - 1) * accountsPageSize;
     return filteredAccounts.slice(start, start + accountsPageSize);
   }, [filteredAccounts, safeAccountsPage, accountsPageSize]);
+
+  // Kiểm tra mounted và quyền Admin/Staff sau khi TOÀN BỘ Hooks đã được gọi đầy đủ
+  if (!isMounted || isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (user?.role !== 'admin' && user?.role !== 'staff') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white max-w-md w-full p-8 rounded-3xl border border-slate-200 shadow-xl text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+            <Lock className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">Yêu cầu quyền Admin</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Khu vực này dành riêng cho Quản trị viên và Nhân viên hệ thống.
+            </p>
+          </div>
+          <Link
+            href="/auth/login"
+            className="w-full block py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition-all text-center"
+          >
+            Đăng nhập tài khoản
+          </Link>
+          <div>
+            <Link href="/" className="text-xs text-slate-400 hover:text-slate-600">
+              Quay lại trang xem phòng trọ
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100/80 flex flex-col md:flex-row">
