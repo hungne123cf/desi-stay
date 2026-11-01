@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
 import { Property, RoomType, GenderPreference, FoodPreference, CurrencyCode, Booking } from '@/types';
+import { Pagination } from '@/components/Pagination';
 import {
   VIETNAM_LOCATIONS,
   DISTANCE_PRESETS,
@@ -460,6 +461,51 @@ export default function AdminPage() {
     return matchesQuery && matchesFilter;
   });
 
+  // State phân trang cho các tab quản trị Admin
+  const [listingsPage, setListingsPage] = useState<number>(1);
+  const [listingsPageSize, setListingsPageSize] = useState<number>(8);
+
+  const [leadsPage, setLeadsPage] = useState<number>(1);
+  const [leadsPageSize, setLeadsPageSize] = useState<number>(10);
+
+  const [reviewsPage, setReviewsPage] = useState<number>(1);
+  const [reviewsPageSize, setReviewsPageSize] = useState<number>(8);
+
+  const [accountsPage, setAccountsPage] = useState<number>(1);
+  const [accountsPageSize, setAccountsPageSize] = useState<number>(10);
+
+  // 1. Phân trang Tab Phòng Trọ (Listings)
+  const totalListingsPages = Math.ceil(activeProperties.length / listingsPageSize) || 1;
+  const safeListingsPage = Math.min(listingsPage, totalListingsPages);
+  const paginatedProperties = useMemo(() => {
+    const start = (safeListingsPage - 1) * listingsPageSize;
+    return activeProperties.slice(start, start + listingsPageSize);
+  }, [activeProperties, safeListingsPage, listingsPageSize]);
+
+  // 2. Phân trang Tab Đơn Cọc & Lịch Hẹn (Leads)
+  const totalLeadsPages = Math.ceil(activeBookings.length / leadsPageSize) || 1;
+  const safeLeadsPage = Math.min(leadsPage, totalLeadsPages);
+  const paginatedBookings = useMemo(() => {
+    const start = (safeLeadsPage - 1) * leadsPageSize;
+    return activeBookings.slice(start, start + leadsPageSize);
+  }, [activeBookings, safeLeadsPage, leadsPageSize]);
+
+  // 3. Phân trang Tab Đánh Giá (Reviews)
+  const totalReviewsPages = Math.ceil(activeReviews.length / reviewsPageSize) || 1;
+  const safeReviewsPage = Math.min(reviewsPage, totalReviewsPages);
+  const paginatedReviews = useMemo(() => {
+    const start = (safeReviewsPage - 1) * reviewsPageSize;
+    return activeReviews.slice(start, start + reviewsPageSize);
+  }, [activeReviews, safeReviewsPage, reviewsPageSize]);
+
+  // 4. Phân trang Tab Tài Khoản (Accounts)
+  const totalAccountsPages = Math.ceil(filteredAccounts.length / accountsPageSize) || 1;
+  const safeAccountsPage = Math.min(accountsPage, totalAccountsPages);
+  const paginatedAccounts = useMemo(() => {
+    const start = (safeAccountsPage - 1) * accountsPageSize;
+    return filteredAccounts.slice(start, start + accountsPageSize);
+  }, [filteredAccounts, safeAccountsPage, accountsPageSize]);
+
   return (
     <div className="min-h-screen bg-slate-100/80 flex flex-col md:flex-row">
       {/* Mobile Admin Header */}
@@ -803,7 +849,7 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ) : (
-                      activeProperties.map((prop) => (
+                      paginatedProperties.map((prop) => (
                         <tr key={prop.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="p-4">
                             <button
@@ -945,6 +991,25 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Thanh phân trang cho Tab Phòng Trọ */}
+              {activeProperties.length > 0 && (
+                <div className="border-t border-slate-100 bg-slate-50/50 p-2">
+                  <Pagination
+                    currentPage={safeListingsPage}
+                    totalPages={totalListingsPages}
+                    totalItems={activeProperties.length}
+                    pageSize={listingsPageSize}
+                    pageSizeOptions={[8, 12, 24, 48]}
+                    itemLabel="phòng trọ"
+                    onPageChange={(p) => setListingsPage(p)}
+                    onPageSizeChange={(s) => {
+                      setListingsPageSize(s);
+                      setListingsPage(1);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1000,7 +1065,7 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ) : (
-                      activeBookings.map((lead) => (
+                      paginatedBookings.map((lead) => (
                         <tr key={lead.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="p-4">
                             <span className="font-bold text-slate-900 block">{lead.studentName}</span>
@@ -1189,6 +1254,25 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Thanh phân trang cho Tab Đơn Cọc & Lịch Hẹn */}
+              {activeBookings.length > 0 && (
+                <div className="border-t border-slate-100 bg-slate-50/50 p-2">
+                  <Pagination
+                    currentPage={safeLeadsPage}
+                    totalPages={totalLeadsPages}
+                    totalItems={activeBookings.length}
+                    pageSize={leadsPageSize}
+                    pageSizeOptions={[10, 20, 50]}
+                    itemLabel="đơn cọc & hẹn"
+                    onPageChange={(p) => setLeadsPage(p)}
+                    onPageSizeChange={(s) => {
+                      setLeadsPageSize(s);
+                      setLeadsPage(1);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1957,8 +2041,9 @@ export default function AdminPage() {
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100">
-                  {activeReviews.map((rev) => {
+                <>
+                  <div className="divide-y divide-slate-100">
+                    {paginatedReviews.map((rev) => {
                     const matchedProp = (properties || []).find(
                       (p) => p && (p.id === rev.propertyId || p.code === rev.propertyCode)
                     );
@@ -2107,7 +2192,27 @@ export default function AdminPage() {
                     );
                   })}
                 </div>
-              )}
+
+                {/* Thanh phân trang cho Tab Đánh Giá */}
+                {activeReviews.length > 0 && (
+                  <div className="border-t border-slate-100 bg-slate-50/50 p-2">
+                    <Pagination
+                      currentPage={safeReviewsPage}
+                      totalPages={totalReviewsPages}
+                      totalItems={activeReviews.length}
+                      pageSize={reviewsPageSize}
+                      pageSizeOptions={[8, 16, 32]}
+                      itemLabel="đánh giá"
+                      onPageChange={(p) => setReviewsPage(p)}
+                      onPageSizeChange={(s) => {
+                        setReviewsPageSize(s);
+                        setReviewsPage(1);
+                      }}
+                    />
+                  </div>
+                )}
+              </>
+            )}
             </div>
           </div>
         )}
@@ -2308,8 +2413,9 @@ export default function AdminPage() {
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100">
-                  {filteredAccounts.map((acc) => {
+                <>
+                  <div className="divide-y divide-slate-100">
+                    {paginatedAccounts.map((acc) => {
                     const cleanEmail = acc.email.toLowerCase().trim();
                     const isSuper = cleanEmail === 'truongvantuan43344@gmail.com';
                     const isCurrentUser = Boolean(
@@ -2530,7 +2636,27 @@ export default function AdminPage() {
                     );
                   })}
                 </div>
-              )}
+
+                {/* Thanh phân trang cho Tab Quản Lý Tài Khoản */}
+                {filteredAccounts.length > 0 && (
+                  <div className="border-t border-slate-100 bg-slate-50/50 p-2">
+                    <Pagination
+                      currentPage={safeAccountsPage}
+                      totalPages={totalAccountsPages}
+                      totalItems={filteredAccounts.length}
+                      pageSize={accountsPageSize}
+                      pageSizeOptions={[10, 20, 50]}
+                      itemLabel="tài khoản"
+                      onPageChange={(p) => setAccountsPage(p)}
+                      onPageSizeChange={(s) => {
+                        setAccountsPageSize(s);
+                        setAccountsPage(1);
+                      }}
+                    />
+                  </div>
+                )}
+              </>
+            )}
             </div>
           </div>
         )}

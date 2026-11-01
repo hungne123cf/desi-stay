@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, isAccountSuspended } from '@/context/AuthContext';
 import { useProperties } from '@/context/PropertyContext';
 import { PropertyCard } from '@/components/PropertyCard';
 import { ReviewModal } from '@/components/ReviewModal';
+import { Pagination } from '@/components/Pagination';
 import { Property, Booking } from '@/types';
 import {
   User as UserIcon,
@@ -104,6 +105,12 @@ function ProfileContent() {
     eligibility: NonNullable<ReturnType<typeof getReviewEligibility>>;
   } | null>(null);
 
+  // Pagination states
+  const [wishlistPage, setWishlistPage] = useState<number>(1);
+  const [wishlistPageSize, setWishlistPageSize] = useState<number>(6);
+  const [bookingPage, setBookingPage] = useState<number>(1);
+  const [bookingPageSize, setBookingPageSize] = useState<number>(5);
+
   useEffect(() => {
     if (user?.email && isAccountSuspended(user.email)) {
       triggerSuspendedModal();
@@ -148,6 +155,22 @@ function ProfileContent() {
   const wishlistProperties = (properties || []).filter(
     (p) => p && !p.isDeleted && wishlistIds.includes(p.id)
   );
+
+  // Phân trang danh sách yêu thích
+  const totalWishlistPages = Math.ceil(wishlistProperties.length / wishlistPageSize) || 1;
+  const safeWishlistPage = Math.min(wishlistPage, totalWishlistPages);
+  const paginatedWishlist = useMemo(() => {
+    const start = (safeWishlistPage - 1) * wishlistPageSize;
+    return wishlistProperties.slice(start, start + wishlistPageSize);
+  }, [wishlistProperties, safeWishlistPage, wishlistPageSize]);
+
+  // Phân trang lịch sử đặt cọc
+  const totalBookingPages = Math.ceil(myBookings.length / bookingPageSize) || 1;
+  const safeBookingPage = Math.min(bookingPage, totalBookingPages);
+  const paginatedBookings = useMemo(() => {
+    const start = (safeBookingPage - 1) * bookingPageSize;
+    return myBookings.slice(start, start + bookingPageSize);
+  }, [myBookings, safeBookingPage, bookingPageSize]);
 
   if (isLoading) {
     return (
@@ -763,10 +786,30 @@ function ProfileContent() {
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {wishlistProperties.map((prop) => (
-                  <PropertyCard key={prop.id} property={prop} />
-                ))}
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {paginatedWishlist.map((prop) => (
+                    <PropertyCard key={prop.id} property={prop} />
+                  ))}
+                </div>
+
+                {wishlistProperties.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-200/90 p-2 shadow-xs">
+                    <Pagination
+                      currentPage={safeWishlistPage}
+                      totalPages={totalWishlistPages}
+                      totalItems={wishlistProperties.length}
+                      pageSize={wishlistPageSize}
+                      pageSizeOptions={[6, 9, 12]}
+                      itemLabel="phòng yêu thích"
+                      onPageChange={(p) => setWishlistPage(p)}
+                      onPageSizeChange={(s) => {
+                        setWishlistPageSize(s);
+                        setWishlistPage(1);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -815,8 +858,9 @@ function ProfileContent() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4">
-                {myBookings.map((b) => {
+              <>
+                <div className="space-y-4">
+                  {paginatedBookings.map((b) => {
                   const statusInfo = getStatusBadge(b.status, b.paymentMethod);
                   const matchedProp = (properties || []).find(
                     (p) => p && (p.id === b.propertyId || p.code === b.propertyCode)
@@ -938,7 +982,26 @@ function ProfileContent() {
                   );
                 })}
               </div>
-            )}
+
+              {myBookings.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200/90 p-2 shadow-xs">
+                  <Pagination
+                    currentPage={safeBookingPage}
+                    totalPages={totalBookingPages}
+                    totalItems={myBookings.length}
+                    pageSize={bookingPageSize}
+                    pageSizeOptions={[5, 10, 20]}
+                    itemLabel="đơn đặt"
+                    onPageChange={(p) => setBookingPage(p)}
+                    onPageSizeChange={(s) => {
+                      setBookingPageSize(s);
+                      setBookingPage(1);
+                    }}
+                  />
+                </div>
+              )}
+            </>
+          )}
           </div>
         )}
       </div>

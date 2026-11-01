@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useProperties } from '@/context/PropertyContext';
 import { useAuth } from '@/context/AuthContext';
 import { ReviewModal } from '@/components/ReviewModal';
+import { Pagination } from '@/components/Pagination';
 import { Property, Booking } from '@/types';
 import {
   Calendar,
@@ -32,6 +33,8 @@ export default function MyBookingsPage() {
   const { user } = useAuth();
 
   const [filterTab, setFilterTab] = useState<'all' | 'paid' | 'visit' | 'cancelled'>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(5);
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
   const [reviewingProperty, setReviewingProperty] = useState<{
     property: Property;
@@ -72,6 +75,18 @@ export default function MyBookingsPage() {
     if (filterTab === 'cancelled') return b.status === 'cancelled';
     return true;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterTab]);
+
+  const totalPages = Math.ceil(filteredBookings.length / pageSize) || 1;
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedBookings = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredBookings.slice(start, start + pageSize);
+  }, [filteredBookings, safeCurrentPage, pageSize]);
 
   const getStatusBadge = (status: Booking['status'], method?: string) => {
     switch (status) {
@@ -264,8 +279,9 @@ export default function MyBookingsPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredBookings.map((b) => {
+          <>
+            <div className="space-y-4">
+              {paginatedBookings.map((b) => {
               const matchedProp = properties.find(
                 (p) => p.id === b.propertyId || p.code === b.propertyCode
               );
@@ -472,7 +488,30 @@ export default function MyBookingsPage() {
               );
             })}
           </div>
-        )}
+
+          {/* Phân trang cho Lịch sử đơn đặt cọc */}
+          {filteredBookings.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-2 shadow-xs mt-4">
+              <Pagination
+                currentPage={safeCurrentPage}
+                totalPages={totalPages}
+                totalItems={filteredBookings.length}
+                pageSize={pageSize}
+                pageSizeOptions={[5, 10, 20]}
+                itemLabel="giao dịch"
+                onPageChange={(p) => {
+                  setCurrentPage(p);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          )}
+        </>
+      )}
       </div>
 
       {/* Popup Xem Lại Biên Lai */}

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { HeroSection, MultiMarketFilters, SortOption, PriceRangeOption } from '@/components/HeroSection';
 import { PropertyCard } from '@/components/PropertyCard';
 import { BookingModal } from '@/components/BookingModal';
+import { Pagination } from '@/components/Pagination';
 import { useProperties } from '@/context/PropertyContext';
 import { Property } from '@/types';
 import { isPropertySoldOut } from '@/lib/availability';
@@ -33,6 +34,8 @@ function removeVietnameseAccents(str: string): string {
 export default function HomePage() {
   const { properties, wishlistIds, bookings } = useProperties();
   const [selectedPropertyForBooking, setSelectedPropertyForBooking] = useState<Property | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(6);
 
   const [filters, setFilters] = useState<MultiMarketFilters>({
     searchQuery: '',
@@ -144,6 +147,28 @@ export default function HomePage() {
     });
   }, [properties, filters, bookings]);
 
+  // Reset về trang 1 mỗi khi người dùng thay đổi bộ lọc hoặc tìm kiếm
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  // Tính toán số trang và danh sách phòng hiển thị trên trang hiện tại
+  const totalPages = Math.ceil(filteredProperties.length / pageSize) || 1;
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedProperties = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * pageSize;
+    return filteredProperties.slice(startIndex, startIndex + pageSize);
+  }, [filteredProperties, safeCurrentPage, pageSize]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    const el = document.getElementById('listings');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const resetFilters = () => {
     setFilters({
       searchQuery: '',
@@ -241,15 +266,34 @@ export default function HomePage() {
 
         {/* Listings Grid */}
         {filteredProperties.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
-            {filteredProperties.map((prop) => (
-              <PropertyCard
-                key={prop.id}
-                property={prop}
-                onBookNow={(p) => setSelectedPropertyForBooking(p)}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
+              {paginatedProperties.map((prop) => (
+                <PropertyCard
+                  key={prop.id}
+                  property={prop}
+                  onBookNow={(p) => setSelectedPropertyForBooking(p)}
+                />
+              ))}
+            </div>
+
+            {/* Thanh phân trang thông minh */}
+            <div className="mt-8 bg-white rounded-2xl border border-slate-200/90 p-2 shadow-xs">
+              <Pagination
+                currentPage={safeCurrentPage}
+                totalPages={totalPages}
+                totalItems={filteredProperties.length}
+                pageSize={pageSize}
+                pageSizeOptions={[6, 9, 12, 18]}
+                itemLabel="phòng trọ"
+                onPageChange={handlePageChange}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize);
+                  setCurrentPage(1);
+                }}
               />
-            ))}
-          </div>
+            </div>
+          </>
         ) : (
           <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 mt-8 p-8">
             <SearchX className="w-12 h-12 text-slate-400 mx-auto mb-3" />
