@@ -7,6 +7,20 @@
 create extension if not exists "pgcrypto";
 
 -- ---------------------------------------------------------------------
+-- 0. DỌN DẸP BẢNG CŨ (Xóa các bảng cũ nếu có để tạo lại cấu trúc chuẩn, không bị lỗi thiếu cột)
+-- ---------------------------------------------------------------------
+drop table if exists public.wishlists cascade;
+drop table if exists public.chat_messages cascade;
+drop table if exists public.property_reviews cascade;
+drop table if exists public.bookings cascade;
+drop table if exists public.properties cascade;
+drop table if exists public.accounts cascade;
+drop table if exists public.admins cascade;
+drop table if exists public.roles cascade;
+drop table if exists public.site_settings cascade;
+drop function if exists public.sync_account_admin_role() cascade;
+
+-- ---------------------------------------------------------------------
 -- 1. BẢNG ROLES (Phân quyền hệ thống)
 -- ---------------------------------------------------------------------
 create table if not exists public.roles (
