@@ -1,6 +1,8 @@
 {
   "properties": [
     {
+      "id": "prop-1793242710688",
+      "code": "CT-101",
       "title": "Căn hộ sinh viên cao cấp",
       "slug": "can-ho-sinh-vien-ctu-01",
       "address": "KDC ĐH Cần Thơ, Đường 3/2, Phường Xuân Khánh, Quận Ninh Kiều, Cần Thơ",
@@ -42,16 +44,264 @@
       "isPublished": true,
       "landlordName": "Trương Hùng",
       "landlordContact": "0901234567",
-      "id": "prop-1793242710688",
-      "code": "CT-101",
-      "rating": 0,
-      "reviewsCount": 0,
+      "rating": 5,
+      "reviewsCount": 1,
       "createdAt": "2026-10-29"
+    },
+    {
+      "id": "prop-vn-ct-2",
+      "code": "CT-102",
+      "title": "FPT Smart Duplex – Phòng gác lửng KDC Hồng Phát gần ĐH FPT Cần Thơ",
+      "slug": "fpt-smart-duplex-kdc-hong-phat-can-tho",
+      "address": "Đường số 6, KDC Hồng Phát, Phường An Bình, Quận Ninh Kiều, Cần Thơ",
+      "city": "Cần Thơ",
+      "country": "Việt Nam",
+      "area": "KDC Hồng Phát (P. An Bình)",
+      "nearbyUniversity": "ĐH FPT Cần Thơ (Cầu Rau Răm - Nguyễn Văn Cừ)",
+      "distanceToCampus": "500m (2 phút đi xe máy)",
+      "roomType": "double",
+      "gender": "all",
+      "foodPreference": "self_cook",
+      "pricePerMonthUSD": 126,
+      "securityDepositUSD": 126,
+      "tokenDepositUSD": 20,
+      "images": [
+        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1540518614846-7ede433c4ef0?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "description": "Phòng Duplex gác lửng trần cao thoáng mát nằm trong KDC Hồng Phát yên tĩnh, đường nhựa rộng 12m có vỉa hè cây xanh, cực kỳ thuận tiện cho sinh viên ĐH FPT Cần Thơ và ĐH Nam Cần Thơ. Ở được 2-3 bạn thoải mái.",
+      "highlights": [
+        "0% Phí môi giới làm việc trực tiếp",
+        "Cách ĐH FPT Cần Thơ & ĐH Nam Cần Thơ chỉ 500m",
+        "Thiết kế gác lửng rộng rãi, ở được 2-3 sinh viên",
+        "Giờ giấc tự do 24/7 (Khóa vân tay)"
+      ],
+      "amenities": [
+        "Wifi Mesh riêng từng tầng",
+        "Máy lạnh Inverter",
+        "Gác lửng lót sàn gỗ",
+        "Tủ quần áo & bàn học dài",
+        "Bếp nấu ăn riêng",
+        "Khóa vân tay 2 lớp"
+      ],
+      "curfewTime": "Giờ giấc tự do 24/7 (Khóa vân tay)",
+      "availableBeds": 2,
+      "isVerified": true,
+      "isZeroBrokerage": true,
+      "isPublished": true,
+      "landlordName": "Chị Lan (Chủ nhà KDC Hồng Phát)",
+      "landlordContact": "0901234567",
+      "rating": 4.9,
+      "reviewsCount": 24,
+      "createdAt": "2026-10-28"
+    },
+    {
+      "id": "prop-vn-ct-3",
+      "code": "CT-103",
+      "title": "An Khánh Studio – Phòng trọ sinh viên tiện nghi gần ĐH Y Dược Cần Thơ",
+      "slug": "an-khanh-studio-gan-dh-y-duoc-can-tho",
+      "address": "Đường số 3, KDC 91B, Phường An Khánh, Quận Ninh Kiều, Cần Thơ",
+      "city": "Cần Thơ",
+      "country": "Việt Nam",
+      "area": "KDC 91B (P. An Khánh)",
+      "nearbyUniversity": "ĐH Y Dược Cần Thơ (CTUMP)",
+      "distanceToCampus": "400m (5 phút đi bộ)",
+      "roomType": "single",
+      "gender": "all",
+      "foodPreference": "self_cook",
+      "pricePerMonthUSD": 98,
+      "securityDepositUSD": 98,
+      "tokenDepositUSD": 20,
+      "images": [
+        "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "description": "Phòng trọ một người hoặc hai bạn yên tĩnh, gần trường ĐH Y Dược Cần Thơ. Đầy đủ máy lạnh, wifi mạnh, bàn học, cửa sổ thoáng mát, khu an ninh tri thức cao.",
+      "highlights": [
+        "0% Phí môi giới làm việc trực tiếp",
+        "5 phút đi bộ tới cổng ĐH Y Dược Cần Thơ",
+        "Khu dân cư 91B an ninh, yên tĩnh học tập",
+        "Giờ giấc tự do 24/7 (Khóa vân tay)"
+      ],
+      "amenities": [
+        "Wifi cáp quang tốc độ cao",
+        "Máy lạnh Inverter",
+        "Vệ sinh khép kín",
+        "Bàn ghế học tập",
+        "Bãi đỗ xe an ninh",
+        "Camera hành lang 24/7"
+      ],
+      "curfewTime": "Giờ giấc tự do 24/7 (Khóa vân tay)",
+      "availableBeds": 1,
+      "isVerified": true,
+      "isZeroBrokerage": true,
+      "isPublished": true,
+      "landlordName": "Bác Năm (Chủ trọ An Khánh)",
+      "landlordContact": "0901234567",
+      "rating": 4.8,
+      "reviewsCount": 18,
+      "createdAt": "2026-10-27"
+    },
+    {
+      "id": "prop-vn-ct-4",
+      "code": "CT-104",
+      "title": "Nam Cần Thơ Deluxe – Căn hộ mini gần ĐH Nam Cần Thơ (DNC)",
+      "slug": "nam-can-tho-deluxe-can-ho-mini-dnc",
+      "address": "Đường Nguyễn Văn Cừ nối dài, Phường An Bình, Quận Ninh Kiều, Cần Thơ",
+      "city": "Cần Thơ",
+      "country": "Việt Nam",
+      "area": "Đường Nguyễn Văn Cừ nối dài",
+      "nearbyUniversity": "ĐH Nam Cần Thơ (DNC)",
+      "distanceToCampus": "600m (3 phút đi xe)",
+      "roomType": "studio",
+      "gender": "all",
+      "foodPreference": "self_cook",
+      "pricePerMonthUSD": 87,
+      "securityDepositUSD": 87,
+      "tokenDepositUSD": 20,
+      "images": [
+        "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "description": "Phòng mới tinh 100%, có máy lạnh, kệ bếp nấu ăn, ban công phơi đồ riêng biệt, giá cực kỳ sinh viên dành cho các bạn ĐH Nam Cần Thơ và FPT.",
+      "highlights": [
+        "0% Phí môi giới làm việc trực tiếp",
+        "Sát ĐH Nam Cần Thơ (DNC) & BV Nam Cần Thơ",
+        "Ban công phơi đồ riêng, bếp nấu ăn thoáng mùi",
+        "Giờ giấc tự do 24/7"
+      ],
+      "amenities": [
+        "Wifi tốc độ cao",
+        "Máy lạnh",
+        "Ban công riêng",
+        "Bếp nấu ăn riêng",
+        "Nhà để xe có khóa vân tay"
+      ],
+      "curfewTime": "Giờ giấc tự do 24/7 (Khóa vân tay)",
+      "availableBeds": 2,
+      "isVerified": true,
+      "isZeroBrokerage": true,
+      "isPublished": true,
+      "landlordName": "Cô Út (Chủ trọ An Bình)",
+      "landlordContact": "0901234567",
+      "rating": 4.9,
+      "reviewsCount": 12,
+      "createdAt": "2026-10-27"
+    },
+    {
+      "id": "prop-vn-hcm-1",
+      "code": "SG-105",
+      "title": "The Green Studio – Căn hộ dịch vụ cao cấp gần ĐH Bách Khoa TP.HCM",
+      "slug": "green-studio-bach-khoa-y-duoc-q10",
+      "address": "Đường Lý Thường Kiệt, Phường 14, Quận 10, TP. Hồ Chí Minh",
+      "city": "TP. Hồ Chí Minh",
+      "country": "Việt Nam",
+      "area": "Quận 10",
+      "nearbyUniversity": "ĐH Bách Khoa TP.HCM & ĐH Y Dược",
+      "distanceToCampus": "350m (4 phút đi bộ)",
+      "roomType": "studio",
+      "gender": "all",
+      "foodPreference": "self_cook",
+      "pricePerMonthUSD": 165,
+      "securityDepositUSD": 165,
+      "tokenDepositUSD": 20,
+      "images": [
+        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1502005229762-ee1b40280b89?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "description": "Phòng studio full nội thất cao cấp: máy lạnh Inverter, máy nước nóng, tủ lạnh, bếp từ riêng biệt, ban công thoáng mát đón nắng. Giờ giấc tự do 24/7, thang máy thẻ từ, không chung chủ.",
+      "highlights": [
+        "0% Phí môi giới làm việc trực tiếp",
+        "4 phút đi bộ tới cổng ĐH Bách Khoa TP.HCM",
+        "Bếp riêng nấu ăn thoải mái, có ban công lớn",
+        "Thang máy thẻ từ, hầm để xe bảo vệ 24/7"
+      ],
+      "amenities": [
+        "Wifi cáp quang tốc độ cao",
+        "Máy lạnh & Tủ lạnh Inverter",
+        "Vệ sinh khép kín nước nóng",
+        "Bếp từ riêng & hút mùi",
+        "Thang máy thẻ từ",
+        "Hầm xe bảo vệ 24/7"
+      ],
+      "curfewTime": "Tự do 24/7 (Thẻ từ thang máy & Camera)",
+      "availableBeds": 2,
+      "isVerified": true,
+      "isZeroBrokerage": true,
+      "isPublished": true,
+      "landlordName": "Anh Minh (Chủ tòa nhà Q.10)",
+      "landlordContact": "0901234567",
+      "rating": 4.9,
+      "reviewsCount": 35,
+      "createdAt": "2026-10-26"
+    },
+    {
+      "id": "prop-vn-hn-1",
+      "code": "HN-106",
+      "title": "Sunrise Scholar Box – Ký túc xá Sleepbox tiện nghi Cầu Giấy",
+      "slug": "sunrise-scholar-dorm-cau-giay",
+      "address": "Ngõ 20 Hồ Tùng Mậu, Phường Mai Dịch, Quận Cầu Giấy, Hà Nội",
+      "city": "Hà Nội",
+      "country": "Việt Nam",
+      "area": "Quận Cầu Giấy",
+      "nearbyUniversity": "ĐH Quốc Gia Hà Nội & ĐH Sư Phạm (Cầu Giấy)",
+      "distanceToCampus": "350m (4 phút đi bộ)",
+      "roomType": "shared",
+      "gender": "all",
+      "foodPreference": "self_cook",
+      "pricePerMonthUSD": 71,
+      "securityDepositUSD": 71,
+      "tokenDepositUSD": 20,
+      "images": [
+        "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "description": "Mô hình Sleepbox riêng tư cao cấp: rèm che kín đáo, nệm êm, đèn học, ổ cắm riêng, tủ đồ khóa mã số. Không gian học tập yên tĩnh, trang bị máy lạnh 24/24, máy giặt, máy sấy miễn phí.",
+      "highlights": [
+        "0% Phí môi giới làm việc trực tiếp",
+        "Sát ĐH Quốc Gia HN, ĐH Sư Phạm & Thương Mại",
+        "Sleepbox riêng tư, có khóa an toàn",
+        "Bao trọn chi phí điện nước, wifi, máy giặt"
+      ],
+      "amenities": [
+        "Wifi tốc độ cao",
+        "Máy lạnh 24/24",
+        "Máy giặt & Máy sấy",
+        "Bếp chung đầy đủ gia vị",
+        "Tủ lạnh & Bình nóng lạnh"
+      ],
+      "curfewTime": "Tự do 24/7 (Khóa vân tay)",
+      "availableBeds": 4,
+      "isVerified": true,
+      "isZeroBrokerage": true,
+      "isPublished": true,
+      "landlordName": "Chị Mai (Quản lý KTX Cầu Giấy)",
+      "landlordContact": "0988776655",
+      "rating": 4.8,
+      "reviewsCount": 42,
+      "createdAt": "2026-10-27"
     }
   ],
   "bookings": [],
   "messages": [],
-  "reviews": [],
+  "reviews": [
+    {
+      "id": "rev-ctu-101-seed",
+      "bookingId": "BK-SEED-CTU",
+      "propertyId": "prop-1793242710688",
+      "propertyCode": "CT-101",
+      "propertyTitle": "Căn hộ sinh viên cao cấp",
+      "userName": "Truong Hung (K18 CT)",
+      "userEmail": "hungtce181568@fpt.edu.vn",
+      "userCollege": "ĐH CT",
+      "rating": 5,
+      "comment": "Chủ trọ / Quản lý thân thiện, hỗ trợ nhiệt tình",
+      "adminReply": "thankyou",
+      "repliedAt": "2026-10-30T12:39:00.000Z",
+      "createdAt": "12:39 • 30/10/2026"
+    }
+  ],
   "accounts": [
     {
       "id": "acc-admin-1",
@@ -119,5 +369,5 @@
     "acc-admin-1": [],
     "truongvantuan43344@gmail.com": []
   },
-  "updatedAt": 1793370000000
+  "updatedAt": 1793460000000
 }
