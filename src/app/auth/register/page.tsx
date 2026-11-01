@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -20,7 +20,7 @@ import { UserRole } from '@/types';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, loginWithGoogle, isLoading } = useAuth();
+  const { user, register, loginWithGoogle, isLoading } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +32,12 @@ export default function RegisterPage() {
     const dest = role === 'admin' || role === 'staff' ? '/admin' : '/';
     window.location.href = dest;
   };
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      handleRedirect(user.role);
+    }
+  }, [user, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

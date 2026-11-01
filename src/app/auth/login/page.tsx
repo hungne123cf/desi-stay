@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -24,7 +24,7 @@ function LoginFormContent() {
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get('next');
 
-  const { loginWithGoogle, loginWithEmail, resetPassword, isLoading } = useAuth();
+  const { user, loginWithGoogle, loginWithEmail, resetPassword, isLoading } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [email, setEmail] = useState('');
@@ -45,6 +45,13 @@ function LoginFormContent() {
         : '/';
     window.location.href = dest;
   };
+
+  // Tự động chuyển hướng nếu người dùng đã đăng nhập (tránh việc Admin đã đăng nhập vẫn thấy form login)
+  useEffect(() => {
+    if (!isLoading && user) {
+      redirectAfterAuth(user.role);
+    }
+  }, [user, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
