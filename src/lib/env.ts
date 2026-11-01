@@ -4,6 +4,7 @@ export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 export function isSupabaseConfigured(): boolean {
   return (
     SUPABASE_URL.startsWith('https://') &&
+    !SUPABASE_URL.includes('YOUR_PROJECT_REF') &&
     !SUPABASE_URL.includes('YOUR-PROJECT') &&
     SUPABASE_ANON_KEY.length > 20
   );

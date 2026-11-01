@@ -381,3 +381,4 @@ export async function syncToSupabase(payload: {
     console.error('Supabase sync error:', err);
   }
 }
+
